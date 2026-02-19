@@ -1,0 +1,9 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: starbucks-mugs-website-feat-main
+        name: Static Mug Browsing Site
+        type: feature
+        files: [index.html style.css app.js mugs.json]
