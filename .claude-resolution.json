@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in index.html and mugs.json. For index.html, preserved the header subtitle paragraph from main and the modal dialog from the feature branch. For mugs.json, kept the feature branch mug data (with reliable placehold.co image URLs) and normalized IDs to numeric integers for consistency.",
-  "strategyUsed": "kept both for index.html (subtitle from main + modal from HEAD); chose HEAD for mugs.json with numeric ID normalization (placehold.co images load reliably vs starbucks.com URLs which may be inaccessible)"
+  "filesResolved": 4,
+  "summary": "Resolved conflicts in app.js, index.html, mugs.json, and style.css. The feature branch (HEAD) had a polished implementation with CSS variables, animations, responsive breakpoints, accessible overlay using detail-* element IDs, and real Unsplash images. origin/main had a simpler baseline using modal-* element IDs, placeholder images, and an ES module export. Since the two naming schemes were incompatible, HEAD's implementation was used as the primary. Improvements from origin/main (DocumentFragment optimization in renderGrid, export statement in app.js) were incorporated.",
+  "strategyUsed": "Used HEAD's implementation as the base for all files (more complete design with CSS variables, accessibility, animations, footer, responsive breakpoints). Incorporated origin/main's DocumentFragment optimization in renderGrid and ES module export in app.js. mugs.json used HEAD's version with real Unsplash images and richer descriptions."
 }

@@ -1,6 +1,10 @@
 /**
+ * @typedef {{ id: number, name: string, price: number, description: string, imageUrl: string }} Mug
+ */
+
+/**
  * Fetches mug data from mugs.json.
- * @returns {Promise<Array>} Array of mug records
+ * @returns {Promise<Mug[]>}
  */
 async function loadMugs() {
   const response = await fetch('mugs.json');
@@ -11,30 +15,32 @@ async function loadMugs() {
 }
 
 /**
- * Creates a card DOM element for a single mug.
- * @param {Object} mug - Mug record with id, name, price, description, imageUrl
- * @returns {HTMLElement} Card element
+ * Creates a card element for a single mug.
+ * @param {Mug} mug
+ * @returns {HTMLElement}
  */
 function createCard(mug) {
   const card = document.createElement('article');
-  card.className = 'card';
-  card.setAttribute('role', 'button');
+  card.className = 'mug-card';
   card.setAttribute('tabindex', '0');
-  card.setAttribute('aria-label', `${mug.name} - $${mug.price.toFixed(2)}`);
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', `View details for ${mug.name}`);
 
   card.innerHTML = `
-    <img class="card-image" src="${mug.imageUrl}" alt="${mug.name}">
+    <div class="card-image-wrapper">
+      <img class="card-image" src="${mug.imageUrl}" alt="${mug.name}" loading="lazy" />
+    </div>
     <div class="card-body">
       <h2 class="card-name">${mug.name}</h2>
       <p class="card-price">$${mug.price.toFixed(2)}</p>
     </div>
   `;
 
-  card.addEventListener('click', () => showDetail(mug));
+  card.addEventListener('click', () => openDetail(mug));
   card.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      showDetail(mug);
+      openDetail(mug);
     }
   });
 
@@ -42,9 +48,9 @@ function createCard(mug) {
 }
 
 /**
- * Renders all mug cards into the given container element.
- * @param {Array} mugs - Array of mug records
- * @param {HTMLElement} container - Target container element
+ * Renders all mug cards into the grid container.
+ * @param {Mug[]} mugs
+ * @param {HTMLElement} container
  */
 function renderGrid(mugs, container) {
   container.innerHTML = '';
@@ -54,43 +60,50 @@ function renderGrid(mugs, container) {
 }
 
 /**
- * Opens the detail modal with full mug information.
- * @param {Object} mug - Mug record to display
+ * Opens the detail overlay for a mug.
+ * @param {Mug} mug
  */
-function showDetail(mug) {
-  const modal = document.getElementById('modal');
-  document.getElementById('modal-image').src = mug.imageUrl;
-  document.getElementById('modal-image').alt = mug.name;
-  document.getElementById('modal-name').textContent = mug.name;
-  document.getElementById('modal-price').textContent = `$${mug.price.toFixed(2)}`;
-  document.getElementById('modal-description').textContent = mug.description;
-
-  modal.classList.remove('hidden');
-  document.getElementById('modal-close').focus();
+function openDetail(mug) {
+  const overlay = document.getElementById('detail-overlay');
+  document.getElementById('detail-image').src = mug.imageUrl;
+  document.getElementById('detail-image').alt = mug.name;
+  document.getElementById('detail-name').textContent = mug.name;
+  document.getElementById('detail-price').textContent = `$${mug.price.toFixed(2)}`;
+  document.getElementById('detail-description').textContent = mug.description;
+  overlay.hidden = false;
+  document.body.classList.add('overlay-open');
+  document.getElementById('detail-close').focus();
 }
 
 /**
- * Closes the detail modal.
+ * Closes the detail overlay.
  */
 function closeDetail() {
-  document.getElementById('modal').classList.add('hidden');
+  const overlay = document.getElementById('detail-overlay');
+  overlay.hidden = true;
+  document.body.classList.remove('overlay-open');
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const container = document.getElementById('grid');
+  const grid = document.getElementById('grid');
 
-  try {
-    const mugs = await loadMugs();
-    renderGrid(mugs, container);
-  } catch (err) {
-    container.textContent = 'Unable to load mugs.';
-  }
+  document.getElementById('detail-close').addEventListener('click', closeDetail);
 
-  document.getElementById('modal-close').addEventListener('click', closeDetail);
-  document.getElementById('modal-overlay').addEventListener('click', closeDetail);
+  document.getElementById('detail-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeDetail();
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeDetail();
   });
+
+  try {
+    const mugs = await loadMugs();
+    renderGrid(mugs, grid);
+  } catch (err) {
+    grid.innerHTML = '<p class="error-message">Unable to load mugs. Please try again later.</p>';
+    console.error(err);
+  }
 });
 
 export { loadMugs, createCard, renderGrid };
