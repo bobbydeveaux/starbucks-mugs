@@ -1,44 +1,44 @@
 [
   {
     "id": 1,
-    "name": "Starbucks Classic Ceramic Mug",
+    "name": "Starbucks Classic Logo Mug",
     "price": 14.95,
-    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/classic-ceramic-mug.jpg",
-    "description": "A timeless white ceramic mug featuring the iconic Starbucks Siren logo. Perfect for your morning brew at home or the office."
+    "description": "The iconic Starbucks ceramic mug featuring the classic green Siren logo. Perfect for your morning coffee ritual.",
+    "imageUrl": "https://placehold.co/300x300/006241/ffffff?text=Starbucks+Mug"
   },
   {
     "id": 2,
-    "name": "Starbucks Holiday Blend Mug",
-    "price": 19.95,
-    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/holiday-blend-mug.jpg",
-    "description": "A festive red mug adorned with holiday designs and warm seasonal colors. A perfect gift for coffee lovers during the holiday season."
+    "name": "Pike Place Roast Mug",
+    "price": 16.95,
+    "description": "Inspired by our Pike Place Roast blend, this mug captures the spirit of Seattle with warm earth tones and a comfortable handle.",
+    "imageUrl": "https://placehold.co/300x300/5c4033/ffffff?text=Pike+Place+Mug"
   },
   {
     "id": 3,
-    "name": "Starbucks City Collection Seattle Mug",
-    "price": 17.95,
-    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/seattle-city-mug.jpg",
-    "description": "Celebrate the birthplace of Starbucks with this Seattle skyline mug. Features iconic landmarks and the Pike Place Market Starbucks storefront."
+    "name": "Holiday Collection Mug",
+    "price": 19.95,
+    "description": "Limited edition holiday mug featuring festive red and green designs. A collectible piece for the holiday season.",
+    "imageUrl": "https://placehold.co/300x300/c41e3a/ffffff?text=Holiday+Mug"
   },
   {
     "id": 4,
-    "name": "Starbucks Reserve Dot Collection Mug",
+    "name": "Reserve Roastery Mug",
     "price": 22.95,
-    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/reserve-dot-mug.jpg",
-    "description": "From the premium Starbucks Reserve collection, this elegant mug features a sophisticated dot pattern and a sleek matte black finish."
+    "description": "Premium ceramic mug from our Reserve Roastery collection. Features artisan details and a generous 16oz capacity.",
+    "imageUrl": "https://placehold.co/300x300/1e3a2f/ffffff?text=Reserve+Mug"
   },
   {
     "id": 5,
-    "name": "Starbucks Cold Cup Acrylic Tumbler",
-    "price": 24.95,
-    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/cold-cup-tumbler.jpg",
-    "description": "A clear acrylic tumbler perfect for iced beverages. Features a reusable straw and double-wall insulation to keep drinks cold longer."
+    "name": "City Series Seattle Mug",
+    "price": 17.95,
+    "description": "Celebrate the birthplace of Starbucks with this Seattle-themed mug featuring the iconic skyline and Space Needle.",
+    "imageUrl": "https://placehold.co/300x300/1a73a7/ffffff?text=Seattle+Mug"
   },
   {
     "id": 6,
-    "name": "Starbucks Seasonal Autumn Harvest Mug",
-    "price": 16.95,
-    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/autumn-harvest-mug.jpg",
-    "description": "Embrace the fall season with this warm-toned mug featuring pumpkin spice motifs and rich autumn leaves. A cozy companion for your pumpkin spice latte."
+    "name": "Siren's Tale Mug",
+    "price": 21.95,
+    "description": "An artistic mug featuring an illustrated story of the Starbucks Siren. A conversation piece for coffee enthusiasts.",
+    "imageUrl": "https://placehold.co/300x300/2e7d32/ffffff?text=Siren+Mug"
   }
 ]

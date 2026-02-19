@@ -1,0 +1,6 @@
+{
+  "method": "ai-assisted",
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in index.html and mugs.json. For index.html, preserved the header subtitle paragraph from main and the modal dialog from the feature branch. For mugs.json, kept the feature branch mug data (with reliable placehold.co image URLs) and normalized IDs to numeric integers for consistency.",
+  "strategyUsed": "kept both for index.html (subtitle from main + modal from HEAD); chose HEAD for mugs.json with numeric ID normalization (placehold.co images load reliably vs starbucks.com URLs which may be inaccessible)"
+}
