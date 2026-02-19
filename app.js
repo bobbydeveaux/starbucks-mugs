@@ -54,7 +54,9 @@ function createCard(mug) {
  */
 function renderGrid(mugs, container) {
   container.innerHTML = '';
-  mugs.forEach((mug) => container.appendChild(createCard(mug)));
+  const fragment = document.createDocumentFragment();
+  mugs.forEach(mug => fragment.appendChild(createCard(mug)));
+  container.appendChild(fragment);
 }
 
 /**
@@ -103,3 +105,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error(err);
   }
 });
+
+export { loadMugs, createCard, renderGrid };

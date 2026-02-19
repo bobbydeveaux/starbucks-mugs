@@ -1,0 +1,12 @@
+{
+  "prNumber": 6,
+  "baseBranch": "main",
+  "headBranch": "feature/4-starbucks-mugs-website-sprint-1-issue-4",
+  "conflictedFiles": [
+    "app.js",
+    "index.html",
+    "mugs.json",
+    "style.css"
+  ],
+  "conflictCount": 4
+}
