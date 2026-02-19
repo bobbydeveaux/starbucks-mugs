@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "name": "Starbucks Classic Ceramic Mug",
+    "price": 14.95,
+    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/classic-ceramic-mug.jpg",
+    "description": "A timeless white ceramic mug featuring the iconic Starbucks Siren logo. Perfect for your morning brew at home or the office."
+  },
+  {
+    "id": 2,
+    "name": "Starbucks Holiday Blend Mug",
+    "price": 19.95,
+    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/holiday-blend-mug.jpg",
+    "description": "A festive red mug adorned with holiday designs and warm seasonal colors. A perfect gift for coffee lovers during the holiday season."
+  },
+  {
+    "id": 3,
+    "name": "Starbucks City Collection Seattle Mug",
+    "price": 17.95,
+    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/seattle-city-mug.jpg",
+    "description": "Celebrate the birthplace of Starbucks with this Seattle skyline mug. Features iconic landmarks and the Pike Place Market Starbucks storefront."
+  },
+  {
+    "id": 4,
+    "name": "Starbucks Reserve Dot Collection Mug",
+    "price": 22.95,
+    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/reserve-dot-mug.jpg",
+    "description": "From the premium Starbucks Reserve collection, this elegant mug features a sophisticated dot pattern and a sleek matte black finish."
+  },
+  {
+    "id": 5,
+    "name": "Starbucks Cold Cup Acrylic Tumbler",
+    "price": 24.95,
+    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/cold-cup-tumbler.jpg",
+    "description": "A clear acrylic tumbler perfect for iced beverages. Features a reusable straw and double-wall insulation to keep drinks cold longer."
+  },
+  {
+    "id": 6,
+    "name": "Starbucks Seasonal Autumn Harvest Mug",
+    "price": 16.95,
+    "imageUrl": "https://www.starbucks.com/static-content/images/mugs/autumn-harvest-mug.jpg",
+    "description": "Embrace the fall season with this warm-toned mug featuring pumpkin spice motifs and rich autumn leaves. A cozy companion for your pumpkin spice latte."
+  }
+]
