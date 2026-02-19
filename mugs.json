@@ -1,0 +1,44 @@
+[
+  {
+    "id": "1",
+    "name": "Starbucks Classic Logo Mug",
+    "price": 14.95,
+    "description": "The iconic Starbucks ceramic mug featuring the classic green Siren logo. Perfect for your morning coffee ritual.",
+    "imageUrl": "https://placehold.co/300x300/006241/ffffff?text=Starbucks+Mug"
+  },
+  {
+    "id": "2",
+    "name": "Pike Place Roast Mug",
+    "price": 16.95,
+    "description": "Inspired by our Pike Place Roast blend, this mug captures the spirit of Seattle with warm earth tones and a comfortable handle.",
+    "imageUrl": "https://placehold.co/300x300/5c4033/ffffff?text=Pike+Place+Mug"
+  },
+  {
+    "id": "3",
+    "name": "Holiday Collection Mug",
+    "price": 19.95,
+    "description": "Limited edition holiday mug featuring festive red and green designs. A collectible piece for the holiday season.",
+    "imageUrl": "https://placehold.co/300x300/c41e3a/ffffff?text=Holiday+Mug"
+  },
+  {
+    "id": "4",
+    "name": "Reserve Roastery Mug",
+    "price": 22.95,
+    "description": "Premium ceramic mug from our Reserve Roastery collection. Features artisan details and a generous 16oz capacity.",
+    "imageUrl": "https://placehold.co/300x300/1e3a2f/ffffff?text=Reserve+Mug"
+  },
+  {
+    "id": "5",
+    "name": "City Series Seattle Mug",
+    "price": 17.95,
+    "description": "Celebrate the birthplace of Starbucks with this Seattle-themed mug featuring the iconic skyline and Space Needle.",
+    "imageUrl": "https://placehold.co/300x300/1a73a7/ffffff?text=Seattle+Mug"
+  },
+  {
+    "id": "6",
+    "name": "Siren's Tale Mug",
+    "price": 21.95,
+    "description": "An artistic mug featuring an illustrated story of the Starbucks Siren. A conversation piece for coffee enthusiasts.",
+    "imageUrl": "https://placehold.co/300x300/2e7d32/ffffff?text=Siren+Mug"
+  }
+]
