@@ -1,0 +1,19 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-19T17:11:13Z
+  totalSprints: 1
+  totalDuration: 7 days
+
+sprints:
+  - number: 1
+    startDate: 2026-02-19
+    endDate: 2026-02-26
+    duration: 7 days
+    features:
+      - id: starbucks-mugs-website-feat-main
+        name: Static Mug Browsing Site
+        type: feature
+
+criticalPath:
+  - starbucks-mugs-website-feat-main
