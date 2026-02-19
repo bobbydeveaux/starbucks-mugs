@@ -1,0 +1,314 @@
+/* ============================================================
+   Starbucks Mugs — style.css
+   CSS Grid layout, responsive cards, detail modal
+   ============================================================ */
+
+/* ---- Reset & base ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --green-dark:  #00704a;
+  --green-mid:   #1e3932;
+  --green-light: #d4e9e2;
+  --accent:      #cba258;
+  --text:        #1e3932;
+  --text-light:  #555;
+  --bg:          #f9f6f0;
+  --card-bg:     #ffffff;
+  --shadow:      0 2px 8px rgba(0, 0, 0, 0.10);
+  --shadow-hover:0 6px 20px rgba(0, 0, 0, 0.18);
+  --radius:      10px;
+  --transition:  0.25s ease;
+}
+
+html {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  background-color: var(--bg);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Header ---- */
+.site-header {
+  background-color: var(--green-mid);
+  color: #fff;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.logo {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.site-header h1 {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.tagline {
+  margin-top: 0.4rem;
+  font-size: 1rem;
+  color: var(--green-light);
+  opacity: 0.9;
+}
+
+/* ---- Main content ---- */
+.site-main {
+  flex: 1;
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ---- Mug grid — responsive CSS Grid ---- */
+.mug-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ---- Mug card ---- */
+.mug-card {
+  background-color: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition);
+  outline: none;
+}
+
+.mug-card:hover,
+.mug-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.mug-card:focus-visible {
+  outline: 3px solid var(--green-dark);
+  outline-offset: 2px;
+}
+
+/* Card image */
+.card-image-wrapper {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background-color: var(--green-light);
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition);
+}
+
+.mug-card:hover .card-image,
+.mug-card:focus-visible .card-image {
+  transform: scale(1.05);
+}
+
+/* Card body */
+.card-body {
+  padding: 0.9rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.card-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.card-price {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-top: auto;
+}
+
+/* ---- Loading / error messages ---- */
+.loading-message,
+.error-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--text-light);
+  padding: 3rem 1rem;
+}
+
+.error-message {
+  color: #c0392b;
+}
+
+/* ---- Detail overlay ---- */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(30, 57, 50, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.detail-overlay[hidden] {
+  display: none;
+}
+
+/* Prevent background scroll when modal is open */
+body.overlay-open {
+  overflow: hidden;
+}
+
+/* Detail panel */
+.detail-panel {
+  background-color: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-hover);
+  max-width: 560px;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  animation: panel-in var(--transition) both;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* Close button */
+.detail-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition);
+  z-index: 1;
+}
+
+.detail-close:hover,
+.detail-close:focus-visible {
+  background-color: #fff;
+  outline: 2px solid var(--green-dark);
+}
+
+/* Detail image */
+.detail-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background-color: var(--green-light);
+}
+
+/* Detail content */
+.detail-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.detail-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.detail-price {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.detail-description {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-light);
+}
+
+/* ---- Footer ---- */
+.site-footer {
+  background-color: var(--green-mid);
+  color: var(--green-light);
+  text-align: center;
+  padding: 1.25rem 1rem;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+/* ---- Responsive breakpoints ---- */
+
+/* Narrow phones: single column */
+@media (max-width: 360px) {
+  .mug-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mid-range phones: 2 columns */
+@media (min-width: 361px) and (max-width: 639px) {
+  .mug-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* Tablets and above: auto-fill kicks in naturally via minmax */
+@media (min-width: 640px) {
+  .site-main {
+    padding: 2.5rem 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-main {
+    padding: 3rem 2rem;
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "name": "Starbucks Classic White Mug",
+    "price": 14.95,
+    "description": "The iconic Starbucks white ceramic mug featuring the classic siren logo. Perfect for your morning coffee ritual at home.",
+    "imageUrl": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&h=400&fit=crop"
+  },
+  {
+    "id": 2,
+    "name": "Starbucks Reserve Black Mug",
+    "price": 19.95,
+    "description": "A bold matte black mug from the Starbucks Reserve collection. Elegant design with a comfortable handle for everyday use.",
+    "imageUrl": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop"
+  },
+  {
+    "id": 3,
+    "name": "Holiday Season Red Mug",
+    "price": 16.95,
+    "description": "Celebrate the season with this festive red mug adorned with holiday-themed Starbucks artwork. A collector's edition piece.",
+    "imageUrl": "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&h=400&fit=crop"
+  },
+  {
+    "id": 4,
+    "name": "City Edition Seattle Mug",
+    "price": 18.95,
+    "description": "Commemorate the birthplace of Starbucks with this Seattle city edition mug. Features iconic Seattle landmarks and the original store design.",
+    "imageUrl": "https://images.unsplash.com/photo-1511920170033-f8396924c348?w=400&h=400&fit=crop"
+  },
+  {
+    "id": 5,
+    "name": "Starbucks Ceramic Travel Mug",
+    "price": 24.95,
+    "description": "Take your coffee on the go with this double-walled ceramic travel mug. Keeps drinks hot for up to 2 hours with a secure lid.",
+    "imageUrl": "https://images.unsplash.com/photo-1521305916504-4a1121188589?w=400&h=400&fit=crop"
+  },
+  {
+    "id": 6,
+    "name": "Pike Place Market Mug",
+    "price": 17.95,
+    "description": "A tribute to the historic Pike Place Market where Starbucks was born. Hand-painted details capture the vibrant market atmosphere.",
+    "imageUrl": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop"
+  }
+]
