@@ -1,3 +1,11 @@
+Now I have a complete picture of the current state. Let me identify what's changed:
+
+- **app.js**: `createCard()` uses `innerHTML` (Risk 6 confirmed), no `onerror` on `<img>`, detail modal confirmed implemented. `openDetail()` sets detail image `.src` directly (safe). No focus trap in modal.
+- **style.css**: CSS Grid used for `.mug-grid` with no flex fallback, but three responsive breakpoints now present.
+- **mugs.json**: 4 of 6 records still have explicit "Starbucks" in names; descriptions also reference Starbucks.
+- **index.html**: Footer disclaimer present; `type="module"` confirmed on `app.js`.
+- **README.md**: Still only `# starbucks-mugs` — obstacle unresolved.
+
 # ROAM Analysis: starbucks-mugs-website
 
 **Feature Count:** 1
@@ -6,17 +14,19 @@
 
 ## Risks
 
-1. **Trademark and Intellectual Property Exposure** (High): Using Starbucks branding and product names without authorization may constitute trademark infringement. `mugs.json` mug names explicitly reference "Starbucks" (e.g., "Starbucks Classic White Mug", "Starbucks Reserve Black Mug"). A footer disclaimer is in place and images now source from Unsplash rather than Starbucks.com, which reduces — but does not eliminate — exposure. The Starbucks name in mug titles and the overall site branding remain the primary risk.
+1. **Trademark and Intellectual Property Exposure** (High): Using Starbucks branding and product names without authorization may constitute trademark infringement. `mugs.json` mug names explicitly reference "Starbucks" in 4 of 6 records (e.g., "Starbucks Classic White Mug", "Starbucks Reserve Black Mug"), and descriptions mention Starbucks throughout. A footer disclaimer is present ("Fan site. Not affiliated with Starbucks Corporation.") and images source from Unsplash rather than Starbucks.com, which reduces — but does not eliminate — exposure. The Starbucks name in mug titles and the overall site branding remain the primary risk.
 
-2. **Image URL Rot** (Medium): `mugs.json` references six Unsplash URLs with query-string transform parameters (`?w=400&h=400&fit=crop`). If Unsplash restructures its CDN, changes URL patterns, or images are removed, cards render broken with no fallback. No `onerror` handler is currently implemented in `createCard()`.
+2. **Image URL Rot** (Medium): `mugs.json` references six Unsplash URLs with query-string transform parameters (`?w=400&h=400&fit=crop`). If Unsplash restructures its CDN, changes URL patterns, or images are removed, cards render broken with no fallback. No `onerror` handler is currently implemented in `createCard()` (app.js:31) nor on the detail image populated in `openDetail()` (app.js:68–69).
 
-3. **`fetch()` and ES Module Blocked on `file://` Protocol** (Medium): `app.js` is loaded as `type="module"` and uses `fetch('mugs.json')`. Browsers block both ES module loading and fetch requests over the `file://` protocol. Opening `index.html` directly from the filesystem silently breaks all rendering. `README.md` currently contains only `# starbucks-mugs` with no dev server instructions, leaving contributors without a documented local setup path.
+3. **`fetch()` and ES Module Blocked on `file://` Protocol** (Medium): `app.js` is loaded as `type="module"` (index.html:41) and uses `fetch('mugs.json')`. Browsers block both ES module loading and fetch requests over the `file://` protocol. Opening `index.html` directly from the filesystem silently breaks all rendering. `README.md` still contains only `# starbucks-mugs` with no dev server instructions, leaving contributors without a documented local setup path.
 
-4. **CSS Grid Browser Coverage** (Low): No `display: flex; flex-wrap: wrap;` fallback is present in `style.css`.
+4. **CSS Grid Browser Coverage** (Very Low): No `display: flex; flex-wrap: wrap;` fallback precedes the Grid declaration in `style.css`. This risk is substantially reduced: three explicit responsive breakpoints now cover narrow phones (single column), mid-range phones (2 columns), and tablets+ (auto-fill). CSS Grid has near-universal browser support as of 2026. A flex fallback remains a best-practice hardening measure only.
 
 5. **Single Point of Failure in Hosting** (Low): GitHub Pages and Netlify free tiers impose bandwidth and build limits. A traffic spike could trigger rate limiting or temporary unavailability.
 
-6. **`innerHTML` XSS Surface** (Low): `createCard()` injects `mug.imageUrl` and `mug.name` via `innerHTML` without sanitization. Safe with static `mugs.json`, but creates an XSS vector if the data source ever changes.
+6. **`innerHTML` XSS Surface** (Low): `createCard()` injects `mug.imageUrl` and `mug.name` via template literals in `innerHTML` (app.js:29–37) without sanitization. Safe with static `mugs.json`, but creates an XSS vector if the data source ever changes. Note: `openDetail()` correctly uses `textContent` and direct property assignment — only `createCard()` is affected.
+
+7. **Modal Focus Trap Absent** (Low): The detail overlay uses `role="dialog"` and `aria-modal="true"` (index.html:25), and `openDetail()` correctly moves focus to the close button (app.js:75). However, no focus trap is implemented — keyboard users can tab past the close button into background content behind the overlay. This is a WCAG 2.1 AA violation and may affect keyboard and screen-reader users.
 
 ---
 
@@ -37,11 +47,11 @@
 
 ## Assumptions
 
-1. **Unsplash image URLs are stable.** Images now confirmed from Unsplash (not Starbucks.com), but remain external dependencies with CDN query parameters. *Validation: Monitor for 404s; migrate to `/images` self-hosting if breakage occurs.*
+1. **Unsplash image URLs are stable.** Images confirmed from Unsplash (not Starbucks.com), but remain external dependencies with CDN query parameters. *Validation: Monitor for 404s; migrate to `/images` self-hosting if breakage occurs.*
 
-2. **Footer disclaimer is sufficient for fan-site use.** Disclaimer ("Fan site. Not affiliated with Starbucks Corporation.") is implemented but brief. No legal review conducted. *Validation: Consider expanding disclaimer language before wide public promotion.*
+2. **Footer disclaimer is sufficient for fan-site use.** Disclaimer ("Fan site. Not affiliated with Starbucks Corporation.") is implemented. No legal review conducted. *Validation: Consider expanding disclaimer language and auditing mug name copy before wide public promotion.*
 
-3. **Detail view is a modal overlay on a single `index.html`.** *(Previously assumed query-param routing — superseded by implementation.)* `openDetail()` / `closeDetail()` control an overlay panel; no URL changes occur. *Status: Implemented and confirmed.*
+3. **Detail view is a modal overlay on a single `index.html`.** `openDetail()` / `closeDetail()` control an overlay panel; no URL changes occur. *Status: Implemented and confirmed.*
 
 4. **`mugs.json` will remain small enough that no pagination is needed.** 6 records currently; well within the ~10–30 target. *Status: Confirmed; revisit if collection exceeds 50.*
 
@@ -52,21 +62,23 @@
 ## Mitigations
 
 **Risk 1 — Trademark and IP Exposure**
-- Footer disclaimer is present — consider expanding to: "Unofficial fan site — not affiliated with or endorsed by Starbucks Corporation."
-- Audit `mugs.json` mug names; consider replacing explicit "Starbucks" prefixes with descriptive names where possible.
+- Footer disclaimer is present — consider expanding to: "Unofficial fan site — not affiliated with or endorsed by Starbucks Corporation. All trademarks belong to their respective owners."
+- Audit `mugs.json` mug names; consider replacing explicit "Starbucks" prefixes with descriptive names where possible (e.g., "Classic White Ceramic Mug").
 - Confirm Unsplash image licensing covers non-commercial fan-site use.
 
 **Risk 2 — Image URL Rot**
-- Add an `onerror` handler on `<img>` inside `createCard()` to swap in a local placeholder (`images/placeholder.png`) on load failure.
+- Add an `onerror` handler on `<img>` inside `createCard()` (app.js:31) to swap in a local placeholder (`images/placeholder.png`) on load failure.
+- Add the same fallback to the detail image populated in `openDetail()` (app.js:68).
 - Consider migrating images to a `/images` folder in the repository to eliminate the external URL dependency.
 
 **Risk 3 — `fetch()` and ES Module Blocked on `file://`**
 - Document the required dev server command in `README.md` (e.g., `npx serve .` or `python -m http.server 8080`) as a mandatory setup step.
-- Note that `app.js` is an ES module and requires an HTTP origin for both module loading and `fetch()`.
+- Note that `app.js` is an ES module (`type="module"`) and requires an HTTP origin for both module loading and `fetch()`.
 
 **Risk 4 — CSS Grid Browser Coverage**
-- Test on current Chrome, Firefox, Safari, and Edge before marking the feature complete.
-- Add `display: flex; flex-wrap: wrap;` fallback ahead of the Grid declaration in `style.css`.
+- Existing responsive breakpoints in `style.css` already handle narrow and mid-range phone layouts explicitly.
+- Optionally add `display: flex; flex-wrap: wrap;` fallback ahead of the Grid declaration for belt-and-suspenders coverage on legacy browsers.
+- Cross-browser smoke test on current Chrome, Firefox, Safari, and Edge before final release.
 
 **Risk 5 — Hosting Single Point of Failure**
 - Enable Netlify's free CDN caching to absorb traffic spikes.
@@ -74,4 +86,8 @@
 
 **Risk 6 — `innerHTML` XSS Surface**
 - No action required for the current static implementation.
-- If the data source ever changes, refactor `createCard()` to use `document.createElement` and set properties directly rather than `innerHTML`.
+- If the data source ever changes, refactor `createCard()` to use `document.createElement` and set properties directly rather than `innerHTML`, consistent with how `openDetail()` is already implemented.
+
+**Risk 7 — Modal Focus Trap Absent**
+- Implement a focus trap in `openDetail()`: capture Tab and Shift+Tab keydown events to cycle focus within the overlay's focusable elements.
+- On close, restore focus to the card that triggered the overlay (store a reference to `document.activeElement` before opening).
