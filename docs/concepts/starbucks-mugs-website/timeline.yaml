@@ -1,14 +1,14 @@
 # Project Timeline
 
 metadata:
-  generated: 2026-02-19T17:11:13Z
+  generated: 2026-02-23T19:48:27Z
   totalSprints: 1
   totalDuration: 7 days
 
 sprints:
   - number: 1
-    startDate: 2026-02-19
-    endDate: 2026-02-26
+    startDate: 2026-02-23
+    endDate: 2026-03-02
     duration: 7 days
     features:
       - id: starbucks-mugs-website-feat-main
