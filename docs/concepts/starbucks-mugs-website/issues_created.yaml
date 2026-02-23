@@ -1,12 +1,12 @@
-GeneratedAt: "2026-02-19T18:45:23Z"
+GeneratedAt: "2026-02-23T19:49:09Z"
 Issues:
-- IssueNumber: 2
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/2
+- IssueNumber: 9
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/9
   TaskID: task-starbucks-mugs-website-feat-main-1
-- IssueNumber: 3
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/3
+- IssueNumber: 10
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/10
   TaskID: task-starbucks-mugs-website-feat-main-2
-- IssueNumber: 4
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/4
+- IssueNumber: 11
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/11
   TaskID: task-starbucks-mugs-website-feat-main-3
 Plan: starbucks-mugs-website-plan
