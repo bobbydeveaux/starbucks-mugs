@@ -1,11 +1,3 @@
-Now I have a complete picture of the current state. Let me identify what's changed:
-
-- **app.js**: `createCard()` uses `innerHTML` (Risk 6 confirmed), no `onerror` on `<img>`, detail modal confirmed implemented. `openDetail()` sets detail image `.src` directly (safe). No focus trap in modal.
-- **style.css**: CSS Grid used for `.mug-grid` with no flex fallback, but three responsive breakpoints now present.
-- **mugs.json**: 4 of 6 records still have explicit "Starbucks" in names; descriptions also reference Starbucks.
-- **index.html**: Footer disclaimer present; `type="module"` confirmed on `app.js`.
-- **README.md**: Still only `# starbucks-mugs` — obstacle unresolved.
-
 # ROAM Analysis: starbucks-mugs-website
 
 **Feature Count:** 1
@@ -14,7 +6,7 @@ Now I have a complete picture of the current state. Let me identify what's chang
 
 ## Risks
 
-1. **Trademark and Intellectual Property Exposure** (High): Using Starbucks branding and product names without authorization may constitute trademark infringement. `mugs.json` mug names explicitly reference "Starbucks" in 4 of 6 records (e.g., "Starbucks Classic White Mug", "Starbucks Reserve Black Mug"), and descriptions mention Starbucks throughout. A footer disclaimer is present ("Fan site. Not affiliated with Starbucks Corporation.") and images source from Unsplash rather than Starbucks.com, which reduces — but does not eliminate — exposure. The Starbucks name in mug titles and the overall site branding remain the primary risk.
+1. **Trademark and Intellectual Property Exposure** (High): Using Starbucks branding and product names without authorization may constitute trademark infringement. `mugs.json` mug names explicitly reference "Starbucks" in 4 of 6 records (e.g., "Starbucks Classic White Mug", "Starbucks Reserve Black Mug"), and descriptions mention Starbucks throughout. The page `<title>` and any visible `<h1>` headings should also be audited — site-level branding carries the same exposure as individual mug names. A footer disclaimer is present ("Fan site. Not affiliated with Starbucks Corporation.") and images source from Unsplash rather than Starbucks.com, which reduces — but does not eliminate — exposure.
 
 2. **Image URL Rot** (Medium): `mugs.json` references six Unsplash URLs with query-string transform parameters (`?w=400&h=400&fit=crop`). If Unsplash restructures its CDN, changes URL patterns, or images are removed, cards render broken with no fallback. No `onerror` handler is currently implemented in `createCard()` (app.js:31) nor on the detail image populated in `openDetail()` (app.js:68–69).
 
@@ -42,6 +34,7 @@ Now I have a complete picture of the current state. Let me identify what's chang
 ## Obstacles
 
 - **No dev server documented:** `README.md` is still `# starbucks-mugs` only. Both `fetch()` and `type="module"` require an HTTP origin. This must be documented before onboarding contributors.
+- **Test plan not implemented:** The LLD specifies unit tests for `createCard()`, integration tests for `loadMugs()`, and an E2E assertion on grid visibility. No test files or test infrastructure exist in the repository (`index.html`, `style.css`, `app.js`, `mugs.json` only). Tests must be written before the site can be considered release-validated.
 
 ---
 
@@ -49,7 +42,7 @@ Now I have a complete picture of the current state. Let me identify what's chang
 
 1. **Unsplash image URLs are stable.** Images confirmed from Unsplash (not Starbucks.com), but remain external dependencies with CDN query parameters. *Validation: Monitor for 404s; migrate to `/images` self-hosting if breakage occurs.*
 
-2. **Footer disclaimer is sufficient for fan-site use.** Disclaimer ("Fan site. Not affiliated with Starbucks Corporation.") is implemented. No legal review conducted. *Validation: Consider expanding disclaimer language and auditing mug name copy before wide public promotion.*
+2. **Footer disclaimer is sufficient for fan-site use.** Disclaimer ("Fan site. Not affiliated with Starbucks Corporation.") is implemented. No legal review conducted. *Validation: Consider expanding disclaimer language and auditing mug name copy — including page title and headings — before wide public promotion.*
 
 3. **Detail view is a modal overlay on a single `index.html`.** `openDetail()` / `closeDetail()` control an overlay panel; no URL changes occur. *Status: Implemented and confirmed.*
 
@@ -57,13 +50,15 @@ Now I have a complete picture of the current state. Let me identify what's chang
 
 5. **Developers will use a local HTTP server during development.** *Validation: Not yet documented in `README.md` — still outstanding.*
 
+6. **No automated tests are required for initial release.** The LLD test plan exists as documentation but no test runner, framework, or test files have been provisioned. *Validation: Confirm with team whether pre-release testing is manual only or if a lightweight framework (e.g., Playwright for E2E) should be added.*
+
 ---
 
 ## Mitigations
 
 **Risk 1 — Trademark and IP Exposure**
 - Footer disclaimer is present — consider expanding to: "Unofficial fan site — not affiliated with or endorsed by Starbucks Corporation. All trademarks belong to their respective owners."
-- Audit `mugs.json` mug names; consider replacing explicit "Starbucks" prefixes with descriptive names where possible (e.g., "Classic White Ceramic Mug").
+- Audit all visible branding: `mugs.json` mug names and descriptions, the page `<title>` tag, and any `<h1>` / site header text. Replace explicit "Starbucks" prefixes with descriptive names where possible (e.g., "Classic White Ceramic Mug").
 - Confirm Unsplash image licensing covers non-commercial fan-site use.
 
 **Risk 2 — Image URL Rot**
@@ -91,3 +86,14 @@ Now I have a complete picture of the current state. Let me identify what's chang
 **Risk 7 — Modal Focus Trap Absent**
 - Implement a focus trap in `openDetail()`: capture Tab and Shift+Tab keydown events to cycle focus within the overlay's focusable elements.
 - On close, restore focus to the card that triggered the overlay (store a reference to `document.activeElement` before opening).
+
+---
+
+**Changes made vs. prior version:**
+
+- Removed the implementation-state notes that were prepended to the file (those belong in a review log, not the ROAM document itself).
+- **Risk 1**: Extended scope to include `<title>` and `<h1>` headings as trademark exposure surfaces, not just `mugs.json` content.
+- **Assumption #2**: Aligned with Risk 1 expansion — now explicitly calls out page title and headings in the validation note.
+- **Risk 1 mitigation**: Audit scope updated to cover all visible branding (title, headings, data file).
+- **Obstacles**: Added "Test plan not implemented" — the LLD documents unit/integration/E2E tests but no test infrastructure exists in the file tree.
+- **Assumption #6**: Added to capture the open question of whether automated testing is expected before release.
