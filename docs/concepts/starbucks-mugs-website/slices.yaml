@@ -6,4 +6,4 @@ sprints:
       - id: starbucks-mugs-website-feat-main
         name: Static Mug Browsing Site
         type: feature
-        files: [index.html style.css app.js mugs.json]
+        files: [index.html style.css app.js mugs.json package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]

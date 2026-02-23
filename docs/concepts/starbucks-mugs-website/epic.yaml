@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: 'Build the complete static website: a homepage grid of mug cards
       rendered from mugs.json via fetch, with responsive CSS layout and a detail view
       per mug.'
@@ -14,6 +15,6 @@ Epics:
     name: Static Mug Browsing Site
     project: website
     type: feature
-  id: starbucks-mugs-website-epic-main
-  name: Starbucks Mugs Website
+  ID: starbucks-mugs-website-epic-main
+  Name: Starbucks Mugs Website
 Version: v1alpha1
