@@ -1,0 +1,28 @@
+{
+  "prTitle": "feat: scaffold Vite + React 18 + TypeScript project for costa-vs-starbucks",
+  "prBody": "## Summary\n\n- Initialised `costa-vs-starbucks/` as a standalone Vite 5 + React 18 + TypeScript SPA\n- Configured `vite.config.ts` with `@vitejs/plugin-react`, path aliases (`@/` → `src/`), and Vitest settings\n- Configured `tsconfig.json` with strict TypeScript settings, `noEmit`, `bundler` module resolution, and `@/*` path alias\n- Installed runtime dependencies: `react@^18.3.1`, `react-dom@^18.3.1`, `recharts@^2.12.7`\n- Installed dev dependencies: `typescript`, `@vitejs/plugin-react`, `tailwindcss`, `postcss`, `autoprefixer`, `vitest`, `jsdom`, `@playwright/test`, `eslint` + TypeScript ESLint plugins\n- Added `tailwind.config.ts` with brand colour tokens: `starbucks` (`#00704A`) and `costa` (`#6B1E1E`)\n- Added minimal `App.tsx` shell referencing brand colour classes\n- Wired Tailwind directives into `src/index.css`\n- `npm run build` produces a clean `dist/` bundle (46 kB gzipped, under 150 kB budget)\n- `npm run lint` passes with zero warnings\n- `npm run test` passes (no tests yet; `passWithNoTests: true` configured)\n\n**Review feedback addressed**: The blocking `mugs.json` `price_usd` / versioned envelope issue was already resolved in the previous commit; this PR introduces the greenfield `costa-vs-starbucks` project scaffold.\n\nCloses #39",
+  "testsPass": true,
+  "filesChanged": [
+    "costa-vs-starbucks/.eslintrc.cjs",
+    "costa-vs-starbucks/.gitignore",
+    "costa-vs-starbucks/index.html",
+    "costa-vs-starbucks/package.json",
+    "costa-vs-starbucks/package-lock.json",
+    "costa-vs-starbucks/postcss.config.js",
+    "costa-vs-starbucks/src/App.tsx",
+    "costa-vs-starbucks/src/index.css",
+    "costa-vs-starbucks/src/main.tsx",
+    "costa-vs-starbucks/tailwind.config.ts",
+    "costa-vs-starbucks/tsconfig.json",
+    "costa-vs-starbucks/tsconfig.node.json",
+    "costa-vs-starbucks/vite.config.ts"
+  ],
+  "docsUpdated": [],
+  "docsReviewed": [
+    "docs/concepts/costa-vs-starbucks/HLD.md",
+    "docs/concepts/costa-vs-starbucks/LLD.md",
+    "docs/concepts/costa-vs-starbucks/PRD.md",
+    "docs/concepts/costa-vs-starbucks/tasks.yaml"
+  ],
+  "completedTasks": [1]
+}
