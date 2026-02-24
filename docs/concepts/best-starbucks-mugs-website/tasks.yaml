@@ -1,62 +1,22 @@
-GeneratedAt: "2026-02-24T10:01:32Z"
+GeneratedAt: "2026-02-24T13:33:05Z"
 Plan: best-starbucks-mugs-website-plan
 Sprints:
-- Features:
-  - FeatureID: best-starbucks-mugs-website-feat-catalog-data
-    FeatureTitle: Expanded Mug Catalog Data
-    Tasks:
-    - AcceptanceCriteria:
-      - 'mugs.json root is { version: ''1.0'', mugs: [...] } and validates as valid
-        JSON'
-      - 'All entries have price_usd (no price field remains) and required fields:
-        id, name, series, year, region, price_usd, description, image, tags'
-      - Catalog contains 50 or more entries distributed across the seven named series
-      AgentType: frontend-engineer
-      Dependencies: []
-      Description: Restructure mugs.json root from a bare array to { version, mugs[]
-        }, rename price to price_usd on all existing entries, and add series/year/region/edition/material/capacity_oz/tags
-        fields. Expand catalog from 6 to 50+ entries spanning City, Holiday, You Are
-        Here, Reserve, Siren, Anniversary, and Dot Collection series.
-      EstimatedEffort: M
-      Files:
-      - mugs.json
-      ID: task-best-starbucks-mugs-website-feat-catalog-data-1
-      Title: Expand mugs.json to versioned envelope schema with 50+ entries
-    - AcceptanceCriteria:
-      - loadMugs() returns a consistent { version, mugs } object whether mugs.json
-        uses the new envelope or legacy bare array
-      - Mug cards display prices correctly using price_usd; no references to mug.price
-        remain in app.js
-      - Network failure and HTTP error paths still render the existing grid-error
-        message
-      AgentType: frontend-engineer
-      Dependencies:
-      - task-best-starbucks-mugs-website-feat-catalog-data-1
-      Description: Update loadMugs() to parse the new { version, mugs[] } envelope
-        with a legacy bare-array fallback. Update all app.js references from mug.price
-        to mug.price_usd so price display remains correct.
-      EstimatedEffort: S
-      Files:
-      - app.js
-      ID: task-best-starbucks-mugs-website-feat-catalog-data-2
-      Title: Update app.js loadMugs() to handle versioned envelope and price_usd rename
-  Sprint: 1
 - Features:
   - FeatureID: best-starbucks-mugs-website-feat-filter-search
     FeatureTitle: Filter Bar & Search Engine
     Tasks:
     - AcceptanceCriteria:
-      - '#filter-bar section renders visibly above the mug grid with all controls
-        present'
-      - '#results-count element has aria-live=''polite'' and aria-atomic=''true''
-        attributes'
-      - Filter bar is responsive and styled consistently with the existing site design
+      - Filter bar section renders above the mug grid with all specified controls
+        (search, series select, year min/max, reset button)
+      - Results count paragraph with aria-live polite is present below the filter
+        bar
+      - Filter bar is styled and visually coherent with the existing site design
       AgentType: frontend-engineer
       Dependencies: []
       Description: 'Insert the #filter-bar section into index.html between the header
-        and main content, including search input, series dropdown, year-range inputs,
-        reset button, and results-count paragraph. Add corresponding filter bar, empty-state,
-        and results count styles to style.css.'
+        and main, including search input, series dropdown, year-range inputs, reset
+        button, and results-count paragraph. Add corresponding CSS for the filter
+        bar layout, empty-state, and placeholder styles to style.css.'
       EstimatedEffort: S
       Files:
       - index.html
@@ -64,25 +24,71 @@ Sprints:
       ID: task-best-starbucks-mugs-website-feat-filter-search-1
       Title: Add filter bar HTML and CSS
     - AcceptanceCriteria:
-      - filterMugs() correctly filters by case-insensitive query substring across
-        name/series/region/tags, exact series match, and inclusive year range
-      - Search input uses debounced applyFilters (200ms); select and number inputs
-        call applyFilters directly
-      - Series dropdown is populated dynamically from loaded mug data with an 'All
-        Series' default option
-      - Results count displays filtered vs total count and updates on every filter
-        change; reset button restores all mugs
+      - filterMugs() correctly AND-combines query substring match (name/series/region/tags),
+        exact series equality, and inclusive year-range filtering
+      - Typing in search input debounces at 200ms; series and year inputs trigger
+        applyFilters immediately; reset button clears all filter state and re-renders
+        full catalog
+      - Series dropdown is populated dynamically from the loaded catalog with no duplicate
+        values
+      - Results count text updates on every filter change and reflects filtered vs
+        total count
       AgentType: frontend-engineer
       Dependencies:
       - task-best-starbucks-mugs-website-feat-filter-search-1
-      Description: Add allMugs and filterState module-level state, implement filterMugs()
-        as a pure function with AND-combined query/series/year-range matching, implement
-        debounce() utility, and implement applyFilters(), populateSeriesFilter(),
-        and updateResultsCount(). Update loadMugs() to handle versioned envelope with
-        legacy-array fallback. Wire all filter control event listeners.
+      Description: Add module-level allMugs and filterState variables. Implement filterMugs()
+        (pure function with AND-combined query/series/year-range matching), debounce()
+        utility, applyFilters(), populateSeriesFilter(), and updateResultsCount().
+        Update loadMugs() to populate allMugs, call populateSeriesFilter, and wire
+        search (debounced), select, number inputs, and reset button to applyFilters.
+        Add tests for filterMugs() and debounce() in app.test.js.
       EstimatedEffort: M
       Files:
       - app.js
+      - app.test.js
       ID: task-best-starbucks-mugs-website-feat-filter-search-2
-      Title: Implement filter engine and wire up controls in app.js
+      Title: Implement filter engine and wire up events in app.js
   Sprint: 2
+- Features:
+  - FeatureID: best-starbucks-mugs-website-feat-modal-image
+    FeatureTitle: Enhanced Modal & Image Fallback
+    Tasks:
+    - AcceptanceCriteria:
+      - images/placeholder.svg exists and renders a recognizable cup silhouette at
+        ~400 bytes
+      - Cards with broken image src display placeholder.svg instead of a broken image
+        icon
+      - Modal opened for a mug with missing image also displays placeholder.svg
+      - onerror handler sets img.onerror = null to prevent infinite fallback loops
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create images/placeholder.svg as a ~400-byte inline SVG cup silhouette.
+        Add img.onerror handlers in both createCard and openModal in app.js so any
+        missing image falls back to images/placeholder.svg without infinite loops.
+      EstimatedEffort: S
+      Files:
+      - images/placeholder.svg
+      - app.js
+      ID: task-best-starbucks-mugs-website-feat-modal-image-1
+      Title: Add placeholder SVG and image onerror fallback
+    - AcceptanceCriteria:
+      - Modal displays series, year, region, edition, material, capacity_oz, price_usd,
+        and tags for every mug entry
+      - Fields with missing/undefined values are omitted or shown as a dash rather
+        than 'undefined'
+      - Modal detail layout is visually structured (labels aligned, tags displayed
+        as chips or comma-separated)
+      - No existing modal functionality (close button, image display) is broken
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Update openModal in app.js to render all metadata fields (series,
+        year, region, edition, material, capacity_oz, price_usd, tags) in a structured
+        definition-list or grid layout. Add corresponding CSS in style.css for the
+        modal detail section so fields are clearly labeled and readable.
+      EstimatedEffort: S
+      Files:
+      - app.js
+      - style.css
+      ID: task-best-starbucks-mugs-website-feat-modal-image-2
+      Title: Expand modal metadata layout with all fields and styles
+  Sprint: 3
