@@ -1,10 +1,10 @@
 {
-  "prNumber": 88,
+  "prNumber": 107,
   "baseBranch": "main",
-  "headBranch": "feature/25-best-starbucks-mugs-website-sprint-2-issue-25",
+  "headBranch": "feature/75-ferrari-vs-lambo-website-sprint-2-issue-75",
   "conflictedFiles": [
-    ".claude-output.json",
-    "style.css"
+    "src/hooks/useComparison.test.ts",
+    "src/hooks/useComparison.ts"
   ],
   "conflictCount": 2
 }
