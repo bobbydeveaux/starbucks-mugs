@@ -71,6 +71,45 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## Utilities
+
+### filterDrinks
+
+**File:** `src/utils/filterDrinks.ts`
+
+Pure utility function that filters a drinks array by category and/or search query. Consumed by `useDrinks` to apply the active `FilterState`.
+
+#### Signature
+
+```typescript
+function filterDrinks(
+  drinks: Drink[],
+  category: Category | 'all',
+  query: string,
+): Drink[]
+```
+
+#### Behaviour
+
+| Scenario | Result |
+|----------|--------|
+| `category === 'all'`, empty query | All drinks returned unchanged |
+| Specific category | Only drinks with that `category` value |
+| Non-empty query | Case-insensitive substring match on `drink.name`; leading/trailing whitespace trimmed |
+| Both category and query active | AND logic — must satisfy both conditions |
+| Empty input array | Empty array returned without errors |
+
+#### Example
+
+```typescript
+import { filterDrinks } from '../utils/filterDrinks';
+
+// Only hot drinks whose name contains "flat" (case-insensitive)
+const result = filterDrinks(allDrinks, 'hot', 'flat');
+```
+
+---
+
 ## FilterBar
 
 **File:** `src/components/FilterBar.tsx`
