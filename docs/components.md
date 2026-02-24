@@ -1,6 +1,6 @@
-# Costa vs Starbucks — React Components
+# React Components
 
-This document describes the React components that form the Costa vs Starbucks drink comparison UI.
+This document describes the React components that power the Costa vs Starbucks and Ferrari vs Lamborghini comparison UIs.
 
 ## DrinkCard
 
@@ -93,8 +93,96 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 |------|-------------|
 | `CarBrand` | `'ferrari' \| 'lamborghini'` |
 | `CarSpecs` | `{ hp, torqueLbFt, zeroToSixtyMs, topSpeedMph, engineConfig }` |
-| `CarModel` | Full car entity: id, brand, model, year, decade, imageUrl, price?, specs, eraRivals |
+| `CarModel` | Full car entity: id, brand, model, year, decade, image, price?, specs, eraRivals |
 | `CarCatalogEnvelope` | Root JSON structure for each brand's car data file |
 | `CatalogFilters` | `{ decade?: number; search?: string }` — used by `useCarCatalog` |
 | `ComparisonStat` | Per-stat winner annotation: `{ label, ferrariValue, lamboValue, winner }` |
 | `CarComparisonState` | `{ ferrari: CarModel \| null; lamborghini: CarModel \| null }` |
+
+---
+
+## ComparisonView
+
+**File:** `src/components/ComparisonView.tsx`
+
+Side-by-side stat comparison panel for a selected Ferrari and Lamborghini model.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `ferrari` | `CarModel \| null` | Selected Ferrari (or `null`) |
+| `lambo` | `CarModel \| null` | Selected Lamborghini (or `null`) |
+| `winners` | `ComparisonStat[]` | Per-stat winner annotations produced by `useComparison` |
+| `eraRivalSuggestion` | `CarModel \| null \| undefined` | Optional era-rival hint shown beneath the panel |
+
+### Features
+
+- Brand-coloured top border (Ferrari red `#DC143C` / Lamborghini yellow `#FFC72C`)
+- Car image with year + model name header per column
+- Stat table with winning value highlighted in the correct brand colour per row
+- Winner indicator arrow (▲) displayed next to the stat label
+- Era-rival suggestion footer when `eraRivalSuggestion` is provided
+- Clean empty-state message when neither car is selected
+
+### Usage
+
+```tsx
+<ComparisonView
+  ferrari={selectedFerrari}
+  lambo={selectedLambo}
+  winners={winners}
+  eraRivalSuggestion={suggestion}
+/>
+```
+
+---
+
+## Ferrari vs Lamborghini — Hooks
+
+### useComparison
+
+**File:** `src/hooks/useComparison.ts`
+
+Manages which Ferrari and Lamborghini are selected for comparison and derives per-stat winner annotations.
+
+| Return value | Type | Description |
+|---|---|---|
+| `selectedFerrari` | `CarModel \| null` | Currently selected Ferrari |
+| `selectedLambo` | `CarModel \| null` | Currently selected Lamborghini |
+| `setSelectedFerrari` | `(car: CarModel \| null) => void` | Setter for Ferrari selection |
+| `setSelectedLambo` | `(car: CarModel \| null) => void` | Setter for Lamborghini selection |
+| `winners` | `ComparisonStat[]` | Stat comparison results; empty when fewer than two cars selected |
+
+Stats compared: Horsepower (higher wins), Torque (higher wins), 0–60 mph (lower wins), Top Speed (higher wins).
+
+### useCarCatalog
+
+**File:** `src/hooks/useCarCatalog.ts`
+
+Fetches both brand JSON catalogs in parallel and returns chronologically sorted car arrays, mirroring the `useDrinks` pattern.
+
+| Return value | Type | Description |
+|---|---|---|
+| `ferrariCars` | `CarModel[]` | All Ferrari models, sorted by year ascending |
+| `lamboCars` | `CarModel[]` | All Lamborghini models, sorted by year ascending |
+| `loading` | `boolean` | True while JSON fetch is in flight |
+| `error` | `string \| null` | Non-null on fetch failure |
+
+---
+
+## Ferrari vs Lamborghini — Utilities
+
+### eraMatchSuggestion
+
+**File:** `src/utils/eraMatchSuggestion.ts`
+
+Pure function that pairs a selected car with its closest-year era rival using the `eraRivals` id list embedded in the JSON catalog.
+
+```ts
+eraMatchSuggestion(selected: CarModel, opponentCatalog: CarModel[]): CarModel | null
+```
+
+- Filters `opponentCatalog` to only the IDs listed in `selected.eraRivals`
+- Returns the candidate whose year is closest to `selected.year`
+- Returns `null` when `eraRivals` is empty, the catalog is empty, or no rival IDs are found

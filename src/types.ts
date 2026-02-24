@@ -114,7 +114,7 @@ export interface CarModel {
   /** Decade the model belongs to (year rounded down to nearest 10), e.g. 1980 */
   decade: number;
   /** Path to the car image relative to the public root, e.g. "/images/ferrari/testarossa.jpg" */
-  imageUrl: string;
+  image: string;
   /** Approximate base price in USD at time of launch (optional) */
   price?: number;
   specs: CarSpecs;
