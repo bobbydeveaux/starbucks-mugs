@@ -1,0 +1,103 @@
+Epics:
+- features:
+  - dependencies: []
+    description: 'Initialise Vite + React 18 + TypeScript project with Tailwind CSS
+      (custom brand tokens for Starbucks green #00704A and Costa red #6B1E1E), Recharts,
+      and GitHub Actions CI pipeline covering lint, type-check, build, Lighthouse
+      CI, and Netlify deploy. Include netlify.toml with CSP headers.'
+    estimatedComplexity: low
+    files:
+    - vite.config.ts
+    - tailwind.config.ts
+    - index.html
+    - src/main.tsx
+    - .github/workflows/ci.yml
+    - netlify.toml
+    id: costa-vs-starbucks-feat-project-setup
+    name: Project Scaffolding
+    project: website
+    type: enabler
+  - dependencies:
+    - costa-vs-starbucks-feat-project-setup
+    description: Define shared TypeScript types (Drink, Brand, Category, ComparisonState,
+      FilterState) in src/types.ts. Populate static JSON files for 30+ Starbucks and
+      30+ Costa drinks with full nutritional fields (calories_kcal, sugar_g, fat_g,
+      protein_g, caffeine_mg, size_ml). Implement useDrinks hook that fetches both
+      JSON files in parallel via Promise.all and exposes filtered and searched drink
+      lists.
+    estimatedComplexity: medium
+    files:
+    - src/types.ts
+    - src/hooks/useDrinks.ts
+    - public/data/starbucks.json
+    - public/data/costa.json
+    id: costa-vs-starbucks-feat-data-layer
+    name: Drink Data Layer
+    project: website
+    type: enabler
+  id: costa-vs-starbucks-epic-foundation
+  name: Foundation
+- features:
+  - dependencies:
+    - costa-vs-starbucks-feat-data-layer
+    description: Implement DrinkCard displaying drink name, category badge, brand-coloured
+      border, and a Select to Compare CTA. Implement DrinkCatalog rendering a responsive
+      grid of cards for both brands with brand section headers and selected state
+      highlight. Wire handleSelect handlers in App.tsx.
+    estimatedComplexity: medium
+    files:
+    - src/components/DrinkCard.tsx
+    - src/components/DrinkCatalog.tsx
+    - src/App.tsx
+    id: costa-vs-starbucks-feat-drink-cards
+    name: Drink Card Grid
+    project: website
+    type: feature
+  - dependencies:
+    - costa-vs-starbucks-feat-drink-cards
+    description: Implement FilterBar with Hot, Iced, Blended, Tea, Other, and All
+      toggle buttons and SearchBox with instant client-side search by drink name.
+      Both applied simultaneously across both brands. Implement filterDrinks utility
+      consumed by useDrinks.
+    estimatedComplexity: low
+    files:
+    - src/components/FilterBar.tsx
+    - src/components/SearchBox.tsx
+    - src/utils/filterDrinks.ts
+    id: costa-vs-starbucks-feat-filter-search
+    name: Category Filter and Search
+    project: website
+    type: feature
+  id: costa-vs-starbucks-epic-drink-catalog
+  name: Drink Catalog
+- features:
+  - dependencies:
+    - costa-vs-starbucks-feat-drink-cards
+    description: Implement ComparisonPanel displaying two selected drinks (one per
+      brand) with all nutritional fields in a side-by-side layout. Includes same-brand
+      duplicate selection guard, clear/reset action, and getNutritionRows utility
+      to produce labelled row data for rendering.
+    estimatedComplexity: medium
+    files:
+    - src/components/ComparisonPanel.tsx
+    - src/utils/getNutritionRows.ts
+    id: costa-vs-starbucks-feat-comparison-panel
+    name: Side-by-Side Comparison Panel
+    project: website
+    type: feature
+  - dependencies:
+    - costa-vs-starbucks-feat-comparison-panel
+    description: Implement NutritionBar component rendering a proportional horizontal
+      bar per nutrient scaled relative to the higher of the two compared values, using
+      Recharts BarChart. Integrated within ComparisonPanel for each nutrition row
+      to provide instant at-a-glance comparison.
+    estimatedComplexity: low
+    files:
+    - src/components/NutritionBar.tsx
+    id: costa-vs-starbucks-feat-nutrition-bars
+    name: Visual Nutrition Bars
+    project: website
+    type: feature
+  id: costa-vs-starbucks-epic-comparison
+  name: Drink Comparison Experience
+Version: v1alpha1
