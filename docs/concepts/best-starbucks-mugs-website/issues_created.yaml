@@ -1,15 +1,15 @@
-GeneratedAt: "2026-02-24T10:01:46Z"
+GeneratedAt: "2026-02-24T13:33:18Z"
 Issues:
-- IssueNumber: 22
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/22
-  TaskID: task-best-starbucks-mugs-website-feat-catalog-data-1
-- IssueNumber: 23
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/23
-  TaskID: task-best-starbucks-mugs-website-feat-catalog-data-2
-- IssueNumber: 24
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/24
+- IssueNumber: 29
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/29
   TaskID: task-best-starbucks-mugs-website-feat-filter-search-1
-- IssueNumber: 25
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/25
+- IssueNumber: 30
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/30
   TaskID: task-best-starbucks-mugs-website-feat-filter-search-2
+- IssueNumber: 31
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/31
+  TaskID: task-best-starbucks-mugs-website-feat-modal-image-1
+- IssueNumber: 32
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/32
+  TaskID: task-best-starbucks-mugs-website-feat-modal-image-2
 Plan: best-starbucks-mugs-website-plan
