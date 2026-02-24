@@ -10,13 +10,13 @@ const BRAND_STYLES: Record<string, { border: string; badge: string; button: stri
   ferrari: {
     border: 'border-ferrari-red',
     badge: 'bg-red-100 text-ferrari-red',
-    button: 'bg-ferrari-red hover:bg-red-700 text-white',
+    button: 'bg-ferrari-red hover:bg-red-700 text-white focus:ring-ferrari-red',
     selectedRing: 'ring-2 ring-ferrari-red ring-offset-2',
   },
   lamborghini: {
     border: 'border-lambo-yellow',
     badge: 'bg-yellow-100 text-yellow-800',
-    button: 'bg-lambo-yellow hover:bg-yellow-400 text-gray-900',
+    button: 'bg-lambo-yellow hover:bg-yellow-400 text-gray-900 focus:ring-lambo-yellow',
     selectedRing: 'ring-2 ring-lambo-yellow ring-offset-2',
   },
 };

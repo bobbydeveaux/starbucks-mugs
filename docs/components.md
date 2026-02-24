@@ -1,6 +1,6 @@
-# Costa vs Starbucks — React Components
+# React Components
 
-This document describes the React components that form the Costa vs Starbucks drink comparison UI.
+This document describes the React components and hooks for both the Costa vs Starbucks drink comparison and the Ferrari vs Lamborghini car catalog.
 
 ## DrinkCard
 
