@@ -1,12 +1,18 @@
 {
-  "prNumber": 54,
+  "prNumber": 55,
   "baseBranch": "main",
-  "headBranch": "feature/45-costa-vs-starbucks-sprint-1-issue-45",
+  "headBranch": "feature/40-costa-vs-starbucks-sprint-1-issue-40",
   "conflictedFiles": [
+    ".gitignore",
     "package-lock.json",
     "package.json",
-    "src/types.ts",
-    "tsconfig.json"
+    "src/App.tsx",
+    "src/index.css",
+    "src/main.tsx",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "vite.config.ts"
   ],
-  "conflictCount": 4
+  "conflictCount": 10
 }
