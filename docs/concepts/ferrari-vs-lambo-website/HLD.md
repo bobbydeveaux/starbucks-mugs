@@ -58,8 +58,8 @@ interface CarModel {
 ```
 
 **Data files:**
-- `src/data/ferrari.json` — array of `CarModel[]`
-- `src/data/lamborghini.json` — array of `CarModel[]`
+- `public/data/ferrari.json` — array of `CarModel[]`
+- `public/data/lamborghini.json` — array of `CarModel[]`
 
 Both follow the same envelope pattern as the existing `useDrinks` hook data.
 
