@@ -1,42 +1,18 @@
-GeneratedAt: "2026-02-24T16:21:20Z"
+GeneratedAt: "2026-02-24T17:31:21Z"
 Issues:
-- IssueNumber: 39
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/39
-  TaskID: task-costa-vs-starbucks-feat-project-setup-1
-- IssueNumber: 40
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/40
-  TaskID: task-costa-vs-starbucks-feat-project-setup-2
-- IssueNumber: 41
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/41
-  TaskID: task-costa-vs-starbucks-feat-project-setup-3
-- IssueNumber: 42
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/42
-  TaskID: task-costa-vs-starbucks-feat-data-layer-1
-- IssueNumber: 43
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/43
-  TaskID: task-costa-vs-starbucks-feat-data-layer-2
-- IssueNumber: 44
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/44
-  TaskID: task-costa-vs-starbucks-feat-data-layer-3
-- IssueNumber: 45
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/45
-  TaskID: task-costa-vs-starbucks-feat-drink-cards-1
-- IssueNumber: 46
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/46
-  TaskID: task-costa-vs-starbucks-feat-drink-cards-2
-- IssueNumber: 47
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/47
+- IssueNumber: 61
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/61
   TaskID: task-costa-vs-starbucks-feat-filter-search-1
-- IssueNumber: 48
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/48
+- IssueNumber: 62
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/62
   TaskID: task-costa-vs-starbucks-feat-filter-search-2
-- IssueNumber: 49
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/49
+- IssueNumber: 63
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/63
   TaskID: task-costa-vs-starbucks-feat-comparison-panel-1
-- IssueNumber: 50
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/50
+- IssueNumber: 64
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/64
   TaskID: task-costa-vs-starbucks-feat-comparison-panel-2
-- IssueNumber: 51
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/51
+- IssueNumber: 65
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/65
   TaskID: task-costa-vs-starbucks-feat-nutrition-bars-1
 Plan: costa-vs-starbucks-plan
