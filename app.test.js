@@ -5,7 +5,7 @@
  * (No external test runner required; uses Node's built-in assert module.)
  */
 
-const assert = require('assert');
+import assert from 'assert';
 
 /* -------------------------------------------------------------------------
  * JSDOM-free DOM simulation helpers
@@ -72,6 +72,10 @@ function createCard(mug, onOpen) {
   img.alt = mug.name;
   img.className = 'card-image';
   img.loading = 'lazy';
+  img.onerror = () => {
+    img.src = 'images/placeholder.svg';
+    img.onerror = null;
+  };
 
   const body = makeElement('div');
   body.className = 'card-body';
@@ -107,6 +111,57 @@ function renderCards(mugs, container, onOpen) {
   mugs.forEach(mug => container.appendChild(createCard(mug, onOpen)));
 }
 
+// -- filterMugs (extracted logic) --
+/**
+ * @param {Array} mugs
+ * @param {{ query: string, series: string, yearMin: number|null, yearMax: number|null }} state
+ * @returns {Array}
+ */
+function filterMugs(mugs, state) {
+  const { query, series, yearMin, yearMax } = state;
+  const q = query.trim().toLowerCase();
+
+  return mugs.filter((mug) => {
+    if (q) {
+      const haystack = [
+        mug.name,
+        mug.series,
+        mug.region,
+        Array.isArray(mug.tags) ? mug.tags.join(' ') : '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+
+    if (series && mug.series !== series) return false;
+
+    if (yearMin !== null && mug.year < yearMin) return false;
+    if (yearMax !== null && mug.year > yearMax) return false;
+
+    return true;
+  });
+}
+
+// -- debounce (extracted logic) --
+/**
+ * @param {Function} fn
+ * @param {number} [delay=200]
+ * @returns {Function}
+ */
+function debounce(fn, delay = 200) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// -- parseMugsResponse (extracted logic) --
+function parseMugsResponse(data) {
+  return Array.isArray(data) ? { version: '0', mugs: data } : data;
+}
+
 /* -------------------------------------------------------------------------
  * Test helpers
  * -------------------------------------------------------------------------*/
@@ -131,12 +186,12 @@ function test(description, fn) {
  * -------------------------------------------------------------------------*/
 
 const MUGS = [
-  { id: 1, name: 'Classic White Ceramic Mug', price_usd: 12.95, image: 'images/classic-white.jpg', description: 'Timeless classic.' },
-  { id: 2, name: 'Pike Place Roast Mug',      price_usd: 14.95, image: 'images/pike-place.jpg',    description: 'Vintage-style.' },
-  { id: 3, name: 'Holiday Season Tumbler',     price_usd: 19.95, image: 'images/holiday.jpg',       description: 'Festive design.' },
-  { id: 4, name: 'City Collection: Seattle',   price_usd: 16.95, image: 'images/city-seattle.jpg',  description: 'Space Needle.' },
-  { id: 5, name: 'Reserve Roastery Mug',       price_usd: 22.95, image: 'images/reserve.jpg',       description: 'Premium matte.' },
-  { id: 6, name: 'You Are Here Collection',    price_usd: 18.95, image: 'images/you-are-here.jpg',  description: 'World landmarks.' },
+  { id: 1, name: 'Classic White Ceramic Mug', price_usd: 12.95, image: 'images/classic-white.jpg', description: 'Timeless classic.', series: 'Siren',           year: 2019, region: 'Global',        tags: ['ceramic', 'classic', 'siren', 'white'] },
+  { id: 2, name: 'Pike Place Roast Mug',      price_usd: 14.95, image: 'images/pike-place.jpg',    description: 'Vintage-style.',   series: 'Anniversary',     year: 2012, region: 'North America', tags: ['vintage', 'anniversary', 'seattle'] },
+  { id: 3, name: 'Holiday Season Tumbler',     price_usd: 19.95, image: 'images/holiday.jpg',       description: 'Festive design.',  series: 'Holiday',         year: 2023, region: 'Global',        tags: ['holiday', 'limited-edition', 'insulated'] },
+  { id: 4, name: 'City Collection: Seattle',   price_usd: 16.95, image: 'images/city-seattle.jpg',  description: 'Space Needle.',    series: 'City Collection', year: 2020, region: 'Seattle, USA',  tags: ['city-collection', 'seattle', 'skyline'] },
+  { id: 5, name: 'Reserve Roastery Mug',       price_usd: 22.95, image: 'images/reserve.jpg',       description: 'Premium matte.',   series: 'Reserve',         year: 2021, region: 'Global',        tags: ['reserve', 'roastery', 'premium'] },
+  { id: 6, name: 'You Are Here Collection',    price_usd: 18.95, image: 'images/you-are-here.jpg',  description: 'World landmarks.', series: 'You Are Here',    year: 2018, region: 'Global',        tags: ['you-are-here', 'landmarks', 'travel'] },
 ];
 
 /* =========================================================================
@@ -262,6 +317,142 @@ test('each rendered card has class "card"', () => {
 });
 
 /* =========================================================================
+ * UNIT TESTS — filterMugs
+ * =========================================================================*/
+
+console.log('\nUnit Tests — filterMugs');
+
+test('filterMugs: empty query with no filters returns all mugs', () => {
+  const result = filterMugs(MUGS, { query: '', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, MUGS.length);
+});
+
+test('filterMugs: query matches mug name (case-insensitive)', () => {
+  const result = filterMugs(MUGS, { query: 'CLASSIC', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].name, 'Classic White Ceramic Mug');
+});
+
+test('filterMugs: query matches mug name (partial match)', () => {
+  const result = filterMugs(MUGS, { query: 'city', series: '', yearMin: null, yearMax: null });
+  assert.ok(result.length >= 1, 'should match at least one city mug');
+  assert.ok(result.find(m => m.name === 'City Collection: Seattle'), 'should include Seattle mug');
+});
+
+test('filterMugs: query matches tag substring', () => {
+  const result = filterMugs(MUGS, { query: 'limited-edition', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].name, 'Holiday Season Tumbler');
+});
+
+test('filterMugs: query matches region', () => {
+  const result = filterMugs(MUGS, { query: 'North America', series: '', yearMin: null, yearMax: null });
+  assert.ok(result.length >= 1, 'should match at least one mug by region');
+  assert.ok(result.find(m => m.region === 'North America'));
+});
+
+test('filterMugs: series filter excludes non-matching series', () => {
+  const result = filterMugs(MUGS, { query: '', series: 'Holiday', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].series, 'Holiday');
+});
+
+test('filterMugs: series filter with empty string returns all mugs', () => {
+  const result = filterMugs(MUGS, { query: '', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, MUGS.length);
+});
+
+test('filterMugs: yearMin filters out mugs before the bound (inclusive)', () => {
+  const result = filterMugs(MUGS, { query: '', series: '', yearMin: 2020, yearMax: null });
+  assert.ok(result.every(m => m.year >= 2020), 'all results should have year >= 2020');
+  assert.ok(!result.find(m => m.year < 2020), 'no mug with year < 2020 should appear');
+});
+
+test('filterMugs: yearMax filters out mugs after the bound (inclusive)', () => {
+  const result = filterMugs(MUGS, { query: '', series: '', yearMin: null, yearMax: 2019 });
+  assert.ok(result.every(m => m.year <= 2019), 'all results should have year <= 2019');
+  assert.ok(!result.find(m => m.year > 2019), 'no mug with year > 2019 should appear');
+});
+
+test('filterMugs: yearMin and yearMax combined — inclusive range', () => {
+  const result = filterMugs(MUGS, { query: '', series: '', yearMin: 2018, yearMax: 2020 });
+  assert.ok(result.every(m => m.year >= 2018 && m.year <= 2020),
+    'all results should have year in [2018, 2020]');
+  assert.ok(result.find(m => m.year === 2018), 'mug with year 2018 should appear');
+  assert.ok(result.find(m => m.year === 2019), 'mug with year 2019 should appear');
+  assert.ok(result.find(m => m.year === 2020), 'mug with year 2020 should appear');
+  assert.ok(!result.find(m => m.year < 2018), 'no mug with year < 2018');
+  assert.ok(!result.find(m => m.year > 2020), 'no mug with year > 2020');
+});
+
+test('filterMugs: all filters combined narrows results correctly', () => {
+  // series "Siren" + year >= 2019 + query "global"
+  const result = filterMugs(MUGS, { query: 'global', series: 'Siren', yearMin: 2019, yearMax: null });
+  // Only MUGS[0] matches: series "Siren", year 2019, region "Global"
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].id, 1);
+});
+
+test('filterMugs: no match returns empty array', () => {
+  const result = filterMugs(MUGS, { query: 'xyzzy-no-match', series: '', yearMin: null, yearMax: null });
+  assert.deepStrictEqual(result, []);
+});
+
+test('filterMugs: query is whitespace-trimmed before matching', () => {
+  const result = filterMugs(MUGS, { query: '  classic  ', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].name, 'Classic White Ceramic Mug');
+});
+
+test('filterMugs: does not mutate the input array', () => {
+  const copy = [...MUGS];
+  filterMugs(MUGS, { query: 'classic', series: '', yearMin: null, yearMax: null });
+  assert.deepStrictEqual(MUGS, copy, 'original mugs array should not be modified');
+});
+
+/* =========================================================================
+ * UNIT TESTS — debounce
+ * =========================================================================*/
+
+console.log('\nUnit Tests — debounce');
+
+test('debounce: returns a function', () => {
+  const fn = debounce(() => {}, 200);
+  assert.strictEqual(typeof fn, 'function');
+});
+
+test('debounce: callback does not fire synchronously', () => {
+  let callCount = 0;
+  const fn = debounce(() => { callCount++; }, 50);
+  fn();
+  fn();
+  fn();
+  assert.strictEqual(callCount, 0, 'callback must not fire synchronously');
+});
+
+test('debounce: multiple rapid calls do not fire callback synchronously', () => {
+  let callCount = 0;
+  const fn = debounce(() => { callCount++; }, 100);
+  for (let i = 0; i < 10; i++) fn();
+  assert.strictEqual(callCount, 0, 'ten rapid calls must not fire callback synchronously');
+});
+
+/* =========================================================================
+ * UNIT TESTS — image onerror fallback (createCard)
+ * =========================================================================*/
+
+console.log('\nUnit Tests — image onerror fallback');
+
+test('card image onerror sets src to placeholder and nulls handler', () => {
+  const card = createCard(MUGS[0], () => {});
+  const img = card.children[0];
+  assert.ok(typeof img.onerror === 'function', 'onerror should be a function initially');
+  img.onerror();
+  assert.strictEqual(img.src, 'images/placeholder.svg', 'onerror should set placeholder src');
+  assert.strictEqual(img.onerror, null, 'onerror should null itself to prevent loops');
+});
+
+/* =========================================================================
  * INTEGRATION TESTS — fetch + render flow (mocked)
  * =========================================================================*/
 
@@ -271,6 +462,7 @@ async function runIntegrationTests() {
   await test_fetchSuccess();
   await test_fetchLegacyArray();
   await test_fetchFailure();
+  await test_filterAndRender();
 }
 
 async function test_fetchSuccess() {
@@ -361,11 +553,6 @@ async function test_fetchFailure() {
 
 console.log('\nUnit Tests — loadMugs envelope handling');
 
-// Inline reimplementation of loadMugs parsing logic for unit testing
-function parseMugsResponse(data) {
-  return Array.isArray(data) ? { version: '0', mugs: data } : data;
-}
-
 test('versioned envelope is returned as-is', () => {
   const envelope = { version: '1.0', mugs: MUGS };
   const result = parseMugsResponse(envelope);
@@ -384,6 +571,47 @@ test('empty array is wrapped correctly', () => {
   assert.strictEqual(result.version, '0');
   assert.deepStrictEqual(result.mugs, []);
 });
+
+async function test_filterAndRender() {
+  const name = 'filter + render: filterMugs narrows catalog and renderCards shows only matching mugs';
+  try {
+    // Apply a series filter: only "Holiday" mugs
+    const state = { query: '', series: 'Holiday', yearMin: null, yearMax: null };
+    const filtered = filterMugs(MUGS, state);
+
+    const container = makeElement('div');
+    renderCards(filtered, container, () => {});
+
+    const expectedCount = MUGS.filter(m => m.series === 'Holiday').length;
+    assert.strictEqual(
+      container.children.length,
+      expectedCount,
+      `grid should show only Holiday mugs (expected ${expectedCount})`,
+    );
+
+    // Verify each rendered card has a valid aria-label
+    container.children.forEach((card, i) => {
+      const label = card.getAttribute('aria-label');
+      assert.ok(label && label.length > 0, `card ${i} should have a non-empty aria-label`);
+    });
+
+    // Apply a compound filter: query "ceramic" + yearMin 2019 + yearMax 2019
+    const state2 = { query: 'ceramic', series: '', yearMin: 2019, yearMax: 2019 };
+    const filtered2 = filterMugs(MUGS, state2);
+    const container2 = makeElement('div');
+    renderCards(filtered2, container2, () => {});
+
+    // MUGS[0] (Classic White Ceramic Mug, year 2019, tags include 'ceramic') should match
+    assert.strictEqual(container2.children.length, 1, 'compound filter should return exactly 1 mug');
+
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ✗ ${name}`);
+    console.error(`    ${err.message}`);
+    failed++;
+  }
+}
 
 /* =========================================================================
  * Run all tests

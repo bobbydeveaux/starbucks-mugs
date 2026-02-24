@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 4,
+  "summary": "Resolved 4 conflicts: src/hooks/useCarCatalog.ts, src/hooks/useCarCatalog.test.ts, src/utils/eraMatchSuggestion.ts, and src/utils/eraMatchSuggestion.test.ts. For useCarCatalog, kept the HEAD (sprint 2) version which provides internal debounced state management, exposing filteredFerraris/filteredLambos arrays plus setEra/setSearch/era/search setters. For eraMatchSuggestion, kept the HEAD version which includes the yearToDecade helper and a 2-strategy matching algorithm (eraRivals first, then nearest-year fallback). Tests were kept consistent with their matching implementation.",
+  "strategyUsed": "chose HEAD for all 4 files — the HEAD branch represents sprint 2 feature work with richer functionality: useCarCatalog has internal debounced state (setEra, setSearch, filteredFerraris, filteredLambos) while origin/main had a simpler read-only filtered API; eraMatchSuggestion has a nearest-year fallback when no eraRivals match while origin/main returns null in that case"
 }

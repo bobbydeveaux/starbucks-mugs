@@ -97,6 +97,7 @@ export function useCarCatalog(initialFilters?: CatalogFilters): UseCarCatalogRes
 
         // Sort chronologically by year so consumers receive stable ordering.
         const sortByYear = (a: CarModel, b: CarModel) => a.year - b.year;
+
         setAllFerraris([...ferrariEnvelope.cars].sort(sortByYear));
         setAllLambos([...lamboEnvelope.cars].sort(sortByYear));
         setLoading(false);
