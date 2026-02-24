@@ -1,9 +1,11 @@
 {
-  "prNumber": 92,
+  "prNumber": 115,
   "baseBranch": "main",
-  "headBranch": "feature/50-costa-vs-starbucks-sprint-2-issue-50",
+  "headBranch": "feature/71-ferrari-vs-lambo-website-sprint-2-issue-71",
   "conflictedFiles": [
-    "docs/components.md"
+    ".claude-output.json",
+    "src/hooks/useCarCatalog.test.ts",
+    "src/hooks/useCarCatalog.ts"
   ],
-  "conflictCount": 1
+  "conflictCount": 3
 }

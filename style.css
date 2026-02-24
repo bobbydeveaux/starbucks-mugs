@@ -236,6 +236,7 @@ main {
   gap: 0.75rem;
   background: #fff;
   border-bottom: 1px solid #d9e8e3;
+  justify-content: center;
 }
 
 #search {
@@ -339,6 +340,7 @@ main {
 
 #filter-reset:focus-visible {
   outline: 2px solid #00704a;
+  outline-offset: 2px;
 }
 
 /* --- Results count --- */
@@ -348,6 +350,7 @@ main {
   padding: 0 1.5rem;
   font-size: 0.875rem;
   color: #555;
+  min-height: 1.5rem;
 }
 
 /* --- Empty state (no search results) --- */
