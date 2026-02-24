@@ -204,6 +204,49 @@ import { NutritionBar } from './NutritionBar';
 
 ---
 
+## filterDrinks
+
+**File:** `src/utils/filterDrinks.ts`
+
+Pure utility function that filters a drinks array by category and free-text search query. Has no UI or React dependency and can be used anywhere.
+
+### Signature
+
+```ts
+function filterDrinks(drinks: Drink[], filter: FilterState): Drink[]
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `drinks` | `Drink[]` | Full list of drinks to filter |
+| `filter` | `FilterState` | Active category and search query |
+
+### Behaviour
+
+- When `filter.category` is `'all'`, no category filter is applied.
+- `filter.query` is trimmed and lowercased before matching; matching is case-insensitive substring search on `drink.name`.
+- Both filters are applied simultaneously — a drink must satisfy both to appear in the result.
+- Does **not** mutate the input array.
+
+### Example
+
+```ts
+import { filterDrinks } from '../utils/filterDrinks';
+
+// Hot drinks only
+filterDrinks(allDrinks, { category: 'hot', query: '' });
+
+// Name search across all categories
+filterDrinks(allDrinks, { category: 'all', query: 'latte' });
+
+// Category + name combined
+filterDrinks(allDrinks, { category: 'hot', query: 'flat white' });
+```
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`
