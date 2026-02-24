@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "name": "Starbucks Classic White Ceramic Mug",
+    "price": 14.95,
+    "description": "A timeless white ceramic mug featuring the iconic Starbucks siren logo. Perfect for your morning coffee ritual at home. Holds 11 oz and is dishwasher safe.",
+    "image": "images/classic-white-mug.jpg"
+  },
+  {
+    "id": 2,
+    "name": "Starbucks Pike Place Roast Mug",
+    "price": 16.95,
+    "description": "Inspired by the original 1971 Pike Place store, this rich cobalt blue mug celebrates Starbucks' heritage. Features vintage-style artwork and holds 12 oz. Microwave and dishwasher safe.",
+    "image": "images/pike-place-mug.jpg"
+  },
+  {
+    "id": 3,
+    "name": "Starbucks Reserve Copper Ombre Mug",
+    "price": 24.95,
+    "description": "An elegant copper-toned ombre mug from the Starbucks Reserve collection. The gradient finish adds a touch of sophistication to any kitchen. Holds 10 oz. Hand wash recommended.",
+    "image": "images/reserve-copper-mug.jpg"
+  },
+  {
+    "id": 4,
+    "name": "Starbucks Holiday Blend Red Mug",
+    "price": 19.95,
+    "description": "Bring the festive spirit to your coffee break with this limited-edition holiday red mug. Adorned with seasonal snowflake patterns and the Starbucks wordmark. Holds 12 oz. Dishwasher safe.",
+    "image": "images/holiday-red-mug.jpg"
+  },
+  {
+    "id": 5,
+    "name": "Starbucks You Are Here Collection Mug",
+    "price": 21.95,
+    "description": "Part of the iconic You Are Here collection, this colorful mug features illustrated landmarks and local scenes. A great collector's item for coffee lovers and travelers alike. Holds 14 oz.",
+    "image": "images/you-are-here-mug.jpg"
+  },
+  {
+    "id": 6,
+    "name": "Starbucks Anniversary Blend Black Mug",
+    "price": 18.95,
+    "description": "Commemorating decades of Starbucks' passion for coffee, this matte black mug features the anniversary logo etched in gold. A premium addition to any mug collection. Holds 11 oz. Hand wash recommended.",
+    "image": "images/anniversary-black-mug.jpg"
+  }
+]
