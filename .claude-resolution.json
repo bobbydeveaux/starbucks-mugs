@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 6,
+  "summary": "Resolved conflicts in docs/components.md, FilterBar.tsx, FilterBar.test.tsx, SearchBox.tsx, SearchBox.test.tsx, and CostaVsStarbucksPage.tsx. The origin/main branch introduced a richer SearchBox API (query/onQueryChange), moved category constants to a shared filterDrinks utility, used Starbucks-green brand theming in FilterBar, added ComparisonPanel/NutritionBar/NutritionRow docs, and imported ComparisonPanel in the page. All six files were resolved to be internally consistent.",
+  "strategyUsed": "Chose origin/main for FilterBar.tsx (shared CATEGORIES/CATEGORY_LABELS utility, brand theming), SearchBox.tsx (query/onQueryChange API, native clear button), SearchBox.test.tsx (consistent with new API), and CostaVsStarbucksPage.tsx (ComparisonPanel import + query/onQueryChange props). For FilterBar.test.tsx, merged both branches — kept CATEGORY_LABELS import and core tests from origin/main while adding per-name button checks and blended-state test from HEAD for broader coverage. For docs/components.md, used origin/main's detailed descriptions and kept its new ComparisonPanel, NutritionRow, and NutritionBar sections."
 }

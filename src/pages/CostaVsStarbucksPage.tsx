@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { DrinkCatalog } from '../components/DrinkCatalog';
 import { FilterBar } from '../components/FilterBar';
 import { SearchBox } from '../components/SearchBox';
+import { ComparisonPanel } from '../components/ComparisonPanel';
 import { useDrinks } from '../hooks/useDrinks';
 import type { Drink, ComparisonState, FilterState } from '../types';
 
@@ -47,8 +48,6 @@ export function CostaVsStarbucksPage() {
     costa: comparison.costa?.id ?? null,
   }), [comparison.starbucks?.id, comparison.costa?.id]);
 
-  const hasSelection = comparison.starbucks !== null || comparison.costa !== null;
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -79,68 +78,27 @@ export function CostaVsStarbucksPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filter controls */}
-        <div className="mb-6 flex flex-wrap gap-4 items-center">
+        {/* Filter controls — FilterBar + SearchBox applied together via useDrinks */}
+        <div className="mb-6 flex flex-wrap gap-3 items-center">
           <FilterBar
             category={filter.category}
-            onCategoryChange={category => setFilter(f => ({ ...f, category }))}
+            onCategoryChange={(category) => setFilter(f => ({ ...f, category }))}
           />
           <SearchBox
-            value={filter.query}
-            onChange={query => setFilter(f => ({ ...f, query }))}
+            query={filter.query}
+            onQueryChange={(query) => setFilter(f => ({ ...f, query }))}
           />
         </div>
 
         {/* Drink catalog — two brand sections with selection wiring */}
         <DrinkCatalog drinks={drinks} selectedIds={selectedIds} onSelect={handleSelect} />
 
-        {/* Comparison summary — shown once at least one drink is selected */}
-        {hasSelection && (
-          <section
-            aria-label="Current selection"
-            className="mt-10 p-6 bg-white rounded-lg shadow-sm border border-gray-200"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Your selection</h2>
-              <button
-                type="button"
-                onClick={handleClearComparison}
-                className="text-sm text-gray-500 hover:text-gray-700 underline"
-              >
-                Clear
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-starbucks mb-1">
-                  Starbucks
-                </p>
-                {comparison.starbucks ? (
-                  <p className="font-medium text-gray-900">{comparison.starbucks.name}</p>
-                ) : (
-                  <p className="text-gray-400 text-sm">No drink selected</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-costa mb-1">
-                  Costa
-                </p>
-                {comparison.costa ? (
-                  <p className="font-medium text-gray-900">{comparison.costa.name}</p>
-                ) : (
-                  <p className="text-gray-400 text-sm">No drink selected</p>
-                )}
-              </div>
-            </div>
-
-            {comparison.starbucks && comparison.costa && (
-              <p className="mt-4 text-sm text-gray-500">
-                Full nutrition comparison panel coming in the next sprint.
-              </p>
-            )}
-          </section>
-        )}
+        {/* Comparison panel — shown once at least one drink is selected */}
+        <ComparisonPanel
+          starbucksDrink={comparison.starbucks}
+          costaDrink={comparison.costa}
+          onClear={handleClearComparison}
+        />
       </main>
     </div>
   );
