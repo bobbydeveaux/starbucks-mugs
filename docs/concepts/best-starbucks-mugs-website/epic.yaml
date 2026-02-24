@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Update mugs.json root structure to versioned envelope { version,
       mugs[] }, rename price to price_usd, add series/year/region/edition/material/capacity_oz/tags
       fields to all entries, and expand catalog to 50+ entries across City, Holiday,
@@ -12,10 +13,11 @@ Epics:
     name: Expanded Mug Catalog Data
     project: website
     type: enabler
-  id: best-starbucks-mugs-website-epic-data-layer
-  name: Catalog Data Layer
-- features:
-  - dependencies:
+  ID: best-starbucks-mugs-website-epic-data-layer
+  Name: Catalog Data Layer
+- Features:
+  - Sprint: 2
+    dependencies:
     - best-starbucks-mugs-website-feat-catalog-data
     description: 'Add #filter-bar section to index.html with search input, series
       dropdown, year-range inputs, and reset button. Implement filterMugs(), debounce(),
@@ -31,7 +33,8 @@ Epics:
     name: Filter Bar & Search Engine
     project: website
     type: feature
-  - dependencies:
+  - Sprint: 3
+    dependencies:
     - best-starbucks-mugs-website-feat-catalog-data
     description: Update modal to display all metadata fields (series, year, region,
       edition, material, capacity_oz, price_usd, tags) in a structured layout. Add
@@ -46,6 +49,6 @@ Epics:
     name: Enhanced Modal & Image Fallback
     project: website
     type: feature
-  id: best-starbucks-mugs-website-epic-catalog-ui
-  name: Catalog UI & Functionality
+  ID: best-starbucks-mugs-website-epic-catalog-ui
+  Name: Catalog UI & Functionality
 Version: v1alpha1
