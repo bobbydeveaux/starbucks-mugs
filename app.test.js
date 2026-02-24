@@ -5,7 +5,7 @@
  * (No external test runner required; uses Node's built-in assert module.)
  */
 
-const assert = require('assert');
+import assert from 'assert';
 
 /* -------------------------------------------------------------------------
  * JSDOM-free DOM simulation helpers
@@ -137,6 +137,46 @@ const MUGS = [
   { id: 4, name: 'City Collection: Seattle',   price_usd: 16.95, image: 'images/city-seattle.jpg',  description: 'Space Needle.' },
   { id: 5, name: 'Reserve Roastery Mug',       price_usd: 22.95, image: 'images/reserve.jpg',       description: 'Premium matte.' },
   { id: 6, name: 'You Are Here Collection',    price_usd: 18.95, image: 'images/you-are-here.jpg',  description: 'World landmarks.' },
+];
+
+/** Full-schema fixture used by filterMugs tests */
+const FILTER_MUGS = [
+  {
+    id: 1, name: 'Classic White Ceramic Mug', series: 'Siren', year: 2019,
+    region: 'Global', material: 'Ceramic', capacity_oz: 11, price_usd: 12.95,
+    image: 'images/classic-white.jpg', description: 'Timeless classic.',
+    tags: ['ceramic', 'classic', 'siren', 'white', 'dishwasher-safe'],
+  },
+  {
+    id: 2, name: 'Pike Place Roast Mug', series: 'Anniversary', year: 2012,
+    region: 'North America', material: 'Ceramic', capacity_oz: 12, price_usd: 14.95,
+    image: 'images/pike-place.jpg', description: 'Vintage-style.',
+    tags: ['vintage', 'anniversary', 'seattle', 'pike-place', 'microwave-safe'],
+  },
+  {
+    id: 3, name: 'Holiday Season Tumbler', series: 'Holiday', year: 2023,
+    region: 'Global', edition: 'Limited', material: 'Stainless Steel', capacity_oz: 16, price_usd: 19.95,
+    image: 'images/holiday-tumbler.jpg', description: 'Festive design.',
+    tags: ['holiday', 'limited-edition', 'insulated', 'tumbler', 'winter'],
+  },
+  {
+    id: 4, name: 'City Collection: Seattle', series: 'City Collection', year: 2020,
+    region: 'Seattle, USA', material: 'Ceramic', capacity_oz: 14, price_usd: 16.95,
+    image: 'images/city-seattle.jpg', description: 'Space Needle.',
+    tags: ['city-collection', 'seattle', 'skyline', 'collector', 'travel'],
+  },
+  {
+    id: 5, name: 'Reserve Roastery Mug', series: 'Reserve', year: 2021,
+    region: 'Global', material: 'Ceramic', capacity_oz: 12, price_usd: 22.95,
+    image: 'images/reserve-roastery.jpg', description: 'Premium matte.',
+    tags: ['reserve', 'roastery', 'matte-black', 'copper', 'premium'],
+  },
+  {
+    id: 6, name: 'You Are Here Collection', series: 'You Are Here', year: 2018,
+    region: 'Global', material: 'Ceramic', capacity_oz: 14, price_usd: 18.95,
+    image: 'images/you-are-here.jpg', description: 'World landmarks.',
+    tags: ['you-are-here', 'landmarks', 'travel', 'collector', 'colorful'],
+  },
 ];
 
 /* =========================================================================
@@ -386,10 +426,213 @@ test('empty array is wrapped correctly', () => {
 });
 
 /* =========================================================================
+ * UNIT TESTS — filterMugs
+ * Re-implemented here (pure function; no DOM dependency).
+ * =========================================================================*/
+
+// Inline reimplementation of filterMugs for unit testing
+function filterMugs(mugs, state) {
+  const q = state.query.toLowerCase();
+  return mugs.filter((mug) => {
+    if (q) {
+      const searchable = [
+        mug.name,
+        mug.series,
+        mug.region,
+        (mug.tags || []).join(' '),
+      ].join(' ').toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
+    if (state.series && mug.series !== state.series) return false;
+    if (state.yearMin !== null && mug.year < state.yearMin) return false;
+    if (state.yearMax !== null && mug.year > state.yearMax) return false;
+    return true;
+  });
+}
+
+// Inline reimplementation of debounce for unit testing
+function debounce(fn, delay = 200) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+console.log('\nUnit Tests — filterMugs');
+
+test('empty query returns all mugs', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, FILTER_MUGS.length);
+});
+
+test('query matches name (case-insensitive)', () => {
+  const result = filterMugs(FILTER_MUGS, { query: 'classic', series: '', yearMin: null, yearMax: null });
+  assert.ok(result.length > 0, 'should return at least one result');
+  result.forEach(m => {
+    const searchable = [m.name, m.series, m.region, (m.tags || []).join(' ')].join(' ').toLowerCase();
+    assert.ok(searchable.includes('classic'), `mug "${m.name}" should match "classic"`);
+  });
+});
+
+test('query matches tag substring', () => {
+  const result = filterMugs(FILTER_MUGS, { query: 'vintage', series: '', yearMin: null, yearMax: null });
+  assert.ok(result.length > 0, 'should find at least one mug with "vintage" tag');
+  result.forEach(m => {
+    const searchable = [m.name, m.series, m.region, (m.tags || []).join(' ')].join(' ').toLowerCase();
+    assert.ok(searchable.includes('vintage'));
+  });
+});
+
+test('query is case-insensitive', () => {
+  const lower = filterMugs(FILTER_MUGS, { query: 'ceramic', series: '', yearMin: null, yearMax: null });
+  const upper = filterMugs(FILTER_MUGS, { query: 'CERAMIC', series: '', yearMin: null, yearMax: null });
+  assert.deepStrictEqual(lower.map(m => m.id), upper.map(m => m.id));
+});
+
+test('series filter excludes non-matching series', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: 'Siren', yearMin: null, yearMax: null });
+  assert.ok(result.length > 0, 'should find at least one Siren mug');
+  result.forEach(m => assert.strictEqual(m.series, 'Siren'));
+});
+
+test('series filter returns empty array when no match', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: 'NonExistentSeries', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, 0);
+});
+
+test('empty series string disables series filter', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, FILTER_MUGS.length);
+});
+
+test('yearMin filters out mugs below the minimum year (inclusive)', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: '', yearMin: 2019, yearMax: null });
+  assert.ok(result.length > 0, 'should include at least one mug from 2019+');
+  result.forEach(m => assert.ok(m.year >= 2019, `year ${m.year} should be >= 2019`));
+});
+
+test('yearMax filters out mugs above the maximum year (inclusive)', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: '', yearMin: null, yearMax: 2019 });
+  assert.ok(result.length > 0, 'should include at least one mug from <= 2019');
+  result.forEach(m => assert.ok(m.year <= 2019, `year ${m.year} should be <= 2019`));
+});
+
+test('yearMin and yearMax together create inclusive range', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: '', yearMin: 2012, yearMax: 2019 });
+  assert.ok(result.length > 0, 'should include mugs within 2012–2019');
+  result.forEach(m => {
+    assert.ok(m.year >= 2012, `year ${m.year} should be >= 2012`);
+    assert.ok(m.year <= 2019, `year ${m.year} should be <= 2019`);
+  });
+});
+
+test('null yearMin and yearMax is unbounded', () => {
+  const result = filterMugs(FILTER_MUGS, { query: '', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, FILTER_MUGS.length);
+});
+
+test('all filters combined narrows results correctly', () => {
+  // "Classic" in name/tags, Siren series, year >= 2019
+  const result = filterMugs(FILTER_MUGS, { query: 'classic', series: 'Siren', yearMin: 2019, yearMax: null });
+  result.forEach(m => {
+    assert.strictEqual(m.series, 'Siren');
+    assert.ok(m.year >= 2019);
+    const searchable = [m.name, m.series, m.region, (m.tags || []).join(' ')].join(' ').toLowerCase();
+    assert.ok(searchable.includes('classic'));
+  });
+});
+
+test('no matches returns empty array', () => {
+  const result = filterMugs(FILTER_MUGS, { query: 'zzz-no-match-zzz', series: '', yearMin: null, yearMax: null });
+  assert.strictEqual(result.length, 0);
+});
+
+test('query matches region field', () => {
+  const result = filterMugs(FILTER_MUGS, { query: 'north america', series: '', yearMin: null, yearMax: null });
+  assert.ok(result.length > 0, 'should find mugs with "North America" region');
+  result.forEach(m => {
+    const searchable = [m.name, m.series, m.region, (m.tags || []).join(' ')].join(' ').toLowerCase();
+    assert.ok(searchable.includes('north america'));
+  });
+});
+
+test('mugs with missing tags array do not throw', () => {
+  const mugWithoutTags = [{ ...FILTER_MUGS[0], tags: undefined }];
+  assert.doesNotThrow(() => filterMugs(mugWithoutTags, { query: 'classic', series: '', yearMin: null, yearMax: null }));
+});
+
+/* =========================================================================
+ * UNIT TESTS — debounce
+ * =========================================================================*/
+
+console.log('\nUnit Tests — debounce');
+
+async function runDebounceTests() {
+  await test_debounce_fires_once_after_delay();
+  await test_debounce_does_not_fire_immediately();
+  await test_debounce_resets_on_repeated_calls();
+}
+
+async function test_debounce_fires_once_after_delay() {
+  const name = 'debounce — callback fires exactly once after delay elapses';
+  try {
+    let count = 0;
+    const fn = debounce(() => { count++; }, 50);
+    fn();
+    assert.strictEqual(count, 0, 'should not fire immediately');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.strictEqual(count, 1, 'should fire exactly once after delay');
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ✗ ${name}`);
+    console.error(`    ${err.message}`);
+    failed++;
+  }
+}
+
+async function test_debounce_does_not_fire_immediately() {
+  const name = 'debounce — callback is NOT called synchronously';
+  try {
+    let fired = false;
+    const fn = debounce(() => { fired = true; }, 50);
+    fn();
+    assert.strictEqual(fired, false, 'should not fire synchronously');
+    // Let the timer expire cleanly
+    await new Promise(resolve => setTimeout(resolve, 100));
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ✗ ${name}`);
+    console.error(`    ${err.message}`);
+    failed++;
+  }
+}
+
+async function test_debounce_resets_on_repeated_calls() {
+  const name = 'debounce — rapid repeated calls collapse into a single invocation';
+  try {
+    let count = 0;
+    const fn = debounce(() => { count++; }, 50);
+    fn(); fn(); fn(); fn(); fn();
+    assert.strictEqual(count, 0, 'should not fire during rapid calls');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.strictEqual(count, 1, 'should fire exactly once after the last call settles');
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ✗ ${name}`);
+    console.error(`    ${err.message}`);
+    failed++;
+  }
+}
+
+/* =========================================================================
  * Run all tests
  * =========================================================================*/
 
-runIntegrationTests().then(() => {
+Promise.all([runIntegrationTests(), runDebounceTests()]).then(() => {
   console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`);
   if (failed > 0) {
     process.exit(1);
