@@ -102,7 +102,7 @@ Browser console for local debugging. Host provider analytics (e.g., Netlify anal
 
 ## 11. Architectural Decisions (ADRs)
 
-- **Vanilla JS over framework**: Zero build tooling needed for a 6-item static catalog.
+- **Vanilla JS over framework**: Zero build tooling needed for a 52-item static catalog.
 - **JSON flat file over CMS**: Simplest data source; meets scalability needs without infrastructure cost.
 
 ---
