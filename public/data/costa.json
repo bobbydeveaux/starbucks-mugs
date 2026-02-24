@@ -1,0 +1,217 @@
+{
+  "schema_version": "1.0",
+  "brand": "costa",
+  "updated": "2026-02-24",
+  "drinks": [
+    {
+      "id": "costa-flat-white",
+      "brand": "costa",
+      "name": "Flat White",
+      "category": "hot",
+      "size_ml": 330,
+      "nutrition": {
+        "calories_kcal": 147,
+        "sugar_g": 12,
+        "fat_g": 6,
+        "protein_g": 8,
+        "caffeine_mg": 185
+      }
+    },
+    {
+      "id": "costa-latte",
+      "brand": "costa",
+      "name": "Caffè Latte",
+      "category": "hot",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 197,
+        "sugar_g": 17,
+        "fat_g": 7,
+        "protein_g": 13,
+        "caffeine_mg": 185
+      }
+    },
+    {
+      "id": "costa-cappuccino",
+      "brand": "costa",
+      "name": "Cappuccino",
+      "category": "hot",
+      "size_ml": 330,
+      "nutrition": {
+        "calories_kcal": 112,
+        "sugar_g": 9,
+        "fat_g": 4,
+        "protein_g": 8,
+        "caffeine_mg": 185
+      }
+    },
+    {
+      "id": "costa-americano",
+      "brand": "costa",
+      "name": "Caffè Americano",
+      "category": "hot",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 12,
+        "sugar_g": 0,
+        "fat_g": 0,
+        "protein_g": 1,
+        "caffeine_mg": 277
+      }
+    },
+    {
+      "id": "costa-mocha",
+      "brand": "costa",
+      "name": "Caffè Mocha",
+      "category": "hot",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 303,
+        "sugar_g": 32,
+        "fat_g": 10,
+        "protein_g": 13,
+        "caffeine_mg": 185
+      }
+    },
+    {
+      "id": "costa-iced-latte",
+      "brand": "costa",
+      "name": "Iced Caffè Latte",
+      "category": "iced",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 181,
+        "sugar_g": 16,
+        "fat_g": 6,
+        "protein_g": 12,
+        "caffeine_mg": 185
+      }
+    },
+    {
+      "id": "costa-iced-americano",
+      "brand": "costa",
+      "name": "Iced Americano",
+      "category": "iced",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 12,
+        "sugar_g": 0,
+        "fat_g": 0,
+        "protein_g": 1,
+        "caffeine_mg": 277
+      }
+    },
+    {
+      "id": "costa-iced-mocha",
+      "brand": "costa",
+      "name": "Iced Caffè Mocha",
+      "category": "iced",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 228,
+        "sugar_g": 29,
+        "fat_g": 7,
+        "protein_g": 11,
+        "caffeine_mg": 185
+      }
+    },
+    {
+      "id": "costa-frostino-caramel",
+      "brand": "costa",
+      "name": "Caramel Frostino",
+      "category": "blended",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 412,
+        "sugar_g": 52,
+        "fat_g": 16,
+        "protein_g": 7,
+        "caffeine_mg": 50
+      }
+    },
+    {
+      "id": "costa-frostino-mocha",
+      "brand": "costa",
+      "name": "Mocha Frostino",
+      "category": "blended",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 380,
+        "sugar_g": 48,
+        "fat_g": 13,
+        "protein_g": 8,
+        "caffeine_mg": 85
+      }
+    },
+    {
+      "id": "costa-chai-latte",
+      "brand": "costa",
+      "name": "Chai Tea Latte",
+      "category": "tea",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 218,
+        "sugar_g": 32,
+        "fat_g": 5,
+        "protein_g": 9,
+        "caffeine_mg": 50
+      }
+    },
+    {
+      "id": "costa-matcha-latte",
+      "brand": "costa",
+      "name": "Matcha Latte",
+      "category": "tea",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 225,
+        "sugar_g": 26,
+        "fat_g": 7,
+        "protein_g": 11,
+        "caffeine_mg": 70
+      }
+    },
+    {
+      "id": "costa-hot-chocolate",
+      "brand": "costa",
+      "name": "Hot Chocolate",
+      "category": "other",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 352,
+        "sugar_g": 42,
+        "fat_g": 12,
+        "protein_g": 14,
+        "caffeine_mg": 20
+      }
+    },
+    {
+      "id": "costa-vanilla-latte",
+      "brand": "costa",
+      "name": "Vanilla Latte",
+      "category": "hot",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 250,
+        "sugar_g": 36,
+        "fat_g": 7,
+        "protein_g": 12,
+        "caffeine_mg": 185
+      }
+    },
+    {
+      "id": "costa-caramel-latte",
+      "brand": "costa",
+      "name": "Caramel Latte",
+      "category": "hot",
+      "size_ml": 454,
+      "nutrition": {
+        "calories_kcal": 270,
+        "sugar_g": 38,
+        "fat_g": 7,
+        "protein_g": 12,
+        "caffeine_mg": 185
+      }
+    }
+  ]
+}

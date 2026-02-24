@@ -7,17 +7,17 @@
 // Enums / discriminated union types
 // ---------------------------------------------------------------------------
 
-/** Drink category. Covers the full range of hot, cold, and specialty drinks. */
-export type Category = 'hot' | 'iced' | 'blended' | 'tea' | 'other';
-
-/** Supported brand identifiers. */
+/** Brand enum — one value per chain supported by the app */
 export type Brand = 'starbucks' | 'costa';
+
+/** Drink category enum — matches the categories used in both chains' menus */
+export type Category = 'hot' | 'iced' | 'blended' | 'tea' | 'other';
 
 // ---------------------------------------------------------------------------
 // Core data model
 // ---------------------------------------------------------------------------
 
-/** Nutritional values for a single drink (per-serve). */
+/** Nutritional data for a single drink */
 export interface Nutrition {
   calories_kcal: number;
   sugar_g: number;
@@ -26,7 +26,7 @@ export interface Nutrition {
   caffeine_mg: number;
 }
 
-/** A single drink entry shared across both brands. */
+/** A single drink entry from either brand's JSON file */
 export interface Drink {
   /** Slug-style unique identifier, e.g. "sbux-flat-white" or "costa-flat-white". */
   id: string;
@@ -36,7 +36,7 @@ export interface Drink {
   /** Serving size in millilitres. */
   size_ml: number;
   /** Path to the drink image relative to the public root, e.g. "/images/sbux-flat-white.webp". */
-  image: string;
+  image?: string;
   nutrition: Nutrition;
 }
 
@@ -69,7 +69,7 @@ export interface ComparisonState {
   costa: Drink | null;
 }
 
-/** Active filter and search query applied to the drink catalog. */
+/** Active filter state — category filter and free-text search query */
 export interface FilterState {
   /** Selected category, or "all" to show every category. */
   category: Category | 'all';

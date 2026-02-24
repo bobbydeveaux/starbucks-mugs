@@ -8,6 +8,10 @@
     --color-costa: #6b1e1e;
   }
 
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
   body {
     @apply antialiased bg-gray-50 text-gray-900;
   }

@@ -1,18 +1,18 @@
-import type { Drink } from '../types'
-import { DrinkCard } from './DrinkCard'
+import type { Drink, Brand } from '../types';
+import { DrinkCard } from './DrinkCard';
 
 interface SelectedIds {
-  starbucks: string | null
-  costa: string | null
+  starbucks: string | null;
+  costa: string | null;
 }
 
 interface DrinkCatalogProps {
-  drinks: Drink[]
-  selectedIds: SelectedIds
-  onSelect: (drink: Drink) => void
+  drinks: Drink[];
+  selectedIds: SelectedIds;
+  onSelect: (drink: Drink) => void;
 }
 
-const BRAND_CONFIG = {
+const BRAND_CONFIG: Record<Brand, { label: string; headingClass: string; dividerClass: string; emptyText: string }> = {
   starbucks: {
     label: 'Starbucks',
     headingClass: 'text-starbucks',
@@ -25,22 +25,28 @@ const BRAND_CONFIG = {
     dividerClass: 'border-costa',
     emptyText: 'No Costa drinks match your filters.',
   },
-} as const
+};
 
-interface BrandSectionProps {
-  brand: 'starbucks' | 'costa'
-  drinks: Drink[]
-  selectedId: string | null
-  onSelect: (drink: Drink) => void
-}
-
-function BrandSection({ brand, drinks, selectedId, onSelect }: BrandSectionProps) {
-  const config = BRAND_CONFIG[brand]
+function BrandSection({
+  brand,
+  drinks,
+  selectedId,
+  onSelect,
+}: {
+  brand: Brand;
+  drinks: Drink[];
+  selectedId: string | null;
+  onSelect: (drink: Drink) => void;
+}) {
+  const config = BRAND_CONFIG[brand];
 
   return (
-    <section aria-label={`${config.label} drinks`}>
+    <section aria-labelledby={`${brand}-heading`}>
       <div className="mb-4 flex items-center gap-3">
-        <h2 className={`text-xl font-bold ${config.headingClass}`}>
+        <h2
+          id={`${brand}-heading`}
+          className={`text-xl font-bold ${config.headingClass}`}
+        >
           {config.label}
         </h2>
         <span className="text-sm text-gray-500">({drinks.length} drinks)</span>
@@ -53,11 +59,11 @@ function BrandSection({ brand, drinks, selectedId, onSelect }: BrandSectionProps
         </p>
       ) : (
         <ul
-          className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
           role="list"
-          aria-label={`${config.label} drink cards`}
+          aria-label={`${config.label} drinks`}
         >
-          {drinks.map((drink) => (
+          {drinks.map(drink => (
             <li key={drink.id} role="listitem">
               <DrinkCard
                 drink={drink}
@@ -69,12 +75,12 @@ function BrandSection({ brand, drinks, selectedId, onSelect }: BrandSectionProps
         </ul>
       )}
     </section>
-  )
+  );
 }
 
 export function DrinkCatalog({ drinks, selectedIds, onSelect }: DrinkCatalogProps) {
-  const starbucksDrinks = drinks.filter((d) => d.brand === 'starbucks')
-  const costaDrinks = drinks.filter((d) => d.brand === 'costa')
+  const starbucksDrinks = drinks.filter(d => d.brand === 'starbucks');
+  const costaDrinks = drinks.filter(d => d.brand === 'costa');
 
   return (
     <div className="flex flex-col gap-10">
@@ -91,5 +97,7 @@ export function DrinkCatalog({ drinks, selectedIds, onSelect }: DrinkCatalogProp
         onSelect={onSelect}
       />
     </div>
-  )
+  );
 }
+
+export default DrinkCatalog;

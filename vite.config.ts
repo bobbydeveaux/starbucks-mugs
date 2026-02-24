@@ -1,27 +1,22 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
-    },
-  },
-  build: {
-    rollupOptions: {
-      input: 'react-index.html',
+      '@': path.resolve(__dirname, './src'),
     },
   },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    css: true,
-    // Exclude legacy Node assert-based test (run via `npm run test:legacy` instead)
-    exclude: ['**/node_modules/**', 'app.test.js'],
+    setupFiles: ['./src/setupTests.ts'],
+    css: false,
+    // Only pick up TypeScript tests from src/; exclude the legacy vanilla-JS
+    // app.test.js at the project root which uses its own custom test runner.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
-})
+});

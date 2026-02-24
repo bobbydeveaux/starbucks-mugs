@@ -1,9 +1,24 @@
 {
-  "prNumber": 59,
+  "prNumber": 53,
   "baseBranch": "main",
-  "headBranch": "feature/39-costa-vs-starbucks-sprint-1-issue-39",
+  "headBranch": "feature/46-costa-vs-starbucks-sprint-1-issue-46",
   "conflictedFiles": [
-    ".claude-output.json"
+    ".claude-output.json",
+    ".gitignore",
+    "index.html",
+    "package-lock.json",
+    "package.json",
+    "postcss.config.js",
+    "src/App.tsx",
+    "src/components/DrinkCard.tsx",
+    "src/components/DrinkCatalog.tsx",
+    "src/index.css",
+    "src/main.tsx",
+    "src/types.ts",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "vite.config.ts"
   ],
-  "conflictCount": 1
+  "conflictCount": 16
 }
