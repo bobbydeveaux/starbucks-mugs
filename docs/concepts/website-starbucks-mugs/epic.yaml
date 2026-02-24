@@ -1,0 +1,21 @@
+Epics:
+- Features:
+  - Sprint: 1
+    dependencies: null
+    description: 'Build the complete static site: render mug cards from mugs.json
+      into a responsive grid and display full mug details in a modal overlay on card
+      click, with close on overlay click or ESC key'
+    estimatedComplexity: low
+    files:
+    - index.html
+    - style.css
+    - app.js
+    - mugs.json
+    - images/
+    id: website-starbucks-mugs-feat-catalog-and-modal
+    name: Mug Catalog Grid and Detail Modal
+    project: website
+    type: feature
+  ID: website-starbucks-mugs-epic-main
+  Name: Starbucks Mugs Catalog Site
+Version: v1alpha1

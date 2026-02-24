@@ -1,0 +1,19 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-24T00:20:26Z
+  totalSprints: 1
+  totalDuration: 7 days
+
+sprints:
+  - number: 1
+    startDate: 2026-02-24
+    endDate: 2026-03-03
+    duration: 7 days
+    features:
+      - id: website-starbucks-mugs-feat-catalog-and-modal
+        name: Mug Catalog Grid and Detail Modal
+        type: feature
+
+criticalPath:
+  - website-starbucks-mugs-feat-catalog-and-modal

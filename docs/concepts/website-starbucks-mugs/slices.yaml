@@ -1,0 +1,9 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: website-starbucks-mugs-feat-catalog-and-modal
+        name: Mug Catalog Grid and Detail Modal
+        type: feature
+        files: [index.html style.css app.js mugs.json images/ package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
