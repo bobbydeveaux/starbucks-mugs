@@ -71,6 +71,67 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## ComparisonPanel
+
+**File:** `src/components/ComparisonPanel.tsx`
+
+Renders a side-by-side nutritional comparison of one Costa and one Starbucks drink. Uses `getNutritionRows` to build the rows.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `comparison` | `ComparisonState` | Currently selected drinks (`{ starbucks: Drink \| null; costa: Drink \| null }`) |
+| `onClear` | `() => void` | Callback fired when the Clear button is clicked; should reset both selections to `null` |
+
+### Features
+
+- Renders **nothing** when both slots are `null` (no drinks selected)
+- Shows a prompt message when only one drink is selected, asking the user to also select a drink from the other brand
+- Renders a **guard/error alert** (`role="alert"`) when both selected drinks happen to share the same brand
+- Renders a **3-column table** (Nutrient / Costa / Starbucks) with 5 rows: Calories, Sugar, Fat, Protein, Caffeine when two valid drinks are selected
+- Lower-value cells for each nutrient are highlighted in brand colour with a `↓` indicator
+- Drink names are displayed in the column headers
+- Includes a **Clear** button that calls `onClear` to reset both selections
+
+### Usage
+
+```tsx
+<ComparisonPanel
+  comparison={{ starbucks: selectedStarbucksDrink, costa: selectedCostaDrink }}
+  onClear={() => setComparison({ starbucks: null, costa: null })}
+/>
+```
+
+---
+
+## getNutritionRows
+
+**File:** `src/utils/getNutritionRows.ts`
+
+Pure utility function that maps two `Drink` objects into an ordered array of labelled nutrition rows consumed by `ComparisonPanel`.
+
+### Signature
+
+```ts
+function getNutritionRows(costa: Drink, starbucks: Drink): NutritionRow[]
+```
+
+### `NutritionRow` shape
+
+```ts
+interface NutritionRow {
+  label: string;       // e.g. "Calories"
+  costaValue: number;
+  starbucksValue: number;
+  unit: string;        // e.g. "kcal", "g", "mg"
+}
+```
+
+Returns 5 rows in this order: **Calories** (kcal), **Sugar** (g), **Fat** (g), **Protein** (g), **Caffeine** (mg).
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`

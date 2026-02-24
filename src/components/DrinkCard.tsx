@@ -42,6 +42,7 @@ export function DrinkCard({ drink, isSelected, onSelect }: DrinkCardProps) {
         .filter(Boolean)
         .join(' ')}
       aria-label={`${drink.name}, ${drink.brand}, ${drink.category}`}
+      aria-selected={isSelected}
       data-selected={isSelected}
     >
       {/* Drink image */}
@@ -99,7 +100,7 @@ export function DrinkCard({ drink, isSelected, onSelect }: DrinkCardProps) {
           }`}
           aria-pressed={isSelected}
         >
-          {isSelected ? 'Selected ✓' : 'Select to Compare'}
+          {isSelected ? '✓ Selected' : 'Select to Compare'}
         </button>
       </div>
     </article>

@@ -41,7 +41,7 @@ function BrandSection({
   const config = BRAND_CONFIG[brand];
 
   return (
-    <section aria-labelledby={`${brand}-heading`}>
+    <section aria-label={`${config.label} drinks`}>
       <div className="mb-4 flex items-center gap-3">
         <h2
           id={`${brand}-heading`}
@@ -61,7 +61,7 @@ function BrandSection({
         <ul
           className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
           role="list"
-          aria-label={`${config.label} drinks`}
+          aria-label={`${config.label} drink cards`}
         >
           {drinks.map(drink => (
             <li key={drink.id} role="listitem">
