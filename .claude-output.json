@@ -1,0 +1,33 @@
+{
+  "prTitle": "feat: wire handleSelect handlers in App.tsx (task-costa-vs-starbucks-feat-drink-cards-2)",
+  "prBody": "## Summary\n\n- **Scaffolded the React/TypeScript project** (Vite 6, React 18, Tailwind CSS, Vitest) — prerequisite for App.tsx to exist\n- **Defined `src/types.ts`** with all shared types: `Drink`, `Brand`, `Category`, `Nutrition`, `ComparisonState`, `FilterState`, `DrinkCatalogEnvelope`\n- **Implemented `DrinkCard`** (src/components/DrinkCard.tsx) — name, category badge, brand-coloured border, nutrition summary, and "Select to Compare" CTA that shows selected highlight state (`aria-pressed`, ring outline)\n- **Implemented `DrinkCatalog`** (src/components/DrinkCatalog.tsx) — two labelled brand sections, each with a responsive CSS grid of `DrinkCard`s\n- **Implemented `useDrinks` hook** (src/hooks/useDrinks.ts) — parallel fetch of `/data/starbucks.json` and `/data/costa.json` via `Promise.all`, envelope unwrapping, client-side filter by category + search query, graceful error handling\n- **Wired `handleSelect` in `App.tsx`** (primary task): `useCallback` handler calls `setComparison(prev => ({ ...prev, [drink.brand]: drink }))` — this naturally enforces the same-brand replacement guard: selecting a second Starbucks drink replaces the first selection rather than stacking two Starbucks drinks\n- `DrinkCatalog` receives `selectedIds` derived from `ComparisonState` so each card can show the correct selected highlight without App needing to know card internals\n- Added a "Current selection" summary panel that becomes visible once at least one drink is chosen, with a Clear button that calls `handleClearComparison`\n- Added 15 sample drinks per brand in `public/data/{starbucks,costa}.json`\n- **9 passing Vitest tests** covering: catalog rendering after load, select updates state, selected card shows button label change, same-brand replacement, both-brand selection in summary, clear resets state, fetch error shown as alert, `selectedIds` propagation via `aria-pressed`, and search query filtering\n\n## Acceptance criteria\n\n- Selecting a drink updates App state and the corresponding DrinkCard shows selected highlight\n- Attempting to select a second drink from the same brand replaces the previous selection for that brand\n- DrinkCatalog receives correct filtered/full drinks list and selectedIds from App state\n\nCloses #46",
+  "testsPass": true,
+  "filesChanged": [
+    "index.html",
+    "package.json",
+    "postcss.config.js",
+    "tailwind.config.ts",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "vite.config.ts",
+    "src/App.tsx",
+    "src/App.test.tsx",
+    "src/main.tsx",
+    "src/index.css",
+    "src/setupTests.ts",
+    "src/types.ts",
+    "src/components/DrinkCard.tsx",
+    "src/components/DrinkCatalog.tsx",
+    "src/hooks/useDrinks.ts",
+    "public/data/starbucks.json",
+    "public/data/costa.json"
+  ],
+  "docsUpdated": [],
+  "docsReviewed": [
+    "docs/concepts/costa-vs-starbucks/HLD.md",
+    "docs/concepts/costa-vs-starbucks/LLD.md",
+    "docs/concepts/costa-vs-starbucks/tasks.yaml",
+    "docs/concepts/costa-vs-starbucks/README.md"
+  ],
+  "completedTasks": [1, 2, 3, 4]
+}
