@@ -178,21 +178,21 @@ describe('App — handleSelect', () => {
     await renderAndWait();
     const user = userEvent.setup();
 
-    // Before selection: no card should show aria-pressed=true
+    // Before selection: no card should show data-selected=true
     const articles = screen.getAllByRole('article');
     articles.forEach(article => {
-      expect(article).toHaveAttribute('aria-pressed', 'false');
+      expect(article).toHaveAttribute('data-selected', 'false');
     });
 
     // Select first drink
     const [firstBtn] = screen.getAllByRole('button', { name: /select to compare/i });
     await user.click(firstBtn);
 
-    // Exactly one card should be aria-pressed=true
-    const pressedArticles = screen
+    // Exactly one card should be data-selected=true
+    const selectedArticles = screen
       .getAllByRole('article')
-      .filter(a => a.getAttribute('aria-pressed') === 'true');
-    expect(pressedArticles).toHaveLength(1);
+      .filter(a => a.getAttribute('data-selected') === 'true');
+    expect(selectedArticles).toHaveLength(1);
   });
 });
 

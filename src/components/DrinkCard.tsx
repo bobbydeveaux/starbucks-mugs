@@ -34,7 +34,7 @@ export function DrinkCard({ drink, isSelected, onSelect }: DrinkCardProps) {
         .filter(Boolean)
         .join(' ')}
       aria-label={`${drink.name}, ${drink.brand}, ${drink.category}`}
-      aria-pressed={isSelected}
+      data-selected={isSelected}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold text-gray-900 text-sm leading-snug">{drink.name}</h3>

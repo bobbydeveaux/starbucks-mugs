@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { DrinkCatalog } from './components/DrinkCatalog';
 import { useDrinks } from './hooks/useDrinks';
 import type { Drink, ComparisonState, FilterState } from './types';
@@ -41,10 +41,10 @@ function App() {
   }, []);
 
   // selectedIds passed to DrinkCatalog so cards can show their highlight state
-  const selectedIds = {
+  const selectedIds = useMemo(() => ({
     starbucks: comparison.starbucks?.id ?? null,
     costa: comparison.costa?.id ?? null,
-  };
+  }), [comparison.starbucks?.id, comparison.costa?.id]);
 
   const hasSelection = comparison.starbucks !== null || comparison.costa !== null;
 
