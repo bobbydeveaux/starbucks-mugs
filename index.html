@@ -3,34 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline';" />
-  <title>Starbucks Mugs — Collectible Catalog</title>
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+  />
+  <title>Best Starbucks Mugs — The Definitive Collector's Catalog</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <header>
-    <h1>Starbucks Mugs</h1>
-    <p class="subtitle">Browse our collection of collectible Starbucks mugs</p>
+    <h1>Starbucks Collector Mugs</h1>
+    <p class="subtitle">The world's most comprehensive catalog of Starbucks collector mugs</p>
   </header>
 
   <section id="filter-bar" aria-label="Filter mugs">
-    <input id="search" type="search" placeholder="Search mugs…" aria-label="Search mugs" />
+    <input
+      id="search"
+      type="search"
+      placeholder="Search mugs…"
+      aria-label="Search mugs"
+      autocomplete="off"
+    />
     <select id="filter-series" aria-label="Filter by series">
       <option value="">All Series</option>
     </select>
     <label class="year-range-label">
       Year:
-      <input id="year-min" type="number" min="1990" max="2030" placeholder="From" aria-label="Year from" />
+      <input
+        id="year-min"
+        type="number"
+        min="1990"
+        max="2030"
+        placeholder="From"
+        aria-label="Year from"
+      />
       <span aria-hidden="true">–</span>
-      <input id="year-max" type="number" min="1990" max="2030" placeholder="To" aria-label="Year to" />
+      <input
+        id="year-max"
+        type="number"
+        min="1990"
+        max="2030"
+        placeholder="To"
+        aria-label="Year to"
+      />
     </label>
     <button id="filter-reset" type="button">Reset</button>
   </section>
+
   <p id="results-count" aria-live="polite" aria-atomic="true"></p>
 
   <main>
-    <div id="grid" class="grid" role="list" aria-label="Mug catalog"></div>
+    <div id="grid" class="grid" role="list" aria-label="Mug catalog">
+      <!-- Mug cards are rendered here by app.js -->
+    </div>
   </main>
 
   <!-- Modal overlay -->

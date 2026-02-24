@@ -232,65 +232,109 @@ main {
   padding: 1rem 1.5rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
   align-items: center;
+  gap: 0.75rem;
   background: #fff;
-  border-bottom: 1px solid #e0ede8;
+  border-bottom: 1px solid #d9e8e3;
 }
 
-#filter-bar input[type="search"],
-#filter-bar input[type="number"],
-#filter-bar select {
+#search {
+  flex: 1 1 200px;
+  min-width: 180px;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #c8ddd6;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border: 1px solid #b0ccbf;
+  border-radius: 6px;
+  font-size: 0.95rem;
   color: #1e3932;
-  background: #f9faf9;
-  outline: none;
+  background: #f5f5f0;
+  outline-offset: 2px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-#filter-bar input[type="search"]:focus,
-#filter-bar input[type="number"]:focus,
-#filter-bar select:focus {
+#search:focus {
   border-color: #00704a;
   box-shadow: 0 0 0 2px rgba(0, 112, 74, 0.2);
+  background: #fff;
 }
 
-#filter-bar input[type="search"] {
-  flex: 1;
-  min-width: 180px;
-}
-
-#filter-bar select {
+#filter-series {
+  flex: 0 1 180px;
   min-width: 140px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #b0ccbf;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #1e3932;
+  background: #f5f5f0;
+  cursor: pointer;
+  outline-offset: 2px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-#filter-bar input[type="number"] {
-  width: 90px;
+#filter-series:focus {
+  border-color: #00704a;
+  box-shadow: 0 0 0 2px rgba(0, 112, 74, 0.2);
+  background: #fff;
 }
 
 .year-range-label {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-wrap: nowrap;
   font-size: 0.9rem;
   color: #1e3932;
+  white-space: nowrap;
+}
+
+#year-min,
+#year-max {
+  width: 80px;
+  padding: 0.5rem 0.5rem;
+  border: 1px solid #b0ccbf;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e3932;
+  background: #f5f5f0;
+  text-align: center;
+  outline-offset: 2px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  /* hide browser spinner arrows */
+  -moz-appearance: textfield;
+}
+
+#year-min::-webkit-outer-spin-button,
+#year-min::-webkit-inner-spin-button,
+#year-max::-webkit-outer-spin-button,
+#year-max::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#year-min:focus,
+#year-max:focus {
+  border-color: #00704a;
+  box-shadow: 0 0 0 2px rgba(0, 112, 74, 0.2);
+  background: #fff;
 }
 
 #filter-reset {
   padding: 0.5rem 1rem;
-  background: #1e3932;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
+  border: 1px solid #00704a;
+  border-radius: 6px;
   font-size: 0.9rem;
+  font-weight: 600;
+  color: #00704a;
+  background: transparent;
   cursor: pointer;
-  transition: background 0.15s;
+  white-space: nowrap;
+  outline-offset: 2px;
+  transition: background 0.15s, color 0.15s;
 }
 
 #filter-reset:hover {
-  background: #2d5246;
+  background: #00704a;
+  color: #fff;
 }
 
 #filter-reset:focus-visible {
@@ -298,7 +342,7 @@ main {
   outline-offset: 2px;
 }
 
-/* --- Results Count --- */
+/* --- Results count --- */
 #results-count {
   max-width: 1200px;
   margin: 0.75rem auto 0;
@@ -307,33 +351,64 @@ main {
   color: #555;
 }
 
-/* --- Empty State --- */
+/* --- Empty state (no search results) --- */
 .grid-empty {
   grid-column: 1 / -1;
   text-align: center;
   padding: 3rem 1rem;
-  color: #888;
-  font-size: 1rem;
+  color: #6b8f7e;
+}
+
+.grid-empty p {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.grid-empty small {
+  font-size: 0.875rem;
+  color: #999;
+}
+
+/* --- Image placeholder --- */
+.card-image[src="images/placeholder.svg"],
+.modal-image[src="images/placeholder.svg"] {
+  object-fit: contain;
+  padding: 1.5rem;
+  background-color: #e0ede8;
 }
 
 /* --- Responsive tweaks --- */
-@media (max-width: 400px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 600px) {
   #filter-bar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  #filter-bar input[type="search"] {
-    min-width: 0;
+  #search,
+  #filter-series {
+    flex: 1 1 auto;
+    width: 100%;
   }
 
   .year-range-label {
-    flex-wrap: wrap;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #year-min,
+  #year-max {
+    flex: 1;
+    width: auto;
+  }
+
+  #filter-reset {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .grid {
+    grid-template-columns: 1fr;
   }
 }

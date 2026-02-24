@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 2,
+  "summary": "Resolved 6 conflict regions in style.css and 2 in index.html. Preferred origin/main's more polished UI changes while preserving HEAD's accessibility attribute (outline-offset: 2px on focus-visible).",
+  "strategyUsed": "Chose origin/main for: expanded CSP policy (img-src 'self' data:), improved page title/subtitle, autocomplete='off' on search input, comment in grid div, ID-specific CSS selectors for #search and #filter-series, year input spinner removal (-moz-appearance/webkit), outlined reset button style, richer .grid-empty with sub-element selectors and image placeholder styles, and consolidated responsive media query. Retained outline-offset: 2px from HEAD on #filter-reset:focus-visible for accessibility."
 }

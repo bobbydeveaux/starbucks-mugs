@@ -1,9 +1,10 @@
 {
-  "prNumber": 77,
+  "prNumber": 89,
   "baseBranch": "main",
-  "headBranch": "feature/69-ferrari-vs-lambo-website-sprint-1-issue-69",
+  "headBranch": "feature/30-best-starbucks-mugs-website-sprint-2-issue-30",
   "conflictedFiles": [
-    "package-lock.json"
+    "index.html",
+    "style.css"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }
