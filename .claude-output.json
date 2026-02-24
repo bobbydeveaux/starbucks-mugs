@@ -1,22 +1,23 @@
 {
-  "prTitle": "fix: address code review feedback for handleSelect implementation",
-  "prBody": "## Summary\n\nThis PR addresses all blocking and non-blocking issues raised in the code review.\n\n### Blocking fix\n- **Removed `node_modules/` from git tracking**: Added `node_modules/`, `dist/`, and `.vite/` to `.gitignore` and ran `git rm -r --cached node_modules` to untrack the 11,711 previously committed files (eliminates the 2.3M-line diff)\n\n### Non-blocking fixes\n- **`aria-pressed` on `<article>` replaced with `data-selected`**: `aria-pressed` is a toggle-button ARIA state and is semantically incorrect on a non-interactive `<article>` element. Replaced with `data-selected` data attribute used purely as a CSS/test hook. The `<button>` inside still carries `aria-pressed` correctly.\n- **`selectedIds` memoized with `useMemo`**: The object literal was recreated on every render, defeating any `React.memo` optimisation. Now memoized on `comparison.starbucks?.id` and `comparison.costa?.id`.\n- **HLD.md updated**: Fixed Vite version (`5` → `6`) and data file paths (`drinks/starbucks.json` → `public/data/starbucks.json`) to match the actual implementation.\n- **Tests updated**: `App.test.tsx` updated to query `data-selected` instead of `aria-pressed` on article elements.\n\nAll 9 tests pass.\n\nCloses #46",
+  "prTitle": "feat: implement useDrinks hook with TypeScript types and static drink data",
+  "prBody": "## Summary\n\n- **`src/types.ts`** — Shared TypeScript interfaces: `Drink`, `Brand`, `Category`, `DrinkNutrition`, `DrinkCatalogEnvelope`, `ComparisonState`, `FilterState`\n- **`public/data/starbucks.json`** — 31 Starbucks drinks across all 5 categories (hot, iced, blended, tea, other) with full nutritional data matching the `Drink` schema\n- **`public/data/costa.json`** — 31 Costa drinks across all 5 categories with full nutritional data\n- **`src/hooks/useDrinks.ts`** — React hook that fetches both JSON files in parallel via `Promise.all`, merges results by brand, applies `FilterState` (category + search query), and exposes `{ drinks, starbucksDrinks, costaDrinks, loading, error }`\n- **`src/hooks/useDrinks.test.ts`** — 19 Vitest tests covering: initial loading state, parallel fetch, brand separation, category filtering (all 5 categories), case-insensitive search, combined filter+search, query trimming, and all error scenarios (network error, non-ok HTTP status for each brand)\n- **`package.json` / `tsconfig.json` / `vite.config.ts` / `src/test-setup.ts`** — Minimal project infrastructure to run Vitest in a jsdom environment alongside the existing vanilla-JS mugs website\n\n## Review Feedback Addressed\n\nThe prior review identified `mugs.json` still using `\"price\"` instead of `\"price_usd\"` and not using the versioned envelope format. Both issues were already resolved in the current codebase (`mugs.json` uses `price_usd` and the `{ version, mugs[] }` envelope throughout), so no further changes to `mugs.json` were needed.\n\n## Testing\n\n- `node app.test.js` — 23 tests pass (existing mugs website tests)\n- `npm test` — 19 tests pass (new `useDrinks` hook tests)\n\nCloses #44",
   "testsPass": true,
   "filesChanged": [
-    ".gitignore",
-    "src/components/DrinkCard.tsx",
-    "src/App.tsx",
-    "src/App.test.tsx",
-    "docs/concepts/costa-vs-starbucks/HLD.md"
+    "src/types.ts",
+    "public/data/starbucks.json",
+    "public/data/costa.json",
+    "src/hooks/useDrinks.ts",
+    "src/hooks/useDrinks.test.ts",
+    "src/test-setup.ts",
+    "package.json",
+    "tsconfig.json",
+    "vite.config.ts"
   ],
-  "docsUpdated": [
-    "docs/concepts/costa-vs-starbucks/HLD.md"
-  ],
+  "docsUpdated": [],
   "docsReviewed": [
     "docs/concepts/costa-vs-starbucks/HLD.md",
     "docs/concepts/costa-vs-starbucks/LLD.md",
-    "docs/concepts/costa-vs-starbucks/tasks.yaml",
-    "docs/concepts/costa-vs-starbucks/README.md"
-  ],
-  "completedTasks": [1, 2, 3, 4]
+    "docs/concepts/costa-vs-starbucks/README.md",
+    "docs/concepts/costa-vs-starbucks/tasks.yaml"
+  ]
 }

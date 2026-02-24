@@ -11,8 +11,8 @@ export default defineConfig({
     },
   },
   test: {
-    globals: true,
     environment: 'jsdom',
+    globals: true,
     setupFiles: ['./src/setupTests.ts'],
     css: false,
     // Only pick up TypeScript tests from src/; exclude the legacy vanilla-JS

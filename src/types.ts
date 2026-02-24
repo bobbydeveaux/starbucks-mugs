@@ -17,8 +17,8 @@ export type Category = 'hot' | 'iced' | 'blended' | 'tea' | 'other';
 // Core data model
 // ---------------------------------------------------------------------------
 
-/** Nutritional data for a single drink */
-export interface Nutrition {
+/** Nutritional values for a single drink */
+export interface DrinkNutrition {
   calories_kcal: number;
   sugar_g: number;
   fat_g: number;
@@ -37,7 +37,7 @@ export interface Drink {
   size_ml: number;
   /** Path to the drink image relative to the public root, e.g. "/images/sbux-flat-white.webp". */
   image?: string;
-  nutrition: Nutrition;
+  nutrition: DrinkNutrition;
 }
 
 // ---------------------------------------------------------------------------
