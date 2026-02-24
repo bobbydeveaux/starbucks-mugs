@@ -19,18 +19,18 @@
       }
     },
     {
-      "id": "sbux-caffe-latte",
+      "id": "sbux-latte",
       "brand": "starbucks",
-      "name": "Caffe Latte",
+      "name": "Caffè Latte",
       "category": "hot",
       "size_ml": 354,
-      "image": "/images/sbux-caffe-latte.webp",
+      "image": "/images/sbux-latte.webp",
       "nutrition": {
-        "calories_kcal": 150,
-        "sugar_g": 14,
-        "fat_g": 6,
-        "protein_g": 8,
-        "caffeine_mg": 75
+        "calories_kcal": 190,
+        "sugar_g": 18,
+        "fat_g": 7,
+        "protein_g": 13,
+        "caffeine_mg": 150
       }
     },
     {
@@ -41,25 +41,55 @@
       "size_ml": 354,
       "image": "/images/sbux-cappuccino.webp",
       "nutrition": {
-        "calories_kcal": 90,
-        "sugar_g": 10,
-        "fat_g": 4,
-        "protein_g": 5,
-        "caffeine_mg": 75
+        "calories_kcal": 140,
+        "sugar_g": 13,
+        "fat_g": 5,
+        "protein_g": 10,
+        "caffeine_mg": 150
       }
     },
     {
       "id": "sbux-americano",
       "brand": "starbucks",
-      "name": "Caffe Americano",
+      "name": "Caffè Americano",
       "category": "hot",
       "size_ml": 354,
       "image": "/images/sbux-americano.webp",
       "nutrition": {
-        "calories_kcal": 10,
+        "calories_kcal": 15,
         "sugar_g": 0,
         "fat_g": 0,
         "protein_g": 1,
+        "caffeine_mg": 225
+      }
+    },
+    {
+      "id": "sbux-mocha",
+      "brand": "starbucks",
+      "name": "Caffè Mocha",
+      "category": "hot",
+      "size_ml": 354,
+      "image": "/images/sbux-mocha.webp",
+      "nutrition": {
+        "calories_kcal": 290,
+        "sugar_g": 35,
+        "fat_g": 11,
+        "protein_g": 13,
+        "caffeine_mg": 175
+      }
+    },
+    {
+      "id": "sbux-white-mocha",
+      "brand": "starbucks",
+      "name": "White Chocolate Mocha",
+      "category": "hot",
+      "size_ml": 354,
+      "image": "/images/sbux-white-mocha.webp",
+      "nutrition": {
+        "calories_kcal": 360,
+        "sugar_g": 44,
+        "fat_g": 13,
+        "protein_g": 14,
         "caffeine_mg": 150
       }
     },
@@ -71,32 +101,32 @@
       "size_ml": 354,
       "image": "/images/sbux-caramel-macchiato.webp",
       "nutrition": {
-        "calories_kcal": 180,
-        "sugar_g": 22,
-        "fat_g": 5,
-        "protein_g": 7,
-        "caffeine_mg": 75
+        "calories_kcal": 250,
+        "sugar_g": 33,
+        "fat_g": 7,
+        "protein_g": 10,
+        "caffeine_mg": 150
       }
     },
     {
-      "id": "sbux-caffe-mocha",
+      "id": "sbux-pumpkin-spice-latte",
       "brand": "starbucks",
-      "name": "Caffe Mocha",
+      "name": "Pumpkin Spice Latte",
       "category": "hot",
       "size_ml": 354,
-      "image": "/images/sbux-caffe-mocha.webp",
+      "image": "/images/sbux-psl.webp",
       "nutrition": {
-        "calories_kcal": 220,
-        "sugar_g": 27,
-        "fat_g": 7,
-        "protein_g": 9,
-        "caffeine_mg": 95
+        "calories_kcal": 380,
+        "sugar_g": 50,
+        "fat_g": 14,
+        "protein_g": 14,
+        "caffeine_mg": 150
       }
     },
     {
-      "id": "sbux-espresso-doppio",
+      "id": "sbux-espresso",
       "brand": "starbucks",
-      "name": "Espresso Doppio",
+      "name": "Espresso",
       "category": "hot",
       "size_ml": 60,
       "image": "/images/sbux-espresso.webp",
@@ -109,93 +139,78 @@
       }
     },
     {
-      "id": "sbux-hot-chocolate",
+      "id": "sbux-cortado",
       "brand": "starbucks",
-      "name": "Hot Chocolate",
+      "name": "Cortado",
       "category": "hot",
-      "size_ml": 354,
-      "image": "/images/sbux-hot-chocolate.webp",
+      "size_ml": 118,
+      "image": "/images/sbux-cortado.webp",
       "nutrition": {
-        "calories_kcal": 370,
-        "sugar_g": 44,
-        "fat_g": 16,
-        "protein_g": 12,
-        "caffeine_mg": 25
-      }
-    },
-    {
-      "id": "sbux-chai-tea-latte",
-      "brand": "starbucks",
-      "name": "Chai Tea Latte",
-      "category": "hot",
-      "size_ml": 354,
-      "image": "/images/sbux-chai-tea-latte.webp",
-      "nutrition": {
-        "calories_kcal": 190,
-        "sugar_g": 32,
+        "calories_kcal": 80,
+        "sugar_g": 7,
         "fat_g": 3,
         "protein_g": 5,
-        "caffeine_mg": 50
+        "caffeine_mg": 150
       }
     },
     {
-      "id": "sbux-peppermint-mocha",
+      "id": "sbux-iced-latte",
       "brand": "starbucks",
-      "name": "Peppermint Mocha",
-      "category": "hot",
-      "size_ml": 354,
-      "image": "/images/sbux-peppermint-mocha.webp",
-      "nutrition": {
-        "calories_kcal": 310,
-        "sugar_g": 40,
-        "fat_g": 10,
-        "protein_g": 9,
-        "caffeine_mg": 95
-      }
-    },
-    {
-      "id": "sbux-white-chocolate-mocha",
-      "brand": "starbucks",
-      "name": "White Chocolate Mocha",
-      "category": "hot",
-      "size_ml": 354,
-      "image": "/images/sbux-white-chocolate-mocha.webp",
-      "nutrition": {
-        "calories_kcal": 340,
-        "sugar_g": 40,
-        "fat_g": 13,
-        "protein_g": 9,
-        "caffeine_mg": 75
-      }
-    },
-    {
-      "id": "sbux-iced-caffe-latte",
-      "brand": "starbucks",
-      "name": "Iced Caffe Latte",
+      "name": "Iced Caffè Latte",
       "category": "iced",
-      "size_ml": 354,
-      "image": "/images/sbux-iced-caffe-latte.webp",
+      "size_ml": 473,
+      "image": "/images/sbux-iced-latte.webp",
       "nutrition": {
-        "calories_kcal": 100,
-        "sugar_g": 10,
-        "fat_g": 4,
-        "protein_g": 6,
-        "caffeine_mg": 75
+        "calories_kcal": 130,
+        "sugar_g": 11,
+        "fat_g": 5,
+        "protein_g": 8,
+        "caffeine_mg": 150
       }
     },
     {
       "id": "sbux-iced-americano",
       "brand": "starbucks",
-      "name": "Iced Americano",
+      "name": "Iced Caffè Americano",
       "category": "iced",
-      "size_ml": 354,
+      "size_ml": 473,
       "image": "/images/sbux-iced-americano.webp",
       "nutrition": {
-        "calories_kcal": 10,
+        "calories_kcal": 15,
         "sugar_g": 0,
         "fat_g": 0,
-        "protein_g": 0,
-        "caffeine_mg": 150
+        "protein_g": 1,
+        "caffeine_mg": 225
+      }
+    },
+    {
+      "id": "sbux-iced-mocha",
+      "brand": "starbucks",
+      "name": "Iced Caffè Mocha",
+      "category": "iced",
+      "size_ml": 473,
+      "image": "/images/sbux-iced-mocha.webp",
+      "nutrition": {
+        "calories_kcal": 250,
+        "sugar_g": 31,
+        "fat_g": 9,
+        "protein_g": 9,
+        "caffeine_mg": 175
+      }
+    },
+    {
+      "id": "sbux-cold-brew",
+      "brand": "starbucks",
+      "name": "Cold Brew Coffee",
+      "category": "iced",
+      "size_ml": 473,
+      "image": "/images/sbux-cold-brew.webp",
+      "nutrition": {
+        "calories_kcal": 5,
+        "sugar_g": 0,
+        "fat_g": 0,
+        "protein_g": 1,
+        "caffeine_mg": 205
       }
     },
     {
@@ -203,248 +218,248 @@
       "brand": "starbucks",
       "name": "Iced Caramel Macchiato",
       "category": "iced",
-      "size_ml": 354,
+      "size_ml": 473,
       "image": "/images/sbux-iced-caramel-macchiato.webp",
       "nutrition": {
-        "calories_kcal": 160,
-        "sugar_g": 20,
-        "fat_g": 4,
-        "protein_g": 6,
-        "caffeine_mg": 75
+        "calories_kcal": 250,
+        "sugar_g": 34,
+        "fat_g": 7,
+        "protein_g": 10,
+        "caffeine_mg": 150
       }
     },
     {
-      "id": "sbux-iced-caffe-mocha",
-      "brand": "starbucks",
-      "name": "Iced Caffe Mocha",
-      "category": "iced",
-      "size_ml": 354,
-      "image": "/images/sbux-iced-caffe-mocha.webp",
-      "nutrition": {
-        "calories_kcal": 190,
-        "sugar_g": 25,
-        "fat_g": 5,
-        "protein_g": 7,
-        "caffeine_mg": 95
-      }
-    },
-    {
-      "id": "sbux-iced-chai-tea-latte",
-      "brand": "starbucks",
-      "name": "Iced Chai Tea Latte",
-      "category": "iced",
-      "size_ml": 354,
-      "image": "/images/sbux-iced-chai-tea-latte.webp",
-      "nutrition": {
-        "calories_kcal": 160,
-        "sugar_g": 28,
-        "fat_g": 2,
-        "protein_g": 4,
-        "caffeine_mg": 50
-      }
-    },
-    {
-      "id": "sbux-iced-white-chocolate-mocha",
+      "id": "sbux-iced-white-mocha",
       "brand": "starbucks",
       "name": "Iced White Chocolate Mocha",
       "category": "iced",
-      "size_ml": 354,
-      "image": "/images/sbux-iced-white-chocolate-mocha.webp",
+      "size_ml": 473,
+      "image": "/images/sbux-iced-white-mocha.webp",
       "nutrition": {
-        "calories_kcal": 210,
-        "sugar_g": 30,
-        "fat_g": 6,
-        "protein_g": 7,
-        "caffeine_mg": 75
+        "calories_kcal": 420,
+        "sugar_g": 57,
+        "fat_g": 15,
+        "protein_g": 15,
+        "caffeine_mg": 150
       }
     },
     {
-      "id": "sbux-iced-matcha-tea-latte",
+      "id": "sbux-nitro-cold-brew",
       "brand": "starbucks",
-      "name": "Iced Matcha Tea Latte",
+      "name": "Nitro Cold Brew",
       "category": "iced",
-      "size_ml": 354,
-      "image": "/images/sbux-iced-matcha-tea-latte.webp",
+      "size_ml": 325,
+      "image": "/images/sbux-nitro-cold-brew.webp",
       "nutrition": {
-        "calories_kcal": 170,
-        "sugar_g": 26,
-        "fat_g": 4,
-        "protein_g": 6,
-        "caffeine_mg": 55
+        "calories_kcal": 5,
+        "sugar_g": 0,
+        "fat_g": 0,
+        "protein_g": 1,
+        "caffeine_mg": 280
       }
     },
     {
-      "id": "sbux-caramel-frappuccino",
+      "id": "sbux-frappuccino-caramel",
       "brand": "starbucks",
       "name": "Caramel Frappuccino",
       "category": "blended",
       "size_ml": 473,
-      "image": "/images/sbux-caramel-frappuccino.webp",
+      "image": "/images/sbux-frappuccino-caramel.webp",
       "nutrition": {
-        "calories_kcal": 370,
-        "sugar_g": 50,
+        "calories_kcal": 380,
+        "sugar_g": 55,
         "fat_g": 13,
         "protein_g": 5,
         "caffeine_mg": 90
       }
     },
     {
-      "id": "sbux-mocha-frappuccino",
+      "id": "sbux-frappuccino-mocha",
       "brand": "starbucks",
       "name": "Mocha Frappuccino",
       "category": "blended",
       "size_ml": 473,
-      "image": "/images/sbux-mocha-frappuccino.webp",
+      "image": "/images/sbux-frappuccino-mocha.webp",
       "nutrition": {
-        "calories_kcal": 380,
-        "sugar_g": 50,
+        "calories_kcal": 400,
+        "sugar_g": 58,
         "fat_g": 14,
-        "protein_g": 5,
+        "protein_g": 6,
         "caffeine_mg": 95
       }
     },
     {
-      "id": "sbux-vanilla-bean-frappuccino",
-      "brand": "starbucks",
-      "name": "Vanilla Bean Frappuccino",
-      "category": "blended",
-      "size_ml": 473,
-      "image": "/images/sbux-vanilla-bean-frappuccino.webp",
-      "nutrition": {
-        "calories_kcal": 310,
-        "sugar_g": 46,
-        "fat_g": 11,
-        "protein_g": 5,
-        "caffeine_mg": 0
-      }
-    },
-    {
-      "id": "sbux-strawberries-creme-frappuccino",
-      "brand": "starbucks",
-      "name": "Strawberries & Crème Frappuccino",
-      "category": "blended",
-      "size_ml": 473,
-      "image": "/images/sbux-strawberries-creme-frappuccino.webp",
-      "nutrition": {
-        "calories_kcal": 340,
-        "sugar_g": 56,
-        "fat_g": 10,
-        "protein_g": 5,
-        "caffeine_mg": 0
-      }
-    },
-    {
-      "id": "sbux-java-chip-frappuccino",
+      "id": "sbux-frappuccino-java-chip",
       "brand": "starbucks",
       "name": "Java Chip Frappuccino",
       "category": "blended",
       "size_ml": 473,
-      "image": "/images/sbux-java-chip-frappuccino.webp",
+      "image": "/images/sbux-frappuccino-java-chip.webp",
       "nutrition": {
-        "calories_kcal": 430,
-        "sugar_g": 56,
-        "fat_g": 18,
+        "calories_kcal": 440,
+        "sugar_g": 63,
+        "fat_g": 16,
         "protein_g": 6,
         "caffeine_mg": 110
       }
     },
     {
-      "id": "sbux-matcha-creme-frappuccino",
+      "id": "sbux-frappuccino-vanilla",
       "brand": "starbucks",
-      "name": "Matcha Crème Frappuccino",
+      "name": "Vanilla Bean Frappuccino",
       "category": "blended",
       "size_ml": 473,
-      "image": "/images/sbux-matcha-creme-frappuccino.webp",
+      "image": "/images/sbux-frappuccino-vanilla.webp",
       "nutrition": {
-        "calories_kcal": 350,
+        "calories_kcal": 360,
         "sugar_g": 52,
         "fat_g": 12,
-        "protein_g": 5,
-        "caffeine_mg": 50
+        "protein_g": 6,
+        "caffeine_mg": 0
       }
     },
     {
-      "id": "sbux-white-chocolate-mocha-frappuccino",
+      "id": "sbux-frappuccino-strawberry",
       "brand": "starbucks",
-      "name": "White Chocolate Mocha Frappuccino",
+      "name": "Strawberry Frappuccino",
       "category": "blended",
       "size_ml": 473,
-      "image": "/images/sbux-white-chocolate-mocha-frappuccino.webp",
+      "image": "/images/sbux-frappuccino-strawberry.webp",
       "nutrition": {
-        "calories_kcal": 400,
-        "sugar_g": 57,
-        "fat_g": 14,
-        "protein_g": 6,
-        "caffeine_mg": 95
+        "calories_kcal": 370,
+        "sugar_g": 64,
+        "fat_g": 8,
+        "protein_g": 5,
+        "caffeine_mg": 0
       }
     },
     {
-      "id": "sbux-matcha-green-tea-latte",
+      "id": "sbux-green-tea-latte",
       "brand": "starbucks",
       "name": "Matcha Green Tea Latte",
       "category": "tea",
       "size_ml": 354,
-      "image": "/images/sbux-matcha-green-tea-latte.webp",
+      "image": "/images/sbux-matcha-latte.webp",
       "nutrition": {
-        "calories_kcal": 190,
-        "sugar_g": 26,
-        "fat_g": 5,
+        "calories_kcal": 240,
+        "sugar_g": 32,
+        "fat_g": 6,
+        "protein_g": 12,
+        "caffeine_mg": 80
+      }
+    },
+    {
+      "id": "sbux-chai-latte",
+      "brand": "starbucks",
+      "name": "Chai Tea Latte",
+      "category": "tea",
+      "size_ml": 354,
+      "image": "/images/sbux-chai-latte.webp",
+      "nutrition": {
+        "calories_kcal": 240,
+        "sugar_g": 42,
+        "fat_g": 4,
+        "protein_g": 8,
+        "caffeine_mg": 95
+      }
+    },
+    {
+      "id": "sbux-iced-chai-latte",
+      "brand": "starbucks",
+      "name": "Iced Chai Tea Latte",
+      "category": "tea",
+      "size_ml": 473,
+      "image": "/images/sbux-iced-chai-latte.webp",
+      "nutrition": {
+        "calories_kcal": 230,
+        "sugar_g": 42,
+        "fat_g": 3,
         "protein_g": 7,
-        "caffeine_mg": 55
+        "caffeine_mg": 95
       }
     },
     {
-      "id": "sbux-earl-grey-tea",
+      "id": "sbux-iced-matcha-latte",
       "brand": "starbucks",
-      "name": "Earl Grey Tea",
+      "name": "Iced Matcha Green Tea Latte",
       "category": "tea",
-      "size_ml": 354,
-      "image": "/images/sbux-earl-grey-tea.webp",
+      "size_ml": 473,
+      "image": "/images/sbux-iced-matcha-latte.webp",
       "nutrition": {
-        "calories_kcal": 0,
-        "sugar_g": 0,
-        "fat_g": 0,
-        "protein_g": 0,
-        "caffeine_mg": 50
+        "calories_kcal": 200,
+        "sugar_g": 28,
+        "fat_g": 5,
+        "protein_g": 9,
+        "caffeine_mg": 80
       }
     },
     {
-      "id": "sbux-mint-majesty",
+      "id": "sbux-passion-tango-tea",
       "brand": "starbucks",
-      "name": "Mint Majesty Herbal Tea",
+      "name": "Passion Tango Herbal Tea",
       "category": "tea",
-      "size_ml": 354,
-      "image": "/images/sbux-mint-majesty.webp",
+      "size_ml": 473,
+      "image": "/images/sbux-passion-tango.webp",
       "nutrition": {
-        "calories_kcal": 0,
-        "sugar_g": 0,
+        "calories_kcal": 45,
+        "sugar_g": 11,
         "fat_g": 0,
         "protein_g": 0,
         "caffeine_mg": 0
       }
     },
     {
-      "id": "sbux-peach-green-tea-lemonade",
+      "id": "sbux-london-fog",
       "brand": "starbucks",
-      "name": "Peach Green Tea Lemonade",
+      "name": "London Fog Tea Latte",
       "category": "tea",
-      "size_ml": 473,
-      "image": "/images/sbux-peach-green-tea-lemonade.webp",
+      "size_ml": 354,
+      "image": "/images/sbux-london-fog.webp",
       "nutrition": {
-        "calories_kcal": 120,
+        "calories_kcal": 180,
         "sugar_g": 28,
-        "fat_g": 0,
-        "protein_g": 0,
+        "fat_g": 3,
+        "protein_g": 8,
+        "caffeine_mg": 40
+      }
+    },
+    {
+      "id": "sbux-hot-chocolate",
+      "brand": "starbucks",
+      "name": "Hot Chocolate",
+      "category": "other",
+      "size_ml": 354,
+      "image": "/images/sbux-hot-chocolate.webp",
+      "nutrition": {
+        "calories_kcal": 370,
+        "sugar_g": 43,
+        "fat_g": 15,
+        "protein_g": 15,
         "caffeine_mg": 25
       }
     },
     {
-      "id": "sbux-mango-dragonfruit-refresher",
+      "id": "sbux-steamer-vanilla",
       "brand": "starbucks",
-      "name": "Mango Dragonfruit Refresher",
+      "name": "Vanilla Steamer",
+      "category": "other",
+      "size_ml": 354,
+      "image": "/images/sbux-vanilla-steamer.webp",
+      "nutrition": {
+        "calories_kcal": 280,
+        "sugar_g": 38,
+        "fat_g": 9,
+        "protein_g": 14,
+        "caffeine_mg": 0
+      }
+    },
+    {
+      "id": "sbux-refresher-strawberry-acai",
+      "brand": "starbucks",
+      "name": "Strawberry Acai Refresher",
       "category": "other",
       "size_ml": 473,
-      "image": "/images/sbux-mango-dragonfruit-refresher.webp",
+      "image": "/images/sbux-strawberry-acai-refresher.webp",
       "nutrition": {
         "calories_kcal": 90,
         "sugar_g": 21,
@@ -454,48 +469,18 @@
       }
     },
     {
-      "id": "sbux-lemonade",
+      "id": "sbux-refresher-mango-dragon-fruit",
       "brand": "starbucks",
-      "name": "Lemonade",
+      "name": "Mango Dragonfruit Refresher",
       "category": "other",
       "size_ml": 473,
-      "image": "/images/sbux-lemonade.webp",
+      "image": "/images/sbux-mango-dragonfruit-refresher.webp",
       "nutrition": {
-        "calories_kcal": 100,
-        "sugar_g": 26,
+        "calories_kcal": 90,
+        "sugar_g": 22,
         "fat_g": 0,
-        "protein_g": 0,
-        "caffeine_mg": 0
-      }
-    },
-    {
-      "id": "sbux-pink-drink",
-      "brand": "starbucks",
-      "name": "Pink Drink",
-      "category": "other",
-      "size_ml": 473,
-      "image": "/images/sbux-pink-drink.webp",
-      "nutrition": {
-        "calories_kcal": 140,
-        "sugar_g": 25,
-        "fat_g": 2,
-        "protein_g": 2,
+        "protein_g": 1,
         "caffeine_mg": 45
-      }
-    },
-    {
-      "id": "sbux-passion-tango-herbal-tea",
-      "brand": "starbucks",
-      "name": "Passion Tango Herbal Tea",
-      "category": "other",
-      "size_ml": 473,
-      "image": "/images/sbux-passion-tango-herbal-tea.webp",
-      "nutrition": {
-        "calories_kcal": 0,
-        "sugar_g": 0,
-        "fat_g": 0,
-        "protein_g": 0,
-        "caffeine_mg": 0
       }
     }
   ]

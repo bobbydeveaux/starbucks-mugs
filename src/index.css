@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-starbucks: #00704a;
+    --color-costa: #6b1e1e;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply antialiased bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .brand-starbucks {
+    @apply bg-starbucks text-white;
+  }
+
+  .brand-costa {
+    @apply bg-costa text-white;
+  }
+}
