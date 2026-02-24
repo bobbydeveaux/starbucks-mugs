@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 3,
+  "summary": "Resolved conflicts in .claude-output.json, index.html, and style.css. Kept HEAD PR metadata for .claude-output.json (filter bar PR #24). Merged HTML by preserving origin/main's CSP meta tag, accessibility improvements (autocomplete='off', aria-label on grid), and using year-range-label class consistently. Merged CSS by taking origin/main's polished filter-bar styles (per-element focus states, hidden spinners, green reset button) while adding min-height to results-count from HEAD to prevent layout shift.",
+  "strategyUsed": "kept HEAD for .claude-output.json (current PR metadata); merged index.html and style.css preferring origin/main's improved accessibility and styling while retaining HEAD's justify-content:center for filter bar and min-height for results count; used year-range-label class name consistently across HTML and CSS"
 }
