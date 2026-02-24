@@ -71,6 +71,45 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## getNutritionRows utility
+
+**File:** `src/utils/getNutritionRows.ts`
+
+Transforms two drinks — one Costa, one Starbucks — into a flat list of labelled comparison rows, one per nutritional field. Used by `ComparisonPanel` to render the side-by-side nutrition breakdown.
+
+### Signature
+
+```typescript
+function getNutritionRows(costaDrink: Drink, starbucksDrink: Drink): NutritionRow[]
+```
+
+### Return value
+
+An array of 5 `NutritionRow` objects in this order:
+
+| # | `label` | `unit` | Source field |
+|---|---------|--------|--------------|
+| 1 | `"Calories"` | `"kcal"` | `nutrition.calories_kcal` |
+| 2 | `"Sugar"` | `"g"` | `nutrition.sugar_g` |
+| 3 | `"Fat"` | `"g"` | `nutrition.fat_g` |
+| 4 | `"Protein"` | `"g"` | `nutrition.protein_g` |
+| 5 | `"Caffeine"` | `"mg"` | `nutrition.caffeine_mg` |
+
+### Usage
+
+```typescript
+import { getNutritionRows } from '../utils/getNutritionRows'
+
+const rows = getNutritionRows(costaDrink, starbucksDrink)
+// [
+//   { label: 'Calories', costaValue: 144, starbucksValue: 160, unit: 'kcal' },
+//   { label: 'Sugar',    costaValue: 12,  starbucksValue: 14,  unit: 'g'    },
+//   ...
+// ]
+```
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`
@@ -84,6 +123,7 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 | `DrinkNutrition` | `{ calories_kcal, sugar_g, fat_g, protein_g, caffeine_mg }` |
 | `Drink` | Full drink entity including brand, category, size, image, and nutrition |
 | `DrinkCatalogEnvelope` | Root JSON structure for each brand's data file |
+| `NutritionRow` | `{ label, costaValue, starbucksValue, unit }` — one row per nutrient, returned by `getNutritionRows` |
 | `ComparisonState` | `{ starbucks: Drink \| null; costa: Drink \| null }` |
 | `FilterState` | `{ category: Category \| 'all'; query: string }` |
 
