@@ -1,0 +1,679 @@
+{
+  "schema_version": "1.0",
+  "brand": "lamborghini",
+  "updated": "2026-02-24",
+  "cars": [
+    {
+      "id": "lamborghini-350-gt-1963",
+      "brand": "lamborghini",
+      "model": "350 GT",
+      "year": 1963,
+      "decade": 1960,
+      "image": "/images/lamborghini/350-gt.jpg",
+      "specs": {
+        "hp": 270,
+        "torqueLbFt": 221,
+        "zeroToSixtyMs": 6.7,
+        "topSpeedMph": 152,
+        "engineConfig": "V12, 3.5L"
+      },
+      "eraRivals": ["ferrari-250-gto-1962", "ferrari-275-gtb-1964"]
+    },
+    {
+      "id": "lamborghini-400-gt-1965",
+      "brand": "lamborghini",
+      "model": "400 GT",
+      "year": 1965,
+      "decade": 1960,
+      "image": "/images/lamborghini/400-gt.jpg",
+      "specs": {
+        "hp": 320,
+        "torqueLbFt": 239,
+        "zeroToSixtyMs": 6.3,
+        "topSpeedMph": 158,
+        "engineConfig": "V12, 4.0L"
+      },
+      "eraRivals": ["ferrari-275-gtb-1964", "ferrari-275-gtb-4-1966"]
+    },
+    {
+      "id": "lamborghini-miura-p400-1966",
+      "brand": "lamborghini",
+      "model": "Miura P400",
+      "year": 1966,
+      "decade": 1960,
+      "image": "/images/lamborghini/miura-p400.jpg",
+      "specs": {
+        "hp": 350,
+        "torqueLbFt": 288,
+        "zeroToSixtyMs": 6.7,
+        "topSpeedMph": 171,
+        "engineConfig": "V12, 4.0L"
+      },
+      "eraRivals": ["ferrari-275-gtb-4-1966", "ferrari-365-gtb-4-daytona-1968"]
+    },
+    {
+      "id": "lamborghini-espada-1968",
+      "brand": "lamborghini",
+      "model": "Espada",
+      "year": 1968,
+      "decade": 1960,
+      "image": "/images/lamborghini/espada.jpg",
+      "specs": {
+        "hp": 325,
+        "torqueLbFt": 268,
+        "zeroToSixtyMs": 6.5,
+        "topSpeedMph": 155,
+        "engineConfig": "V12, 4.0L"
+      },
+      "eraRivals": ["ferrari-365-gtb-4-daytona-1968", "ferrari-246-gt-dino-1969"]
+    },
+    {
+      "id": "lamborghini-islero-1968",
+      "brand": "lamborghini",
+      "model": "Islero",
+      "year": 1968,
+      "decade": 1960,
+      "image": "/images/lamborghini/islero.jpg",
+      "specs": {
+        "hp": 325,
+        "torqueLbFt": 268,
+        "zeroToSixtyMs": 6.5,
+        "topSpeedMph": 156,
+        "engineConfig": "V12, 4.0L"
+      },
+      "eraRivals": ["ferrari-365-gtb-4-daytona-1968"]
+    },
+    {
+      "id": "lamborghini-jarama-1970",
+      "brand": "lamborghini",
+      "model": "Jarama",
+      "year": 1970,
+      "decade": 1970,
+      "image": "/images/lamborghini/jarama.jpg",
+      "specs": {
+        "hp": 350,
+        "torqueLbFt": 281,
+        "zeroToSixtyMs": 6.5,
+        "topSpeedMph": 162,
+        "engineConfig": "V12, 4.0L"
+      },
+      "eraRivals": ["ferrari-246-gt-dino-1969", "ferrari-308-gt4-dino-1973"]
+    },
+    {
+      "id": "lamborghini-miura-sv-1971",
+      "brand": "lamborghini",
+      "model": "Miura SV",
+      "year": 1971,
+      "decade": 1970,
+      "image": "/images/lamborghini/miura-sv.jpg",
+      "specs": {
+        "hp": 385,
+        "torqueLbFt": 295,
+        "zeroToSixtyMs": 5.5,
+        "topSpeedMph": 178,
+        "engineConfig": "V12, 4.0L"
+      },
+      "eraRivals": ["ferrari-365-gtb-4-daytona-1968", "ferrari-308-gt4-dino-1973"]
+    },
+    {
+      "id": "lamborghini-countach-lp400-1974",
+      "brand": "lamborghini",
+      "model": "Countach LP400",
+      "year": 1974,
+      "decade": 1970,
+      "image": "/images/lamborghini/countach-lp400.jpg",
+      "specs": {
+        "hp": 375,
+        "torqueLbFt": 268,
+        "zeroToSixtyMs": 5.9,
+        "topSpeedMph": 179,
+        "engineConfig": "V12, 4.0L"
+      },
+      "eraRivals": ["ferrari-308-gtb-1975", "ferrari-512-bb-1976"]
+    },
+    {
+      "id": "lamborghini-silhouette-1976",
+      "brand": "lamborghini",
+      "model": "Silhouette",
+      "year": 1976,
+      "decade": 1970,
+      "image": "/images/lamborghini/silhouette.jpg",
+      "specs": {
+        "hp": 260,
+        "torqueLbFt": 210,
+        "zeroToSixtyMs": 6.5,
+        "topSpeedMph": 162,
+        "engineConfig": "V8, 3.0L"
+      },
+      "eraRivals": ["ferrari-308-gts-1977", "ferrari-512-bb-1976"]
+    },
+    {
+      "id": "lamborghini-jalpa-1981",
+      "brand": "lamborghini",
+      "model": "Jalpa",
+      "year": 1981,
+      "decade": 1980,
+      "image": "/images/lamborghini/jalpa.jpg",
+      "specs": {
+        "hp": 255,
+        "torqueLbFt": 225,
+        "zeroToSixtyMs": 6.5,
+        "topSpeedMph": 161,
+        "engineConfig": "V8, 3.5L"
+      },
+      "eraRivals": ["ferrari-mondial-8-1980", "ferrari-308-gts-1977"]
+    },
+    {
+      "id": "lamborghini-countach-lp500s-1982",
+      "brand": "lamborghini",
+      "model": "Countach LP500S",
+      "year": 1982,
+      "decade": 1980,
+      "image": "/images/lamborghini/countach-lp500s.jpg",
+      "specs": {
+        "hp": 375,
+        "torqueLbFt": 268,
+        "zeroToSixtyMs": 5.0,
+        "topSpeedMph": 183,
+        "engineConfig": "V12, 4.8L"
+      },
+      "eraRivals": ["ferrari-288-gto-1984", "ferrari-testarossa-1984"]
+    },
+    {
+      "id": "lamborghini-lm002-1986",
+      "brand": "lamborghini",
+      "model": "LM002",
+      "year": 1986,
+      "decade": 1980,
+      "image": "/images/lamborghini/lm002.jpg",
+      "specs": {
+        "hp": 444,
+        "torqueLbFt": 369,
+        "zeroToSixtyMs": 7.7,
+        "topSpeedMph": 119,
+        "engineConfig": "V12, 5.2L"
+      },
+      "eraRivals": ["ferrari-testarossa-1984", "ferrari-f40-1987"]
+    },
+    {
+      "id": "lamborghini-countach-25th-anniversary-1988",
+      "brand": "lamborghini",
+      "model": "Countach 25th Anniversary",
+      "year": 1988,
+      "decade": 1980,
+      "image": "/images/lamborghini/countach-25th-anniversary.jpg",
+      "specs": {
+        "hp": 414,
+        "torqueLbFt": 365,
+        "zeroToSixtyMs": 4.7,
+        "topSpeedMph": 183,
+        "engineConfig": "V12, 5.2L"
+      },
+      "eraRivals": ["ferrari-f40-1987"]
+    },
+    {
+      "id": "lamborghini-diablo-1990",
+      "brand": "lamborghini",
+      "model": "Diablo",
+      "year": 1990,
+      "decade": 1990,
+      "image": "/images/lamborghini/diablo.jpg",
+      "specs": {
+        "hp": 492,
+        "torqueLbFt": 428,
+        "zeroToSixtyMs": 4.0,
+        "topSpeedMph": 202,
+        "engineConfig": "V12, 5.7L"
+      },
+      "eraRivals": ["ferrari-f40-1987", "ferrari-512-tr-1991"]
+    },
+    {
+      "id": "lamborghini-diablo-vt-1993",
+      "brand": "lamborghini",
+      "model": "Diablo VT",
+      "year": 1993,
+      "decade": 1990,
+      "image": "/images/lamborghini/diablo-vt.jpg",
+      "specs": {
+        "hp": 492,
+        "torqueLbFt": 428,
+        "zeroToSixtyMs": 4.0,
+        "topSpeedMph": 202,
+        "engineConfig": "V12, 5.7L"
+      },
+      "eraRivals": ["ferrari-512-tr-1991", "ferrari-f355-1994"]
+    },
+    {
+      "id": "lamborghini-diablo-se30-1994",
+      "brand": "lamborghini",
+      "model": "Diablo SE30",
+      "year": 1994,
+      "decade": 1990,
+      "image": "/images/lamborghini/diablo-se30.jpg",
+      "specs": {
+        "hp": 525,
+        "torqueLbFt": 428,
+        "zeroToSixtyMs": 3.9,
+        "topSpeedMph": 202,
+        "engineConfig": "V12, 5.7L"
+      },
+      "eraRivals": ["ferrari-f355-1994", "ferrari-f50-1995"]
+    },
+    {
+      "id": "lamborghini-diablo-sv-1996",
+      "brand": "lamborghini",
+      "model": "Diablo SV",
+      "year": 1996,
+      "decade": 1990,
+      "image": "/images/lamborghini/diablo-sv.jpg",
+      "specs": {
+        "hp": 510,
+        "torqueLbFt": 428,
+        "zeroToSixtyMs": 4.0,
+        "topSpeedMph": 202,
+        "engineConfig": "V12, 5.7L"
+      },
+      "eraRivals": ["ferrari-f50-1995", "ferrari-550-maranello-1996"]
+    },
+    {
+      "id": "lamborghini-diablo-gt-1999",
+      "brand": "lamborghini",
+      "model": "Diablo GT",
+      "year": 1999,
+      "decade": 1990,
+      "image": "/images/lamborghini/diablo-gt.jpg",
+      "specs": {
+        "hp": 575,
+        "torqueLbFt": 465,
+        "zeroToSixtyMs": 3.7,
+        "topSpeedMph": 211,
+        "engineConfig": "V12, 5.7L"
+      },
+      "eraRivals": ["ferrari-360-modena-1999", "ferrari-550-maranello-1996"]
+    },
+    {
+      "id": "lamborghini-murcielago-2001",
+      "brand": "lamborghini",
+      "model": "Murciélago",
+      "year": 2001,
+      "decade": 2000,
+      "image": "/images/lamborghini/murcielago.jpg",
+      "specs": {
+        "hp": 571,
+        "torqueLbFt": 479,
+        "zeroToSixtyMs": 3.8,
+        "topSpeedMph": 205,
+        "engineConfig": "V12, 6.2L"
+      },
+      "eraRivals": ["ferrari-enzo-2002", "ferrari-575m-maranello-2002"]
+    },
+    {
+      "id": "lamborghini-gallardo-2003",
+      "brand": "lamborghini",
+      "model": "Gallardo",
+      "year": 2003,
+      "decade": 2000,
+      "image": "/images/lamborghini/gallardo.jpg",
+      "specs": {
+        "hp": 493,
+        "torqueLbFt": 376,
+        "zeroToSixtyMs": 3.9,
+        "topSpeedMph": 192,
+        "engineConfig": "V10, 5.0L"
+      },
+      "eraRivals": ["ferrari-360-challenge-stradale-2003", "ferrari-f430-2004"]
+    },
+    {
+      "id": "lamborghini-murcielago-lp640-2006",
+      "brand": "lamborghini",
+      "model": "Murciélago LP640",
+      "year": 2006,
+      "decade": 2000,
+      "image": "/images/lamborghini/murcielago-lp640.jpg",
+      "specs": {
+        "hp": 631,
+        "torqueLbFt": 487,
+        "zeroToSixtyMs": 3.4,
+        "topSpeedMph": 211,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-599-gtb-fiorano-2006", "ferrari-430-scuderia-2007"]
+    },
+    {
+      "id": "lamborghini-reventon-2007",
+      "brand": "lamborghini",
+      "model": "Reventón",
+      "year": 2007,
+      "decade": 2000,
+      "image": "/images/lamborghini/reventon.jpg",
+      "specs": {
+        "hp": 641,
+        "torqueLbFt": 487,
+        "zeroToSixtyMs": 3.4,
+        "topSpeedMph": 221,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-430-scuderia-2007", "ferrari-599-gtb-fiorano-2006"]
+    },
+    {
+      "id": "lamborghini-gallardo-lp560-4-2008",
+      "brand": "lamborghini",
+      "model": "Gallardo LP560-4",
+      "year": 2008,
+      "decade": 2000,
+      "image": "/images/lamborghini/gallardo-lp560-4.jpg",
+      "specs": {
+        "hp": 552,
+        "torqueLbFt": 398,
+        "zeroToSixtyMs": 3.7,
+        "topSpeedMph": 202,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-california-2008", "ferrari-458-italia-2009"]
+    },
+    {
+      "id": "lamborghini-gallardo-lp570-4-superleggera-2010",
+      "brand": "lamborghini",
+      "model": "Gallardo LP570-4 Superleggera",
+      "year": 2010,
+      "decade": 2010,
+      "image": "/images/lamborghini/gallardo-lp570-4-superleggera.jpg",
+      "specs": {
+        "hp": 562,
+        "torqueLbFt": 398,
+        "zeroToSixtyMs": 3.4,
+        "topSpeedMph": 202,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-458-italia-2009", "ferrari-458-spider-2011"]
+    },
+    {
+      "id": "lamborghini-aventador-lp700-4-2011",
+      "brand": "lamborghini",
+      "model": "Aventador LP700-4",
+      "year": 2011,
+      "decade": 2010,
+      "image": "/images/lamborghini/aventador-lp700-4.jpg",
+      "specs": {
+        "hp": 691,
+        "torqueLbFt": 509,
+        "zeroToSixtyMs": 2.9,
+        "topSpeedMph": 217,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-ff-2011", "ferrari-458-speciale-2013"]
+    },
+    {
+      "id": "lamborghini-sesto-elemento-2011",
+      "brand": "lamborghini",
+      "model": "Sesto Elemento",
+      "year": 2011,
+      "decade": 2010,
+      "image": "/images/lamborghini/sesto-elemento.jpg",
+      "specs": {
+        "hp": 562,
+        "torqueLbFt": 376,
+        "zeroToSixtyMs": 2.5,
+        "topSpeedMph": 220,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-458-speciale-2013"]
+    },
+    {
+      "id": "lamborghini-huracan-lp610-4-2014",
+      "brand": "lamborghini",
+      "model": "Huracán LP610-4",
+      "year": 2014,
+      "decade": 2010,
+      "image": "/images/lamborghini/huracan-lp610-4.jpg",
+      "specs": {
+        "hp": 602,
+        "torqueLbFt": 413,
+        "zeroToSixtyMs": 3.2,
+        "topSpeedMph": 202,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-458-speciale-2013", "ferrari-488-gtb-2015"]
+    },
+    {
+      "id": "lamborghini-centenario-2016",
+      "brand": "lamborghini",
+      "model": "Centenario",
+      "year": 2016,
+      "decade": 2010,
+      "image": "/images/lamborghini/centenario.jpg",
+      "specs": {
+        "hp": 759,
+        "torqueLbFt": 509,
+        "zeroToSixtyMs": 2.8,
+        "topSpeedMph": 217,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-laferrari-2013", "ferrari-488-pista-2018"]
+    },
+    {
+      "id": "lamborghini-aventador-s-2017",
+      "brand": "lamborghini",
+      "model": "Aventador S",
+      "year": 2017,
+      "decade": 2010,
+      "image": "/images/lamborghini/aventador-s.jpg",
+      "specs": {
+        "hp": 740,
+        "torqueLbFt": 509,
+        "zeroToSixtyMs": 2.9,
+        "topSpeedMph": 217,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-812-superfast-2017", "ferrari-gtc4lusso-2016"]
+    },
+    {
+      "id": "lamborghini-huracan-performante-2017",
+      "brand": "lamborghini",
+      "model": "Huracán Performante",
+      "year": 2017,
+      "decade": 2010,
+      "image": "/images/lamborghini/huracan-performante.jpg",
+      "specs": {
+        "hp": 631,
+        "torqueLbFt": 443,
+        "zeroToSixtyMs": 2.9,
+        "topSpeedMph": 202,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-488-pista-2018", "ferrari-f8-tributo-2019"]
+    },
+    {
+      "id": "lamborghini-urus-2018",
+      "brand": "lamborghini",
+      "model": "Urus",
+      "year": 2018,
+      "decade": 2010,
+      "image": "/images/lamborghini/urus.jpg",
+      "specs": {
+        "hp": 641,
+        "torqueLbFt": 627,
+        "zeroToSixtyMs": 3.6,
+        "topSpeedMph": 190,
+        "engineConfig": "Twin-Turbo V8, 4.0L"
+      },
+      "eraRivals": ["ferrari-roma-2020", "ferrari-purosangue-2022"]
+    },
+    {
+      "id": "lamborghini-aventador-svj-2018",
+      "brand": "lamborghini",
+      "model": "Aventador SVJ",
+      "year": 2018,
+      "decade": 2010,
+      "image": "/images/lamborghini/aventador-svj.jpg",
+      "specs": {
+        "hp": 759,
+        "torqueLbFt": 531,
+        "zeroToSixtyMs": 2.8,
+        "topSpeedMph": 217,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-812-superfast-2017", "ferrari-sf90-stradale-2019"]
+    },
+    {
+      "id": "lamborghini-sian-fkp37-2019",
+      "brand": "lamborghini",
+      "model": "Sián FKP 37",
+      "year": 2019,
+      "decade": 2010,
+      "image": "/images/lamborghini/sian-fkp37.jpg",
+      "specs": {
+        "hp": 819,
+        "torqueLbFt": 531,
+        "zeroToSixtyMs": 2.8,
+        "topSpeedMph": 217,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-sf90-stradale-2019", "ferrari-laferrari-2013"]
+    },
+    {
+      "id": "lamborghini-huracan-evo-2020",
+      "brand": "lamborghini",
+      "model": "Huracán EVO",
+      "year": 2020,
+      "decade": 2020,
+      "image": "/images/lamborghini/huracan-evo.jpg",
+      "specs": {
+        "hp": 631,
+        "torqueLbFt": 443,
+        "zeroToSixtyMs": 2.9,
+        "topSpeedMph": 202,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-f8-tributo-2019", "ferrari-296-gtb-2021"]
+    },
+    {
+      "id": "lamborghini-huracan-sto-2020",
+      "brand": "lamborghini",
+      "model": "Huracán STO",
+      "year": 2020,
+      "decade": 2020,
+      "image": "/images/lamborghini/huracan-sto.jpg",
+      "specs": {
+        "hp": 631,
+        "torqueLbFt": 417,
+        "zeroToSixtyMs": 3.0,
+        "topSpeedMph": 193,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-488-pista-2018", "ferrari-296-gtb-2021"]
+    },
+    {
+      "id": "lamborghini-essenza-scv12-2021",
+      "brand": "lamborghini",
+      "model": "Essenza SCV12",
+      "year": 2021,
+      "decade": 2020,
+      "image": "/images/lamborghini/essenza-scv12.jpg",
+      "specs": {
+        "hp": 830,
+        "torqueLbFt": 531,
+        "zeroToSixtyMs": 2.6,
+        "topSpeedMph": 200,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-812-competizione-2021", "ferrari-sf90-stradale-2019"]
+    },
+    {
+      "id": "lamborghini-countach-lpi-800-4-2021",
+      "brand": "lamborghini",
+      "model": "Countach LPI 800-4",
+      "year": 2021,
+      "decade": 2020,
+      "image": "/images/lamborghini/countach-lpi-800-4.jpg",
+      "specs": {
+        "hp": 814,
+        "torqueLbFt": 531,
+        "zeroToSixtyMs": 2.8,
+        "topSpeedMph": 221,
+        "engineConfig": "V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-daytona-sp3-2022", "ferrari-sf90-spider-2021"]
+    },
+    {
+      "id": "lamborghini-urus-s-2022",
+      "brand": "lamborghini",
+      "model": "Urus S",
+      "year": 2022,
+      "decade": 2020,
+      "image": "/images/lamborghini/urus-s.jpg",
+      "specs": {
+        "hp": 657,
+        "torqueLbFt": 627,
+        "zeroToSixtyMs": 3.5,
+        "topSpeedMph": 193,
+        "engineConfig": "Twin-Turbo V8, 4.0L"
+      },
+      "eraRivals": ["ferrari-purosangue-2022", "ferrari-roma-2020"]
+    },
+    {
+      "id": "lamborghini-urus-performante-2022",
+      "brand": "lamborghini",
+      "model": "Urus Performante",
+      "year": 2022,
+      "decade": 2020,
+      "image": "/images/lamborghini/urus-performante.jpg",
+      "specs": {
+        "hp": 657,
+        "torqueLbFt": 627,
+        "zeroToSixtyMs": 3.3,
+        "topSpeedMph": 190,
+        "engineConfig": "Twin-Turbo V8, 4.0L"
+      },
+      "eraRivals": ["ferrari-purosangue-2022"]
+    },
+    {
+      "id": "lamborghini-revuelto-2023",
+      "brand": "lamborghini",
+      "model": "Revuelto",
+      "year": 2023,
+      "decade": 2020,
+      "image": "/images/lamborghini/revuelto.jpg",
+      "specs": {
+        "hp": 1001,
+        "torqueLbFt": 531,
+        "zeroToSixtyMs": 2.5,
+        "topSpeedMph": 217,
+        "engineConfig": "Plugin Hybrid V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-sf90-stradale-2019", "ferrari-296-gtb-2021"]
+    },
+    {
+      "id": "lamborghini-huracan-sterrato-2023",
+      "brand": "lamborghini",
+      "model": "Huracán Sterrato",
+      "year": 2023,
+      "decade": 2020,
+      "image": "/images/lamborghini/huracan-sterrato.jpg",
+      "specs": {
+        "hp": 602,
+        "torqueLbFt": 413,
+        "zeroToSixtyMs": 3.4,
+        "topSpeedMph": 162,
+        "engineConfig": "V10, 5.2L"
+      },
+      "eraRivals": ["ferrari-296-gts-2022", "ferrari-roma-spider-2023"]
+    },
+    {
+      "id": "lamborghini-revuelto-spider-2024",
+      "brand": "lamborghini",
+      "model": "Revuelto Spider",
+      "year": 2024,
+      "decade": 2020,
+      "image": "/images/lamborghini/revuelto-spider.jpg",
+      "specs": {
+        "hp": 1001,
+        "torqueLbFt": 531,
+        "zeroToSixtyMs": 2.5,
+        "topSpeedMph": 217,
+        "engineConfig": "Plugin Hybrid V12, 6.5L"
+      },
+      "eraRivals": ["ferrari-sf90-spider-2021", "ferrari-296-gts-2022"]
+    }
+  ]
+}
