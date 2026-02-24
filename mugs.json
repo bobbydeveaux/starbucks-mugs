@@ -1,44 +1,44 @@
 [
   {
     "id": 1,
-    "name": "Starbucks Classic White Ceramic Mug",
-    "price": 14.95,
-    "description": "A timeless white ceramic mug featuring the iconic Starbucks siren logo. Perfect for your morning coffee ritual at home. Holds 11 oz and is dishwasher safe.",
-    "image": "images/classic-white-mug.jpg"
+    "name": "Classic White Ceramic Mug",
+    "price": 12.95,
+    "image": "images/classic-white.jpg",
+    "description": "The timeless Starbucks classic white ceramic mug. Features the iconic Starbucks siren logo and holds 11 oz of your favorite beverage. Dishwasher safe."
   },
   {
     "id": 2,
-    "name": "Starbucks Pike Place Roast Mug",
-    "price": 16.95,
-    "description": "Inspired by the original 1971 Pike Place store, this rich cobalt blue mug celebrates Starbucks' heritage. Features vintage-style artwork and holds 12 oz. Microwave and dishwasher safe.",
-    "image": "images/pike-place-mug.jpg"
+    "name": "Pike Place Roast Mug",
+    "price": 14.95,
+    "image": "images/pike-place.jpg",
+    "description": "Inspired by the original Pike Place Market store in Seattle. This 12 oz mug celebrates Starbucks' roots with a vintage-style illustration. Microwave safe."
   },
   {
     "id": 3,
-    "name": "Starbucks Reserve Copper Ombre Mug",
-    "price": 24.95,
-    "description": "An elegant copper-toned ombre mug from the Starbucks Reserve collection. The gradient finish adds a touch of sophistication to any kitchen. Holds 10 oz. Hand wash recommended.",
-    "image": "images/reserve-copper-mug.jpg"
+    "name": "Holiday Season Tumbler",
+    "price": 19.95,
+    "image": "images/holiday-tumbler.jpg",
+    "description": "Limited edition holiday mug featuring festive red designs and snowflake patterns. Double-wall insulated to keep drinks warm longer. Holds 16 oz."
   },
   {
     "id": 4,
-    "name": "Starbucks Holiday Blend Red Mug",
-    "price": 19.95,
-    "description": "Bring the festive spirit to your coffee break with this limited-edition holiday red mug. Adorned with seasonal snowflake patterns and the Starbucks wordmark. Holds 12 oz. Dishwasher safe.",
-    "image": "images/holiday-red-mug.jpg"
+    "name": "City Collection: Seattle",
+    "price": 16.95,
+    "image": "images/city-seattle.jpg",
+    "description": "Part of the exclusive Starbucks City Collection. This Seattle mug showcases the Space Needle and downtown skyline. A must-have for travelers and collectors. 14 oz capacity."
   },
   {
     "id": 5,
-    "name": "Starbucks You Are Here Collection Mug",
-    "price": 21.95,
-    "description": "Part of the iconic You Are Here collection, this colorful mug features illustrated landmarks and local scenes. A great collector's item for coffee lovers and travelers alike. Holds 14 oz.",
-    "image": "images/you-are-here-mug.jpg"
+    "name": "Reserve Roastery Mug",
+    "price": 22.95,
+    "image": "images/reserve-roastery.jpg",
+    "description": "Premium matte black mug from the Starbucks Reserve Roastery line. Features copper accent detailing and the Reserve logo. Perfect for specialty coffee enthusiasts. 12 oz."
   },
   {
     "id": 6,
-    "name": "Starbucks Anniversary Blend Black Mug",
+    "name": "You Are Here Collection",
     "price": 18.95,
-    "description": "Commemorating decades of Starbucks' passion for coffee, this matte black mug features the anniversary logo etched in gold. A premium addition to any mug collection. Holds 11 oz. Hand wash recommended.",
-    "image": "images/anniversary-black-mug.jpg"
+    "image": "images/you-are-here.jpg",
+    "description": "The beloved You Are Here series captures iconic landmarks and cultural elements from around the world. Each mug tells a unique story. 14 oz, ceramic with colorful glaze."
   }
 ]
