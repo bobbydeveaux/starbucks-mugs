@@ -2,63 +2,53 @@
 
 ## ❌ BLOCKING ISSUES FOUND
 
-This PR changes the `mugs.json` data schema but does **not update `app.js`** to match. The result is a completely broken website at runtime — no mugs will render.
+### Summary
+
+The PR correctly implements the `loadMugs()` envelope refactor and renames `price` → `price_usd` in `app.js`, but ships with a **breaking production bug**: `mugs.json` was not updated to match.
 
 ---
 
-### Bug 1 — `loadMugs()` returns an envelope object, not an array (BLOCKING)
+### BLOCKING: `mugs.json` still uses `"price"`, app.js now expects `price_usd`
 
-`app.js:129`:
-```js
-loadMugs()
-  .then(renderCards)   // renderCards receives { version: "1.0", mugs: [...] }
+Every card render will throw a `TypeError`:
+
+```
+TypeError: Cannot read properties of undefined (reading 'toFixed')
 ```
 
-`app.js:25-29` (`loadMugs`):
+**Where it breaks** — `app.js:44`, `app.js:61`, `app.js:100`:
 ```js
-return response.json();   // now returns { version, mugs[] }, not an array
+card.setAttribute('aria-label', `${mug.name}, $${mug.price_usd.toFixed(2)}`);
+//                                                       ^^^^^^^^^ undefined
+price.textContent = `$${mug.price_usd.toFixed(2)}`;
+modalPrice.textContent = `$${mug.price_usd.toFixed(2)}`;
 ```
 
-`app.js:83`:
-```js
-mugs.forEach((mug) => { ... });   // TypeError: mugs.forEach is not a function
+**Why it's caught but still breaks**: The `.catch()` in the bootstrap chain captures errors thrown inside the `.then()` callback, so `renderCards()` throwing would redirect to the error message — meaning the catalog shows the failure state, not a partially-rendered grid.
+
+**Root cause**: `mugs.json` entry at line 5 (and all 6 entries):
+```json
+"price": 12.95   // still the old field name
 ```
 
-`renderCards` receives the envelope object and tries to call `.forEach()` on it. This throws immediately and the entire grid fails to render.
+The LLD explicitly calls for this migration in the same PR:
+> *"Schema migration: rename `price` → `price_usd` and restructure root from array to `{ version, mugs }` in `mugs.json`. Handled in a single file edit."*
 
-**Fix required**: `loadMugs()` must extract the array: `return response.json().then(data => data.mugs)`, or the bootstrap chain must be updated to `loadMugs().then(data => renderCards(data.mugs))`.
+Neither the field rename nor the bare-array → envelope restructuring was applied to `mugs.json`.
 
----
-
-### Bug 2 — `mug.price` is used throughout `app.js` but the field is now `price_usd` (BLOCKING)
-
-Even if Bug 1 were fixed, every card creation and modal display would crash:
-
-- `app.js:42`: `aria-label: \`${mug.name}, $${mug.price.toFixed(2)}\``
-- `app.js:59`: `price.textContent = \`$${mug.price.toFixed(2)}\``
-- `app.js:98`: `modalPrice.textContent = \`$${mug.price.toFixed(2)}\``
-
-`mug.price` is `undefined` in the new schema. Calling `undefined.toFixed(2)` throws `TypeError: Cannot read properties of undefined (reading 'toFixed')` on every card.
-
-**Fix required**: Replace all `mug.price` references in `app.js` with `mug.price_usd`.
+**Fix required**: Update `mugs.json` to rename all `price` fields to `price_usd` and wrap the root array in `{ "version": "1.0", "mugs": [...] }`.
 
 ---
 
-### Non-blocking: Test fixtures use old `price` field
+### Non-blocking observations
 
-`app.test.js:133-140` test fixtures still use `price: 12.95` instead of `price_usd`. The 19 tests all pass because they are self-contained, but they no longer exercise the real field name — meaning the regressions above aren't caught by CI.
+**Tests don't cover the actual `loadMugs()` function directly.** The new `parseMugsResponse` unit tests test a reimplemented inline copy of the parsing logic, not the real function. Integration tests also replicate the unwrap logic manually rather than calling `loadMugs()`. This means a regression in the actual `loadMugs()` body would go undetected by the new tests. Not blocking, but worth addressing.
 
-### Non-blocking: JSDoc comments not updated
-
-`app.js` lines 8, 34, and 91 still document the mug type as `{ price: number }` rather than `{ price_usd: number }`.
-
-### Non-blocking: HLD ADR still says "6-item catalog"
-
-`HLD.md:105`: *"Zero build tooling needed for a 6-item static catalog"* — still references the old 6-item count.
+**No validation for malformed non-array objects.** If `mugs.json` returns `{}` or `{ "version": "1.0" }` (missing `mugs`), the destructure `({ mugs })` in the bootstrap yields `undefined`, and `renderCards(undefined)` would throw on `undefined.forEach`. The catch block handles it gracefully at runtime, but there is no early validation. Non-blocking edge case.
 
 ---
 
-**Summary**: The data layer and consuming application are out of sync. The schema migration in `mugs.json` must be paired with corresponding changes to `app.js` (unwrap the envelope, rename the price field) and updated test fixtures before this can be merged.
+**Action required**: Update `mugs.json` to use `price_usd` and the versioned envelope format before this PR can be merged.
 
 **Action Required**: Please address the blocking issues above before merging.
 

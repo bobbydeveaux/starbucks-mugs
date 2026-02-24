@@ -19,14 +19,16 @@ const modalDescription = document.getElementById('modal-description');
 
 /**
  * Fetches mug data from mugs.json.
- * @returns {Promise<Array>} Array of mug objects.
+ * Supports both the versioned envelope { version, mugs[] } and the legacy bare array.
+ * @returns {Promise<{ version: string, mugs: Array }>}
  */
 async function loadMugs() {
   const response = await fetch('./mugs.json');
   if (!response.ok) {
     throw new Error(`Failed to fetch mugs.json: ${response.status}`);
   }
-  return response.json().then(data => data.mugs);
+  const data = await response.json();
+  return Array.isArray(data) ? { version: '0', mugs: data } : data;
 }
 
 /**
@@ -127,7 +129,7 @@ document.addEventListener('keydown', (e) => {
 
 /* Bootstrap */
 loadMugs()
-  .then(renderCards)
+  .then(({ mugs }) => renderCards(mugs))
   .catch((err) => {
     console.error(err);
     grid.innerHTML = '<p class="grid-error">Failed to load mugs. Please try again later.</p>';

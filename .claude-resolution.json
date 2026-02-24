@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 3,
-  "summary": "Resolved conflicts in index.html, mugs.json, and style.css. app.js (not conflicted) clearly targets HEAD's patterns (modal.hidden, .modal-backdrop, id=modal-image, .grid-error, .card-image), so HEAD was used as the base for all three files. Safe, non-breaking improvements from origin/main were incorporated: self-closing void tags and aria-live attribute in HTML; section comments, separate :focus-visible rule, modal-close focus styles, and modal-name padding-right in CSS. mugs.json used HEAD's version because app.test.js fixtures exactly match HEAD's mug names and prices.",
-  "strategyUsed": "Used HEAD as base for all files (app.js and app.test.js both depend on HEAD's structure and data); cherry-picked non-breaking accessibility and style improvements from origin/main where they did not conflict with app.js API surface"
+  "filesResolved": 4,
+  "summary": "Resolved 4 conflicted files: used origin/main's loadMugs() implementation (handles both legacy bare-array and versioned envelope formats), updated integration test to match, preserved HEAD's rich 52-entry mugs.json schema, and kept origin/main's review feedback as the most accurate review.",
+  "strategyUsed": "For app.js: chose origin/main's loadMugs() which returns { version, mugs } consistently (compatible with bootstrap destructuring .then(({ mugs }) => renderCards(mugs))). For app.test.js: chose origin/main's test_fetchSuccess to match the resolved loadMugs() behavior. For mugs.json: chose HEAD's version which is a superset (52 entries with rich schema including series/year/region/material/capacity_oz/tags fields vs origin/main's 6 minimal entries). For .review-feedback.txt: chose origin/main's review which accurately reflects the current state of the PR. All 23 tests pass."
 }
