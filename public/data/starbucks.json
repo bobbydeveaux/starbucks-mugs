@@ -124,6 +124,36 @@
       }
     },
     {
+      "id": "sbux-espresso",
+      "brand": "starbucks",
+      "name": "Espresso",
+      "category": "hot",
+      "size_ml": 60,
+      "image": "/images/sbux-espresso.webp",
+      "nutrition": {
+        "calories_kcal": 10,
+        "sugar_g": 0,
+        "fat_g": 0,
+        "protein_g": 1,
+        "caffeine_mg": 150
+      }
+    },
+    {
+      "id": "sbux-cortado",
+      "brand": "starbucks",
+      "name": "Cortado",
+      "category": "hot",
+      "size_ml": 118,
+      "image": "/images/sbux-cortado.webp",
+      "nutrition": {
+        "calories_kcal": 80,
+        "sugar_g": 7,
+        "fat_g": 3,
+        "protein_g": 5,
+        "caffeine_mg": 150
+      }
+    },
+    {
       "id": "sbux-iced-latte",
       "brand": "starbucks",
       "name": "Iced Caffè Latte",
@@ -379,6 +409,21 @@
       }
     },
     {
+      "id": "sbux-london-fog",
+      "brand": "starbucks",
+      "name": "London Fog Tea Latte",
+      "category": "tea",
+      "size_ml": 354,
+      "image": "/images/sbux-london-fog.webp",
+      "nutrition": {
+        "calories_kcal": 180,
+        "sugar_g": 28,
+        "fat_g": 3,
+        "protein_g": 8,
+        "caffeine_mg": 40
+      }
+    },
+    {
       "id": "sbux-hot-chocolate",
       "brand": "starbucks",
       "name": "Hot Chocolate",
@@ -436,51 +481,6 @@
         "fat_g": 0,
         "protein_g": 1,
         "caffeine_mg": 45
-      }
-    },
-    {
-      "id": "sbux-espresso",
-      "brand": "starbucks",
-      "name": "Espresso",
-      "category": "hot",
-      "size_ml": 60,
-      "image": "/images/sbux-espresso.webp",
-      "nutrition": {
-        "calories_kcal": 10,
-        "sugar_g": 0,
-        "fat_g": 0,
-        "protein_g": 1,
-        "caffeine_mg": 150
-      }
-    },
-    {
-      "id": "sbux-cortado",
-      "brand": "starbucks",
-      "name": "Cortado",
-      "category": "hot",
-      "size_ml": 118,
-      "image": "/images/sbux-cortado.webp",
-      "nutrition": {
-        "calories_kcal": 80,
-        "sugar_g": 7,
-        "fat_g": 3,
-        "protein_g": 5,
-        "caffeine_mg": 150
-      }
-    },
-    {
-      "id": "sbux-london-fog",
-      "brand": "starbucks",
-      "name": "London Fog Tea Latte",
-      "category": "tea",
-      "size_ml": 354,
-      "image": "/images/sbux-london-fog.webp",
-      "nutrition": {
-        "calories_kcal": 180,
-        "sugar_g": 28,
-        "fat_g": 3,
-        "protein_g": 8,
-        "caffeine_mg": 40
       }
     }
   ]

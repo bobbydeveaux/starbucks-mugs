@@ -19,5 +19,6 @@
     "docs/concepts/costa-vs-starbucks/LLD.md",
     "docs/concepts/costa-vs-starbucks/README.md",
     "docs/concepts/costa-vs-starbucks/tasks.yaml"
-  ]
+  ],
+  "completedTasks": [1, 2]
 }
