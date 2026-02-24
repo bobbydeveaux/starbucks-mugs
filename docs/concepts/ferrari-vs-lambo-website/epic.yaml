@@ -1,0 +1,75 @@
+Epics:
+- features:
+  - dependencies: []
+    description: Author ferrari.json and lamborghini.json with all production models
+      (≥50 Ferrari, ≥30 Lambo records matching the CarModel schema), extend src/types.ts
+      with CarModel and related interfaces, add ferrari-red and lambo-yellow brand
+      tokens to tailwind.config.ts, wire up React Router v6 routes (/ferrari, /lamborghini,
+      /compare), and configure CSP headers in vercel.json.
+    estimatedComplexity: medium
+    files:
+    - public/data/ferrari.json
+    - public/data/lamborghini.json
+    - src/types.ts
+    - tailwind.config.ts
+    - src/App.tsx
+    - vercel.json
+    id: ferrari-vs-lambo-website-feat-data-foundation
+    name: Static Data, Types & App Shell
+    project: website
+    type: enabler
+  id: ferrari-vs-lambo-website-epic-data-foundation
+  name: Data & Foundation
+- features:
+  - dependencies:
+    - ferrari-vs-lambo-website-feat-data-foundation
+    description: Implement useCarCatalog hook fetching brand JSON from public/data/
+      (mirroring useDrinks pattern) and exposing filtered/sorted car arrays, CarCard
+      component rendering top-trump-style stat cards (image, HP, torque, 0-60, top
+      speed, engine config), and CatalogPage listing both brand catalogs chronologically
+      with card thumbnails.
+    estimatedComplexity: medium
+    files:
+    - src/hooks/useCarCatalog.ts
+    - src/components/CarCard.tsx
+    - src/pages/CatalogPage.tsx
+    id: ferrari-vs-lambo-website-feat-car-catalog
+    name: Catalog Page & Car Cards
+    project: website
+    type: feature
+  - dependencies:
+    - ferrari-vs-lambo-website-feat-car-catalog
+    description: Implement EraFilter decade selector that narrows both catalogs simultaneously
+      via CatalogFilters and SearchBar with debounced real-time model-name filtering
+      responding within 300 ms, both wired into useCarCatalog.
+    estimatedComplexity: low
+    files:
+    - src/components/EraFilter.tsx
+    - src/components/SearchBar.tsx
+    id: ferrari-vs-lambo-website-feat-filtering-search
+    name: Era Filter & Search
+    project: website
+    type: feature
+  id: ferrari-vs-lambo-website-epic-car-catalog
+  name: Car Catalog
+- features:
+  - dependencies:
+    - ferrari-vs-lambo-website-feat-data-foundation
+    description: Implement useComparison hook tracking the selected Ferrari and Lambo
+      and computing per-stat winners, ComparisonView side-by-side panel highlighting
+      the winning stat per metric in brand colour, and eraMatchSuggestion pure utility
+      function pairing a selected car with its closest-year contemporary opponent
+      (using pre-authored eraRivals ids from the JSON).
+    estimatedComplexity: medium
+    files:
+    - src/hooks/useComparison.ts
+    - src/utils/eraMatchSuggestion.ts
+    - src/components/ComparisonView.tsx
+    - src/pages/ComparePage.tsx
+    id: ferrari-vs-lambo-website-feat-comparison
+    name: Comparison View & Era Rival Suggestion
+    project: website
+    type: feature
+  id: ferrari-vs-lambo-website-epic-comparison
+  name: Head-to-Head Comparison
+Version: v1alpha1
