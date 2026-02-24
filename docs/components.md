@@ -71,6 +71,68 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## FilterBar
+
+**File:** `src/components/FilterBar.tsx`
+
+Renders a group of toggle buttons for filtering drinks by category.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `category` | `Category \| 'all'` | The currently active category filter |
+| `onCategoryChange` | `(category: Category \| 'all') => void` | Callback fired when a category button is clicked |
+
+### Features
+
+- Six buttons: **All**, **Hot**, **Iced**, **Blended**, **Tea**, **Other**
+- Active button is visually highlighted (dark background)
+- Each button has `aria-pressed` set to `true`/`false` for screen readers
+- Wrapped in a `role="group"` with an `aria-label` for accessible grouping
+
+### Usage
+
+```tsx
+<FilterBar
+  category={filter.category}
+  onCategoryChange={category => setFilter(f => ({ ...f, category }))}
+/>
+```
+
+---
+
+## SearchBox
+
+**File:** `src/components/SearchBox.tsx`
+
+Renders a search input that triggers client-side filtering as the user types.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | `string` | — | Current search query |
+| `onChange` | `(query: string) => void` | — | Callback fired on every keystroke |
+| `placeholder` | `string` | `'Search drinks…'` | Input placeholder text |
+
+### Features
+
+- Pill-shaped text input with a visually hidden `<label>` for accessibility
+- Shows a clear (`×`) button when `value` is non-empty; clicking it calls `onChange('')`
+- Works with the `useDrinks` hook's free-text filter on drink names
+
+### Usage
+
+```tsx
+<SearchBox
+  value={filter.query}
+  onChange={query => setFilter(f => ({ ...f, query }))}
+/>
+```
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`
