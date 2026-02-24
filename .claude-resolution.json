@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in .claude-output.json and style.css. Kept HEAD branch PR metadata for .claude-output.json (full filter engine implementation for PR #88). Resolved style.css by adopting origin/main's structure which aligns with the already-merged index.html: uses #filter-bar directly (no .filter-bar-inner wrapper), .year-range-label class, outline-offset for accessibility instead of outline:none, transitions on inputs, ghost-button style for reset, richer .grid-empty with sub-elements, image placeholder styles, and correct #filter-bar selector in responsive media query.",
+  "strategyUsed": "For .claude-output.json: chose HEAD since it contains the complete PR #88 filter engine metadata (the current branch's work). For style.css: adopted origin/main's #filter-bar all-in-one layout (dropping HEAD's dead .filter-bar-inner rule which has no matching HTML), used origin/main's input styles (better a11y: outline-offset not outline:none, transitions), used .year-range-label to match the HTML, used origin/main's ghost-button for #filter-reset, kept origin/main's richer .grid-empty and image placeholder styles."
 }

@@ -99,7 +99,7 @@ export function DrinkCard({ drink, isSelected, onSelect }: DrinkCardProps) {
           }`}
           aria-pressed={isSelected}
         >
-          {isSelected ? 'Selected ✓' : 'Select to Compare'}
+          {isSelected ? '✓ Selected' : 'Select to Compare'}
         </button>
       </div>
     </article>
