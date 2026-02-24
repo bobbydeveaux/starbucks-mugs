@@ -9,7 +9,7 @@
       "model": "250 Testa Rossa",
       "year": 1957,
       "decade": 1950,
-      "image": "/images/ferrari/250-testa-rossa.jpg",
+      "imageUrl": "/images/ferrari/250-testa-rossa.jpg",
       "specs": {
         "hp": 300,
         "torqueLbFt": 217,
@@ -25,7 +25,7 @@
       "model": "250 GT California",
       "year": 1958,
       "decade": 1950,
-      "image": "/images/ferrari/250-gt-california.jpg",
+      "imageUrl": "/images/ferrari/250-gt-california.jpg",
       "specs": {
         "hp": 240,
         "torqueLbFt": 206,
@@ -41,7 +41,7 @@
       "model": "250 GTO",
       "year": 1962,
       "decade": 1960,
-      "image": "/images/ferrari/250-gto.jpg",
+      "imageUrl": "/images/ferrari/250-gto.jpg",
       "specs": {
         "hp": 296,
         "torqueLbFt": 210,
@@ -57,7 +57,7 @@
       "model": "275 GTB",
       "year": 1964,
       "decade": 1960,
-      "image": "/images/ferrari/275-gtb.jpg",
+      "imageUrl": "/images/ferrari/275-gtb.jpg",
       "specs": {
         "hp": 280,
         "torqueLbFt": 213,
@@ -73,7 +73,7 @@
       "model": "275 GTB/4",
       "year": 1966,
       "decade": 1960,
-      "image": "/images/ferrari/275-gtb-4.jpg",
+      "imageUrl": "/images/ferrari/275-gtb-4.jpg",
       "specs": {
         "hp": 300,
         "torqueLbFt": 217,
@@ -89,7 +89,7 @@
       "model": "330 GTS",
       "year": 1966,
       "decade": 1960,
-      "image": "/images/ferrari/330-gts.jpg",
+      "imageUrl": "/images/ferrari/330-gts.jpg",
       "specs": {
         "hp": 300,
         "torqueLbFt": 217,
@@ -105,7 +105,7 @@
       "model": "365 GTB/4 Daytona",
       "year": 1968,
       "decade": 1960,
-      "image": "/images/ferrari/365-gtb-4-daytona.jpg",
+      "imageUrl": "/images/ferrari/365-gtb-4-daytona.jpg",
       "specs": {
         "hp": 352,
         "torqueLbFt": 318,
@@ -121,7 +121,7 @@
       "model": "246 GT Dino",
       "year": 1969,
       "decade": 1960,
-      "image": "/images/ferrari/246-gt-dino.jpg",
+      "imageUrl": "/images/ferrari/246-gt-dino.jpg",
       "specs": {
         "hp": 195,
         "torqueLbFt": 166,
@@ -137,7 +137,7 @@
       "model": "308 GT4 Dino",
       "year": 1973,
       "decade": 1970,
-      "image": "/images/ferrari/308-gt4-dino.jpg",
+      "imageUrl": "/images/ferrari/308-gt4-dino.jpg",
       "specs": {
         "hp": 250,
         "torqueLbFt": 205,
@@ -153,7 +153,7 @@
       "model": "308 GTB",
       "year": 1975,
       "decade": 1970,
-      "image": "/images/ferrari/308-gtb.jpg",
+      "imageUrl": "/images/ferrari/308-gtb.jpg",
       "specs": {
         "hp": 255,
         "torqueLbFt": 206,
@@ -169,7 +169,7 @@
       "model": "512 BB",
       "year": 1976,
       "decade": 1970,
-      "image": "/images/ferrari/512-bb.jpg",
+      "imageUrl": "/images/ferrari/512-bb.jpg",
       "specs": {
         "hp": 340,
         "torqueLbFt": 333,
@@ -185,7 +185,7 @@
       "model": "308 GTS",
       "year": 1977,
       "decade": 1970,
-      "image": "/images/ferrari/308-gts.jpg",
+      "imageUrl": "/images/ferrari/308-gts.jpg",
       "specs": {
         "hp": 252,
         "torqueLbFt": 205,
@@ -201,7 +201,7 @@
       "model": "Mondial 8",
       "year": 1980,
       "decade": 1980,
-      "image": "/images/ferrari/mondial-8.jpg",
+      "imageUrl": "/images/ferrari/mondial-8.jpg",
       "specs": {
         "hp": 214,
         "torqueLbFt": 173,
@@ -217,7 +217,7 @@
       "model": "288 GTO",
       "year": 1984,
       "decade": 1980,
-      "image": "/images/ferrari/288-gto.jpg",
+      "imageUrl": "/images/ferrari/288-gto.jpg",
       "specs": {
         "hp": 400,
         "torqueLbFt": 366,
@@ -233,7 +233,7 @@
       "model": "Testarossa",
       "year": 1984,
       "decade": 1980,
-      "image": "/images/ferrari/testarossa.jpg",
+      "imageUrl": "/images/ferrari/testarossa.jpg",
       "specs": {
         "hp": 390,
         "torqueLbFt": 361,
@@ -249,7 +249,7 @@
       "model": "F40",
       "year": 1987,
       "decade": 1980,
-      "image": "/images/ferrari/f40.jpg",
+      "imageUrl": "/images/ferrari/f40.jpg",
       "specs": {
         "hp": 478,
         "torqueLbFt": 425,
@@ -265,7 +265,7 @@
       "model": "348 tb",
       "year": 1989,
       "decade": 1980,
-      "image": "/images/ferrari/348-tb.jpg",
+      "imageUrl": "/images/ferrari/348-tb.jpg",
       "specs": {
         "hp": 300,
         "torqueLbFt": 238,
@@ -281,7 +281,7 @@
       "model": "348 ts",
       "year": 1989,
       "decade": 1980,
-      "image": "/images/ferrari/348-ts.jpg",
+      "imageUrl": "/images/ferrari/348-ts.jpg",
       "specs": {
         "hp": 300,
         "torqueLbFt": 238,
@@ -297,7 +297,7 @@
       "model": "Mondial T",
       "year": 1989,
       "decade": 1980,
-      "image": "/images/ferrari/mondial-t.jpg",
+      "imageUrl": "/images/ferrari/mondial-t.jpg",
       "specs": {
         "hp": 300,
         "torqueLbFt": 238,
@@ -313,7 +313,7 @@
       "model": "512 TR",
       "year": 1991,
       "decade": 1990,
-      "image": "/images/ferrari/512-tr.jpg",
+      "imageUrl": "/images/ferrari/512-tr.jpg",
       "specs": {
         "hp": 428,
         "torqueLbFt": 369,
@@ -329,7 +329,7 @@
       "model": "456 GT",
       "year": 1992,
       "decade": 1990,
-      "image": "/images/ferrari/456-gt.jpg",
+      "imageUrl": "/images/ferrari/456-gt.jpg",
       "specs": {
         "hp": 442,
         "torqueLbFt": 397,
@@ -345,7 +345,7 @@
       "model": "F355",
       "year": 1994,
       "decade": 1990,
-      "image": "/images/ferrari/f355.jpg",
+      "imageUrl": "/images/ferrari/f355.jpg",
       "specs": {
         "hp": 375,
         "torqueLbFt": 268,
@@ -361,7 +361,7 @@
       "model": "F50",
       "year": 1995,
       "decade": 1990,
-      "image": "/images/ferrari/f50.jpg",
+      "imageUrl": "/images/ferrari/f50.jpg",
       "specs": {
         "hp": 513,
         "torqueLbFt": 347,
@@ -377,7 +377,7 @@
       "model": "550 Maranello",
       "year": 1996,
       "decade": 1990,
-      "image": "/images/ferrari/550-maranello.jpg",
+      "imageUrl": "/images/ferrari/550-maranello.jpg",
       "specs": {
         "hp": 485,
         "torqueLbFt": 415,
@@ -393,7 +393,7 @@
       "model": "355 F1",
       "year": 1997,
       "decade": 1990,
-      "image": "/images/ferrari/355-f1.jpg",
+      "imageUrl": "/images/ferrari/355-f1.jpg",
       "specs": {
         "hp": 375,
         "torqueLbFt": 268,
@@ -409,7 +409,7 @@
       "model": "360 Modena",
       "year": 1999,
       "decade": 1990,
-      "image": "/images/ferrari/360-modena.jpg",
+      "imageUrl": "/images/ferrari/360-modena.jpg",
       "specs": {
         "hp": 400,
         "torqueLbFt": 275,
@@ -425,7 +425,7 @@
       "model": "Enzo Ferrari",
       "year": 2002,
       "decade": 2000,
-      "image": "/images/ferrari/enzo.jpg",
+      "imageUrl": "/images/ferrari/enzo.jpg",
       "specs": {
         "hp": 651,
         "torqueLbFt": 485,
@@ -441,7 +441,7 @@
       "model": "575M Maranello",
       "year": 2002,
       "decade": 2000,
-      "image": "/images/ferrari/575m-maranello.jpg",
+      "imageUrl": "/images/ferrari/575m-maranello.jpg",
       "specs": {
         "hp": 515,
         "torqueLbFt": 434,
@@ -457,7 +457,7 @@
       "model": "360 Challenge Stradale",
       "year": 2003,
       "decade": 2000,
-      "image": "/images/ferrari/360-challenge-stradale.jpg",
+      "imageUrl": "/images/ferrari/360-challenge-stradale.jpg",
       "specs": {
         "hp": 425,
         "torqueLbFt": 276,
@@ -473,7 +473,7 @@
       "model": "F430",
       "year": 2004,
       "decade": 2000,
-      "image": "/images/ferrari/f430.jpg",
+      "imageUrl": "/images/ferrari/f430.jpg",
       "specs": {
         "hp": 483,
         "torqueLbFt": 343,
@@ -489,7 +489,7 @@
       "model": "612 Scaglietti",
       "year": 2004,
       "decade": 2000,
-      "image": "/images/ferrari/612-scaglietti.jpg",
+      "imageUrl": "/images/ferrari/612-scaglietti.jpg",
       "specs": {
         "hp": 540,
         "torqueLbFt": 434,
@@ -505,7 +505,7 @@
       "model": "599 GTB Fiorano",
       "year": 2006,
       "decade": 2000,
-      "image": "/images/ferrari/599-gtb-fiorano.jpg",
+      "imageUrl": "/images/ferrari/599-gtb-fiorano.jpg",
       "specs": {
         "hp": 612,
         "torqueLbFt": 448,
@@ -521,7 +521,7 @@
       "model": "430 Scuderia",
       "year": 2007,
       "decade": 2000,
-      "image": "/images/ferrari/430-scuderia.jpg",
+      "imageUrl": "/images/ferrari/430-scuderia.jpg",
       "specs": {
         "hp": 503,
         "torqueLbFt": 347,
@@ -537,7 +537,7 @@
       "model": "California",
       "year": 2008,
       "decade": 2000,
-      "image": "/images/ferrari/california.jpg",
+      "imageUrl": "/images/ferrari/california.jpg",
       "specs": {
         "hp": 454,
         "torqueLbFt": 358,
@@ -553,7 +553,7 @@
       "model": "458 Italia",
       "year": 2009,
       "decade": 2000,
-      "image": "/images/ferrari/458-italia.jpg",
+      "imageUrl": "/images/ferrari/458-italia.jpg",
       "specs": {
         "hp": 562,
         "torqueLbFt": 398,
@@ -569,7 +569,7 @@
       "model": "599 GTO",
       "year": 2010,
       "decade": 2010,
-      "image": "/images/ferrari/599-gto.jpg",
+      "imageUrl": "/images/ferrari/599-gto.jpg",
       "specs": {
         "hp": 670,
         "torqueLbFt": 458,
@@ -585,7 +585,7 @@
       "model": "458 Spider",
       "year": 2011,
       "decade": 2010,
-      "image": "/images/ferrari/458-spider.jpg",
+      "imageUrl": "/images/ferrari/458-spider.jpg",
       "specs": {
         "hp": 562,
         "torqueLbFt": 398,
@@ -601,7 +601,7 @@
       "model": "FF",
       "year": 2011,
       "decade": 2010,
-      "image": "/images/ferrari/ff.jpg",
+      "imageUrl": "/images/ferrari/ff.jpg",
       "specs": {
         "hp": 651,
         "torqueLbFt": 504,
@@ -617,7 +617,7 @@
       "model": "458 Speciale",
       "year": 2013,
       "decade": 2010,
-      "image": "/images/ferrari/458-speciale.jpg",
+      "imageUrl": "/images/ferrari/458-speciale.jpg",
       "specs": {
         "hp": 597,
         "torqueLbFt": 398,
@@ -633,7 +633,7 @@
       "model": "LaFerrari",
       "year": 2013,
       "decade": 2010,
-      "image": "/images/ferrari/laferrari.jpg",
+      "imageUrl": "/images/ferrari/laferrari.jpg",
       "specs": {
         "hp": 950,
         "torqueLbFt": 664,
@@ -649,7 +649,7 @@
       "model": "California T",
       "year": 2014,
       "decade": 2010,
-      "image": "/images/ferrari/california-t.jpg",
+      "imageUrl": "/images/ferrari/california-t.jpg",
       "specs": {
         "hp": 552,
         "torqueLbFt": 557,
@@ -665,7 +665,7 @@
       "model": "488 GTB",
       "year": 2015,
       "decade": 2010,
-      "image": "/images/ferrari/488-gtb.jpg",
+      "imageUrl": "/images/ferrari/488-gtb.jpg",
       "specs": {
         "hp": 661,
         "torqueLbFt": 561,
@@ -681,7 +681,7 @@
       "model": "488 Spider",
       "year": 2015,
       "decade": 2010,
-      "image": "/images/ferrari/488-spider.jpg",
+      "imageUrl": "/images/ferrari/488-spider.jpg",
       "specs": {
         "hp": 661,
         "torqueLbFt": 561,
@@ -697,7 +697,7 @@
       "model": "GTC4Lusso",
       "year": 2016,
       "decade": 2010,
-      "image": "/images/ferrari/gtc4lusso.jpg",
+      "imageUrl": "/images/ferrari/gtc4lusso.jpg",
       "specs": {
         "hp": 680,
         "torqueLbFt": 514,
@@ -713,7 +713,7 @@
       "model": "812 Superfast",
       "year": 2017,
       "decade": 2010,
-      "image": "/images/ferrari/812-superfast.jpg",
+      "imageUrl": "/images/ferrari/812-superfast.jpg",
       "specs": {
         "hp": 789,
         "torqueLbFt": 530,
@@ -729,7 +729,7 @@
       "model": "Portofino",
       "year": 2017,
       "decade": 2010,
-      "image": "/images/ferrari/portofino.jpg",
+      "imageUrl": "/images/ferrari/portofino.jpg",
       "specs": {
         "hp": 591,
         "torqueLbFt": 561,
@@ -745,7 +745,7 @@
       "model": "488 Pista",
       "year": 2018,
       "decade": 2010,
-      "image": "/images/ferrari/488-pista.jpg",
+      "imageUrl": "/images/ferrari/488-pista.jpg",
       "specs": {
         "hp": 710,
         "torqueLbFt": 568,
@@ -761,7 +761,7 @@
       "model": "F8 Tributo",
       "year": 2019,
       "decade": 2010,
-      "image": "/images/ferrari/f8-tributo.jpg",
+      "imageUrl": "/images/ferrari/f8-tributo.jpg",
       "specs": {
         "hp": 710,
         "torqueLbFt": 568,
@@ -777,7 +777,7 @@
       "model": "SF90 Stradale",
       "year": 2019,
       "decade": 2010,
-      "image": "/images/ferrari/sf90-stradale.jpg",
+      "imageUrl": "/images/ferrari/sf90-stradale.jpg",
       "specs": {
         "hp": 986,
         "torqueLbFt": 590,
@@ -793,7 +793,7 @@
       "model": "Roma",
       "year": 2020,
       "decade": 2020,
-      "image": "/images/ferrari/roma.jpg",
+      "imageUrl": "/images/ferrari/roma.jpg",
       "specs": {
         "hp": 612,
         "torqueLbFt": 561,
@@ -809,7 +809,7 @@
       "model": "Portofino M",
       "year": 2020,
       "decade": 2020,
-      "image": "/images/ferrari/portofino-m.jpg",
+      "imageUrl": "/images/ferrari/portofino-m.jpg",
       "specs": {
         "hp": 612,
         "torqueLbFt": 561,
@@ -825,7 +825,7 @@
       "model": "812 Competizione",
       "year": 2021,
       "decade": 2020,
-      "image": "/images/ferrari/812-competizione.jpg",
+      "imageUrl": "/images/ferrari/812-competizione.jpg",
       "specs": {
         "hp": 819,
         "torqueLbFt": 538,
@@ -841,7 +841,7 @@
       "model": "SF90 Spider",
       "year": 2021,
       "decade": 2020,
-      "image": "/images/ferrari/sf90-spider.jpg",
+      "imageUrl": "/images/ferrari/sf90-spider.jpg",
       "specs": {
         "hp": 986,
         "torqueLbFt": 590,
@@ -857,7 +857,7 @@
       "model": "296 GTB",
       "year": 2021,
       "decade": 2020,
-      "image": "/images/ferrari/296-gtb.jpg",
+      "imageUrl": "/images/ferrari/296-gtb.jpg",
       "specs": {
         "hp": 830,
         "torqueLbFt": 546,
@@ -873,7 +873,7 @@
       "model": "Daytona SP3",
       "year": 2022,
       "decade": 2020,
-      "image": "/images/ferrari/daytona-sp3.jpg",
+      "imageUrl": "/images/ferrari/daytona-sp3.jpg",
       "specs": {
         "hp": 829,
         "torqueLbFt": 538,
@@ -889,7 +889,7 @@
       "model": "296 GTS",
       "year": 2022,
       "decade": 2020,
-      "image": "/images/ferrari/296-gts.jpg",
+      "imageUrl": "/images/ferrari/296-gts.jpg",
       "specs": {
         "hp": 830,
         "torqueLbFt": 546,
@@ -905,7 +905,7 @@
       "model": "Purosangue",
       "year": 2022,
       "decade": 2020,
-      "image": "/images/ferrari/purosangue.jpg",
+      "imageUrl": "/images/ferrari/purosangue.jpg",
       "specs": {
         "hp": 715,
         "torqueLbFt": 528,
@@ -921,7 +921,7 @@
       "model": "Roma Spider",
       "year": 2023,
       "decade": 2020,
-      "image": "/images/ferrari/roma-spider.jpg",
+      "imageUrl": "/images/ferrari/roma-spider.jpg",
       "specs": {
         "hp": 612,
         "torqueLbFt": 561,
