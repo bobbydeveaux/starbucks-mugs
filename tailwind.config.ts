@@ -9,6 +9,8 @@ export default {
         'starbucks-light': '#D4EDDA',
         costa: '#6B1E1E',
         'costa-light': '#F8D7D7',
+        'ferrari-red': '#DC143C',
+        'lambo-yellow': '#FFC72C',
       },
     },
   },
