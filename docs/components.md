@@ -305,6 +305,90 @@ import { NutritionBar } from './NutritionBar';
 
 ---
 
+## CarCard
+
+**File:** `src/components/CarCard.tsx`
+
+Renders a single car model as a top-trump-style stat card in the catalog grid.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `car` | `CarModel` | The car data to display |
+| `isSelected` | `boolean` | Whether this card is currently selected for comparison |
+| `onSelect` | `(car: CarModel) => void` | Callback fired when the CTA button is clicked |
+
+### Features
+
+- Displays model name, year, decade badge, and all six key stats: HP, torque, 0–60, top speed, engine config, and car image
+- Brand-coloured border (`ferrari-red` `#DC143C` / `lambo-yellow` `#FFC72C`) for immediate brand identification
+- Lazy-loads the car image with a graceful fallback placeholder on error
+- "Select to Compare" CTA button that toggles to "✓ Selected" when active
+- Highlighted ring when `isSelected` is `true` (distinct visual state)
+- `aria-pressed` and `data-selected` attributes for accessibility
+
+### Ferrari example
+
+```tsx
+<CarCard
+  car={{ id: 'ferrari-testarossa-1984', brand: 'ferrari', model: 'Testarossa', year: 1984, ... }}
+  isSelected={false}
+  onSelect={(car) => console.log('selected', car)}
+/>
+```
+
+---
+
+## CatalogPage
+
+**File:** `src/pages/CatalogPage.tsx`
+
+Renders two brand sections — Ferrari and Lamborghini — each containing a responsive grid of `CarCard` components. Wired to the `/catalog` route in the app shell.
+
+### Features
+
+- Uses `useCarCatalog` to fetch and display car data sorted chronologically
+- Two labelled sections: **Ferrari** (red heading) and **Lamborghini** (yellow heading)
+- Responsive CSS grid: 1 → 2 → 3 → 4 columns across breakpoints
+- Model count badge per section
+- Empty-state message when no cars match active filters
+- Loading spinner while data is being fetched
+- Error alert when the fetch fails
+
+---
+
+## useCarCatalog hook
+
+**File:** `src/hooks/useCarCatalog.ts`
+
+Fetches both brand JSON files in parallel and exposes filtered, chronologically sorted car arrays.
+
+### Signature
+
+```ts
+function useCarCatalog(filters?: CatalogFilters): UseCarCatalogResult
+```
+
+### UseCarCatalogResult
+
+```ts
+interface UseCarCatalogResult {
+  ferrariCars: CarModel[];   // filtered & sorted by year
+  lamboCars: CarModel[];     // filtered & sorted by year
+  loading: boolean;
+  error: string | null;
+}
+```
+
+### Notes
+
+- Fetches `/data/ferrari.json` and `/data/lamborghini.json` in parallel via `fetch`
+- Maps the JSON `image` field to `imageUrl` on `CarModel` to match the TypeScript type
+- Aborts in-flight requests when the component unmounts
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`
