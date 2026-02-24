@@ -1,0 +1,23 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: ferrari-vs-lambo-website-feat-data-foundation
+        name: Static Data, Types & App Shell
+        type: enabler
+        files: [public/data/ferrari.json public/data/lamborghini.json src/types.ts tailwind.config.ts src/App.tsx vercel.json package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+  - number: 2
+    features:
+      - id: ferrari-vs-lambo-website-feat-car-catalog
+        name: Catalog Page & Car Cards
+        type: feature
+        files: [src/hooks/useCarCatalog.ts src/components/CarCard.tsx src/pages/CatalogPage.tsx package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+      - id: ferrari-vs-lambo-website-feat-comparison
+        name: Comparison View & Era Rival Suggestion
+        type: feature
+        files: [src/hooks/useComparison.ts src/utils/eraMatchSuggestion.ts src/components/ComparisonView.tsx src/pages/ComparePage.tsx package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+      - id: ferrari-vs-lambo-website-feat-filtering-search
+        name: Era Filter & Search
+        type: feature
+        files: [src/components/EraFilter.tsx src/components/SearchBar.tsx package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]

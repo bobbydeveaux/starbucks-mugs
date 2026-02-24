@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Author ferrari.json and lamborghini.json with all production models
       (≥50 Ferrari, ≥30 Lambo records matching the CarModel schema), extend src/types.ts
       with CarModel and related interfaces, add ferrari-red and lambo-yellow brand
@@ -18,10 +19,11 @@ Epics:
     name: Static Data, Types & App Shell
     project: website
     type: enabler
-  id: ferrari-vs-lambo-website-epic-data-foundation
-  name: Data & Foundation
-- features:
-  - dependencies:
+  ID: ferrari-vs-lambo-website-epic-data-foundation
+  Name: Data & Foundation
+- Features:
+  - Sprint: 2
+    dependencies:
     - ferrari-vs-lambo-website-feat-data-foundation
     description: Implement useCarCatalog hook fetching brand JSON from public/data/
       (mirroring useDrinks pattern) and exposing filtered/sorted car arrays, CarCard
@@ -37,7 +39,8 @@ Epics:
     name: Catalog Page & Car Cards
     project: website
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - ferrari-vs-lambo-website-feat-car-catalog
     description: Implement EraFilter decade selector that narrows both catalogs simultaneously
       via CatalogFilters and SearchBar with debounced real-time model-name filtering
@@ -50,10 +53,11 @@ Epics:
     name: Era Filter & Search
     project: website
     type: feature
-  id: ferrari-vs-lambo-website-epic-car-catalog
-  name: Car Catalog
-- features:
-  - dependencies:
+  ID: ferrari-vs-lambo-website-epic-car-catalog
+  Name: Car Catalog
+- Features:
+  - Sprint: 2
+    dependencies:
     - ferrari-vs-lambo-website-feat-data-foundation
     description: Implement useComparison hook tracking the selected Ferrari and Lambo
       and computing per-stat winners, ComparisonView side-by-side panel highlighting
@@ -70,6 +74,6 @@ Epics:
     name: Comparison View & Era Rival Suggestion
     project: website
     type: feature
-  id: ferrari-vs-lambo-website-epic-comparison
-  name: Head-to-Head Comparison
+  ID: ferrari-vs-lambo-website-epic-comparison
+  Name: Head-to-Head Comparison
 Version: v1alpha1
