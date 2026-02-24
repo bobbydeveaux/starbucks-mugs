@@ -4,3 +4,14 @@
 
 # Worker temporary state files (auto-added by COO)
 .claude-state.json
+
+# Node
+node_modules/
+
+# Vite build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
