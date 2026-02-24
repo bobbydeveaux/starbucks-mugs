@@ -1,0 +1,220 @@
+GeneratedAt: "2026-02-24T19:47:15Z"
+Plan: ferrari-vs-lambo-website-plan
+Sprints:
+- Features:
+  - FeatureID: ferrari-vs-lambo-website-feat-data-foundation
+    FeatureTitle: Static Data, Types & App Shell
+    Tasks:
+    - AcceptanceCriteria:
+      - CarModel interface is exported from src/types.ts with all fields required
+        by the JSON data (id, brand, model, year, price, specs, imageUrl, etc.)
+      - Existing Drink and Brand types remain untouched and the file compiles with
+        no TypeScript errors
+      - At least one related interface (e.g., CompareResult or CatalogFilter) is defined
+        for downstream hook use
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Append CarModel and related interfaces (e.g., BrandMeta, CompareResult)
+        to src/types.ts without modifying existing Drink/Brand types. These types
+        serve as the canonical schema for all car data and hook contracts in the feature.
+      EstimatedEffort: S
+      Files:
+      - src/types.ts
+      ID: task-ferrari-vs-lambo-website-feat-data-foundation-1
+      Title: Define CarModel types and interfaces
+    - AcceptanceCriteria:
+      - ferrari.json contains ≥50 records, each valid against the CarModel schema
+        (no missing required fields)
+      - lamborghini.json contains ≥30 records, each valid against the CarModel schema
+      - Both files are served correctly from the Vite dev server under /data/ and
+        can be fetched via fetch('/data/ferrari.json') without 404
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-ferrari-vs-lambo-website-feat-data-foundation-1
+      Description: Create public/data/ferrari.json with ≥50 production Ferrari models
+        and public/data/lamborghini.json with ≥30 production Lamborghini models, each
+        record conforming to the CarModel schema defined in task-1. Data should cover
+        a realistic spread of model years and variants.
+      EstimatedEffort: M
+      Files:
+      - public/data/ferrari.json
+      - public/data/lamborghini.json
+      ID: task-ferrari-vs-lambo-website-feat-data-foundation-2
+      Title: Author static car catalog JSON data
+    - AcceptanceCriteria:
+      - tailwind.config.ts exports ferrari-red and lambo-yellow tokens usable as bg-ferrari-red
+        and text-lambo-yellow; existing starbucks/costa tokens are unchanged
+      - Navigating to /ferrari, /lamborghini, and /compare renders the correct placeholder
+        or stub component without a console error
+      - vercel.json CSP headers allow fetch() to /data/*.json and do not break the
+        existing Costa vs Starbucks route at /
+      - react-router-dom@6 is the only new dependency added to package.json
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-ferrari-vs-lambo-website-feat-data-foundation-1
+      Description: Add ferrari-red (#DC143C) and lambo-yellow (#FFC72C) brand color
+        tokens to tailwind.config.ts alongside existing tokens. Configure React Router
+        v6 routes (/ferrari, /lamborghini, /compare) in src/App.tsx, and add Content-Security-Policy
+        headers to vercel.json permitting the public/data JSON fetches.
+      EstimatedEffort: S
+      Files:
+      - tailwind.config.ts
+      - src/App.tsx
+      - vercel.json
+      ID: task-ferrari-vs-lambo-website-feat-data-foundation-3
+      Title: 'Wire app shell: routes, Tailwind tokens, and CSP headers'
+  Sprint: 1
+- Features:
+  - FeatureID: ferrari-vs-lambo-website-feat-car-catalog
+    FeatureTitle: Catalog Page & Car Cards
+    Tasks:
+    - AcceptanceCriteria:
+      - useCarCatalog fetches both brand JSON files and returns filtered/sorted arrays
+        matching useDrinks API shape
+      - Existing Drink/Brand types and useDrinks hook are unmodified
+      - tailwind.config.ts includes ferrari-red and lambo-yellow alongside existing
+        tokens
+      - eraMatchSuggestion unit tests pass
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Append car-related types (Car, CarBrand, filter/sort options) to
+        src/types.ts without touching existing Drink/Brand types. Implement useCarCatalog
+        hook mirroring the useDrinks pattern — fetch ferrari.json and lamborghini.json
+        from public/data/ via fetch(), expose filtered and sorted car arrays, and
+        add eraMatchSuggestion pure utility. Add ferrari-red and lambo-yellow tokens
+        to tailwind.config.ts.
+      EstimatedEffort: M
+      Files:
+      - src/types.ts
+      - src/hooks/useCarCatalog.ts
+      - tailwind.config.ts
+      ID: task-ferrari-vs-lambo-website-feat-car-catalog-1
+      Title: Implement useCarCatalog hook and car type definitions
+    - AcceptanceCriteria:
+      - CarCard renders all six stat fields and applies correct brand color token
+        per car brand
+      - CatalogPage displays Ferrari and Lamborghini catalogs in chronological order
+        using useCarCatalog
+      - CatalogPage route is accessible and does not break the existing Costa vs Starbucks
+        route at /
+      - React Testing Library tests cover CarCard rendering and CatalogPage list output
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-ferrari-vs-lambo-website-feat-car-catalog-1
+      Description: Build CarCard as a top-trump-style stat card displaying image,
+        HP, torque, 0-60, top speed, and engine config using the ferrari-red/lambo-yellow
+        Tailwind tokens. Build CatalogPage consuming useCarCatalog to list both brand
+        catalogs chronologically with card thumbnails, wired to the react-router-dom
+        route added in the data foundation.
+      EstimatedEffort: M
+      Files:
+      - src/components/CarCard.tsx
+      - src/pages/CatalogPage.tsx
+      ID: task-ferrari-vs-lambo-website-feat-car-catalog-2
+      Title: Implement CarCard component and CatalogPage
+  - FeatureID: ferrari-vs-lambo-website-feat-filtering-search
+    FeatureTitle: Era Filter & Search
+    Tasks:
+    - AcceptanceCriteria:
+      - Selecting a decade in EraFilter reduces both Ferrari and Lamborghini catalog
+        results to models from that decade
+      - Selecting 'All' resets both catalogs to their full lists
+      - useCarCatalog exposes era state and setter consumed by EraFilter
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Build the EraFilter component as a decade selector (e.g. 1960s–2020s)
+        that simultaneously narrows both Ferrari and Lamborghini catalogs. Extend
+        useCarCatalog to accept and apply an era filter parameter, ensuring filtered
+        results update both catalog lists in sync.
+      EstimatedEffort: S
+      Files:
+      - src/components/EraFilter.tsx
+      - src/hooks/useCarCatalog.ts
+      ID: task-ferrari-vs-lambo-website-feat-filtering-search-1
+      Title: Implement EraFilter decade selector with useCarCatalog integration
+    - AcceptanceCriteria:
+      - Typing a model name filters both catalogs within 300 ms of the user stopping
+        input
+      - Search and era filters compose correctly (era + search term both applied simultaneously)
+      - Clearing the search input restores the full (or era-filtered) catalog without
+        delay
+      - Debounce is implemented without external libraries (useRef + setTimeout or
+        equivalent)
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-ferrari-vs-lambo-website-feat-filtering-search-1
+      Description: Build the SearchBar component with a debounced input (300 ms) that
+        filters both catalogs by model name in real time. Wire the search term into
+        useCarCatalog alongside the era filter so both filters compose correctly,
+        and ensure the search clears gracefully when the input is emptied.
+      EstimatedEffort: S
+      Files:
+      - src/components/SearchBar.tsx
+      - src/hooks/useCarCatalog.ts
+      ID: task-ferrari-vs-lambo-website-feat-filtering-search-2
+      Title: Implement debounced SearchBar with 300ms model-name filtering
+  - FeatureID: ferrari-vs-lambo-website-feat-comparison
+    FeatureTitle: Comparison View & Era Rival Suggestion
+    Tasks:
+    - AcceptanceCriteria:
+      - eraMatchSuggestion returns the correct rival car object for a given selection
+        using eraRivals ids
+      - Returns null (or undefined) gracefully when no eraRivals entry exists for
+        the selected car
+      - Unit tests pass with 100% branch coverage for the utility
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Write the pure eraMatchSuggestion function that accepts a selected
+        car and the full catalog, then returns the closest-year rival from the opposing
+        brand by matching against pre-authored eraRivals ids in the JSON. Include
+        a unit test file covering typical matches, missing eraRivals, and edge-year
+        ties.
+      EstimatedEffort: S
+      Files:
+      - src/utils/eraMatchSuggestion.ts
+      - src/utils/eraMatchSuggestion.test.ts
+      ID: task-ferrari-vs-lambo-website-feat-comparison-1
+      Title: Implement eraMatchSuggestion utility
+    - AcceptanceCriteria:
+      - Hook correctly identifies the winning brand per stat and marks ties when values
+        are equal
+      - Changing either selected id updates derived winners without stale state
+      - eraMatchSuggestion is called with the active selection and its result is exposed
+        from the hook
+      - RTL unit test covers stat-winner derivation and era suggestion integration
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-ferrari-vs-lambo-website-feat-comparison-1
+      Description: Create the useComparison hook that holds the selected Ferrari id
+        and Lambo id in state, exposes setters, and derives per-stat winner labels
+        (ferrari | lambo | tie) by comparing numeric stats across both car objects.
+        The hook should return the two car objects, the derived winners map, and the
+        era-suggested rival via eraMatchSuggestion.
+      EstimatedEffort: S
+      Files:
+      - src/hooks/useComparison.ts
+      ID: task-ferrari-vs-lambo-website-feat-comparison-2
+      Title: Implement useComparison hook
+    - AcceptanceCriteria:
+      - Winning stat cells render with the correct brand-colour highlight; tied cells
+        are neutral
+      - Selecting a car in either dropdown updates both the stat comparison and the
+        era suggestion
+      - Era suggestion button populates the opposing car selector with the suggested
+        rival
+      - ComparePage is accessible at its designated route and matches the LLD layout
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-ferrari-vs-lambo-website-feat-comparison-2
+      Description: Implement ComparisonView as a side-by-side stat table where each
+        winning cell is highlighted with the brand colour (ferrari-red or lambo-yellow
+        Tailwind tokens). Wire ComparePage to useComparison, rendering car-selection
+        dropdowns, the ComparisonView, and an era-suggestion prompt that auto-fills
+        the opponent when triggered.
+      EstimatedEffort: M
+      Files:
+      - src/components/ComparisonView.tsx
+      - src/pages/ComparePage.tsx
+      ID: task-ferrari-vs-lambo-website-feat-comparison-3
+      Title: Build ComparisonView panel and ComparePage
+  Sprint: 2
