@@ -1,0 +1,36 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-24T10:00:46Z
+  totalSprints: 3
+  totalDuration: 23 days
+
+sprints:
+  - number: 1
+    startDate: 2026-02-24
+    endDate: 2026-03-03
+    duration: 7 days
+    features:
+      - id: best-starbucks-mugs-website-feat-catalog-data
+        name: Expanded Mug Catalog Data
+        type: enabler
+  - number: 2
+    startDate: 2026-03-04
+    endDate: 2026-03-11
+    duration: 7 days
+    features:
+      - id: best-starbucks-mugs-website-feat-filter-search
+        name: Filter Bar & Search Engine
+        type: feature
+  - number: 3
+    startDate: 2026-03-12
+    endDate: 2026-03-19
+    duration: 7 days
+    features:
+      - id: best-starbucks-mugs-website-feat-modal-image
+        name: Enhanced Modal & Image Fallback
+        type: feature
+
+criticalPath:
+  - best-starbucks-mugs-website-feat-catalog-data
+  - best-starbucks-mugs-website-feat-modal-image
