@@ -1,0 +1,63 @@
+[build]
+  command   = "npm run build"
+  publish   = "dist"
+  functions = ""
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Production context: all deploys from the main branch
+[context.production]
+  command = "npm run build"
+
+# Deploy preview context: all deploys generated from pull/merge requests
+[context.deploy-preview]
+  command = "npm run build"
+
+# Branch deploy context: all deploys that are neither from the main branch nor
+# from a deploy-preview (e.g. feature branches)
+[context.branch-deploy]
+  command = "npm run build"
+
+[[headers]]
+  # Apply security headers to all responses
+  for = "/*"
+  [headers.values]
+    # Content Security Policy
+    # script-src: only allow scripts from this origin and inline scripts hashed/nonce'd
+    # connect-src: allow fetch to own origin only (static JSON data)
+    # Plausible analytics is optional; add https://plausible.io if enabled
+    Content-Security-Policy = """
+      default-src 'self';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data:;
+      font-src 'self';
+      connect-src 'self';
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'none';
+    """
+    X-Frame-Options          = "DENY"
+    X-Content-Type-Options   = "nosniff"
+    Referrer-Policy          = "strict-origin-when-cross-origin"
+    Permissions-Policy       = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  # Long-lived cache for hashed assets produced by Vite
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  # Short cache for the HTML entry point so deployments propagate quickly
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[redirects]]
+  # SPA fallback: serve index.html for all unmatched paths so React Router works
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
