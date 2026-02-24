@@ -1,0 +1,43 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-24T16:18:49Z
+  totalSprints: 2
+  totalDuration: 15 days
+
+sprints:
+  - number: 1
+    startDate: 2026-02-24
+    endDate: 2026-03-03
+    duration: 7 days
+    features:
+      - id: costa-vs-starbucks-feat-project-setup
+        name: Project Scaffolding
+        type: enabler
+      - id: costa-vs-starbucks-feat-data-layer
+        name: Drink Data Layer
+        type: enabler
+      - id: costa-vs-starbucks-feat-drink-cards
+        name: Drink Card Grid
+        type: feature
+  - number: 2
+    startDate: 2026-03-04
+    endDate: 2026-03-11
+    duration: 7 days
+    features:
+      - id: costa-vs-starbucks-feat-filter-search
+        name: Category Filter and Search
+        type: feature
+      - id: costa-vs-starbucks-feat-comparison-panel
+        name: Side-by-Side Comparison Panel
+        type: feature
+      - id: costa-vs-starbucks-feat-nutrition-bars
+        name: Visual Nutrition Bars
+        type: feature
+
+criticalPath:
+  - costa-vs-starbucks-feat-project-setup
+  - costa-vs-starbucks-feat-data-layer
+  - costa-vs-starbucks-feat-drink-cards
+  - costa-vs-starbucks-feat-comparison-panel
+  - costa-vs-starbucks-feat-nutrition-bars
