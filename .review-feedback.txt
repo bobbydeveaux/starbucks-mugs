@@ -1,0 +1,56 @@
+## Code Review - Changes Requested
+
+## ❌ BLOCKING ISSUES FOUND
+
+### Summary
+
+The PR correctly implements the `loadMugs()` envelope refactor and renames `price` → `price_usd` in `app.js`, but ships with a **breaking production bug**: `mugs.json` was not updated to match.
+
+---
+
+### BLOCKING: `mugs.json` still uses `"price"`, app.js now expects `price_usd`
+
+Every card render will throw a `TypeError`:
+
+```
+TypeError: Cannot read properties of undefined (reading 'toFixed')
+```
+
+**Where it breaks** — `app.js:44`, `app.js:61`, `app.js:100`:
+```js
+card.setAttribute('aria-label', `${mug.name}, $${mug.price_usd.toFixed(2)}`);
+//                                                       ^^^^^^^^^ undefined
+price.textContent = `$${mug.price_usd.toFixed(2)}`;
+modalPrice.textContent = `$${mug.price_usd.toFixed(2)}`;
+```
+
+**Why it's caught but still breaks**: The `.catch()` in the bootstrap chain captures errors thrown inside the `.then()` callback, so `renderCards()` throwing would redirect to the error message — meaning the catalog shows the failure state, not a partially-rendered grid.
+
+**Root cause**: `mugs.json` entry at line 5 (and all 6 entries):
+```json
+"price": 12.95   // still the old field name
+```
+
+The LLD explicitly calls for this migration in the same PR:
+> *"Schema migration: rename `price` → `price_usd` and restructure root from array to `{ version, mugs }` in `mugs.json`. Handled in a single file edit."*
+
+Neither the field rename nor the bare-array → envelope restructuring was applied to `mugs.json`.
+
+**Fix required**: Update `mugs.json` to rename all `price` fields to `price_usd` and wrap the root array in `{ "version": "1.0", "mugs": [...] }`.
+
+---
+
+### Non-blocking observations
+
+**Tests don't cover the actual `loadMugs()` function directly.** The new `parseMugsResponse` unit tests test a reimplemented inline copy of the parsing logic, not the real function. Integration tests also replicate the unwrap logic manually rather than calling `loadMugs()`. This means a regression in the actual `loadMugs()` body would go undetected by the new tests. Not blocking, but worth addressing.
+
+**No validation for malformed non-array objects.** If `mugs.json` returns `{}` or `{ "version": "1.0" }` (missing `mugs`), the destructure `({ mugs })` in the bootstrap yields `undefined`, and `renderCards(undefined)` would throw on `undefined.forEach`. The catch block handles it gracefully at runtime, but there is no early validation. Non-blocking edge case.
+
+---
+
+**Action required**: Update `mugs.json` to use `price_usd` and the versioned envelope format before this PR can be merged.
+
+**Action Required**: Please address the blocking issues above before merging.
+
+---
+*Reviewed by code-reviewer agent*

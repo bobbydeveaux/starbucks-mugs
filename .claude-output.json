@@ -1,0 +1,11 @@
+{
+  "prTitle": "fix: migrate mugs.json to versioned envelope with price_usd rename",
+  "prBody": "## Summary\n\n- Updated `mugs.json` root structure from a bare array to the versioned envelope `{ \"version\": \"1.0\", \"mugs\": [...] }`\n- Renamed all `price` fields to `price_usd` in `mugs.json` (6 entries)\n- Updated `loadMugs()` in `app.js` to unwrap the versioned envelope, with a graceful fallback for legacy bare-array responses\n- All `price_usd` references updated in `createCard()`, `renderCards()`, and `openModal()` in `app.js`\n- Added unit tests for the envelope-parsing logic (`parseMugsResponse`) and integration tests covering versioned envelope, legacy array, and fetch failure cases\n\n**Review feedback addressed**: Fixed the blocking issue where `mugs.json` still used the old `price` field and bare-array root structure, which caused `TypeError: Cannot read properties of undefined (reading 'toFixed')` on every card render.\n\nCloses #23",
+  "testsPass": true,
+  "filesChanged": ["app.js", "mugs.json", "app.test.js"],
+  "docsUpdated": [],
+  "docsReviewed": [
+    "docs/concepts/best-starbucks-mugs-website/LLD.md",
+    "docs/concepts/best-starbucks-mugs-website/HLD.md"
+  ]
+}
