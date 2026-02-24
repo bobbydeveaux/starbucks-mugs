@@ -9,7 +9,7 @@
 
 2. **fetch() CORS Failure on Local File System** (Medium): Opening `index.html` directly via `file://` protocol causes `fetch('./mugs.json')` to fail in most browsers due to CORS restrictions, blocking development and testing without a local server.
 
-3. **mugs.json Schema Drift** (Low): If mug entries in `mugs.json` omit required fields (`id`, `name`, `price`, `image`, `description`), `renderCards` and `openModal` will silently render incomplete or broken cards with no validation guard.
+3. **mugs.json Schema Drift** (Low): If mug entries in `mugs.json` omit required fields (`id`, `name`, `series`, `year`, `region`, `price_usd`, `description`, `image`, `tags`), `renderCards` and `openModal` will silently render incomplete or broken cards with no validation guard.
 
 4. **Keyboard/Focus Accessibility Gap** (Low): The modal close behavior relies on ESC key and overlay click, but without explicit focus management (`focus()` on modal open, `tabIndex`, ARIA roles), keyboard-only users cannot navigate into or out of the modal, creating an accessibility defect.
 
@@ -29,7 +29,7 @@
 
 ## Assumptions
 
-1. **Six mug records will be authored in mugs.json** — Acceptance criteria and success metrics both state "all 6 mugs." This assumes exactly 6 records will be created. *Validation: confirm count when mugs.json is authored; update AC if count changes.*
+1. **52 mug records are now in mugs.json** — The catalog has been expanded from 6 to 52 entries spanning seven series (Siren, Anniversary, Holiday, City Collection, Reserve, You Are Here, Dot Collection) in a versioned envelope schema `{ version, mugs[] }`.
 
 2. **Image assets will be local files, not remote URLs** — The HLD data model shows `"image": "url"` which could be a relative path or an absolute URL. The LLD implies local `images/` directory. *Validation: decide and document the image strategy (local vs. CDN URL) before authoring mugs.json.*
 
@@ -196,14 +196,25 @@ Static single-page application. Browser fetches `mugs.json` and renders the UI e
 ## 3. Data Model
 
 ```json
-{ "id": 1, "name": "string", "price": 9.99, "image": "url", "description": "string" }
+{
+  "version": "1.0",
+  "mugs": [
+    {
+      "id": 1, "name": "string", "series": "Siren", "year": 2019,
+      "region": "Global", "price_usd": 12.95, "image": "images/example.jpg",
+      "description": "string", "tags": ["tag1"]
+    }
+  ]
+}
 ```
+
+Required fields: `id`, `name`, `series`, `year`, `region`, `price_usd`, `description`, `image`, `tags`.
 
 ---
 
 ## 4. API Contracts
 
-No API. `fetch('./mugs.json')` returns an array of mug objects as defined above.
+No API. `fetch('./mugs.json')` returns `{ version, mugs[] }` with 52 entries across seven series.
 
 ---
 

@@ -1,11 +1,12 @@
 {
-  "prNumber": 18,
+  "prNumber": 26,
   "baseBranch": "main",
-  "headBranch": "feature/16-website-starbucks-mugs-sprint-1-issue-16",
+  "headBranch": "feature/22-best-starbucks-mugs-website-sprint-1-issue-22",
   "conflictedFiles": [
-    "index.html",
-    "mugs.json",
-    "style.css"
+    ".review-feedback.txt",
+    "app.js",
+    "app.test.js",
+    "mugs.json"
   ],
-  "conflictCount": 3
+  "conflictCount": 4
 }
