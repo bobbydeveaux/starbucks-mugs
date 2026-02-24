@@ -13,3 +13,11 @@ dist/
 
 # Vite cache
 .vite/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local

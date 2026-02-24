@@ -12,14 +12,18 @@ interface DrinkCatalogProps {
   onSelect: (drink: Drink) => void;
 }
 
-const BRAND_CONFIG: Record<Brand, { label: string; headingClass: string }> = {
+const BRAND_CONFIG: Record<Brand, { label: string; headingClass: string; dividerClass: string; emptyText: string }> = {
   starbucks: {
     label: 'Starbucks',
-    headingClass: 'text-starbucks border-b-2 border-starbucks',
+    headingClass: 'text-starbucks',
+    dividerClass: 'border-starbucks',
+    emptyText: 'No Starbucks drinks match your filters.',
   },
   costa: {
     label: 'Costa Coffee',
-    headingClass: 'text-costa border-b-2 border-costa',
+    headingClass: 'text-costa',
+    dividerClass: 'border-costa',
+    emptyText: 'No Costa drinks match your filters.',
   },
 };
 
@@ -38,22 +42,29 @@ function BrandSection({
 
   return (
     <section aria-labelledby={`${brand}-heading`}>
-      <h2
-        id={`${brand}-heading`}
-        className={`text-xl font-bold pb-2 mb-4 ${config.headingClass}`}
-      >
-        {config.label}
-      </h2>
+      <div className="mb-4 flex items-center gap-3">
+        <h2
+          id={`${brand}-heading`}
+          className={`text-xl font-bold ${config.headingClass}`}
+        >
+          {config.label}
+        </h2>
+        <span className="text-sm text-gray-500">({drinks.length} drinks)</span>
+        <div className={`flex-1 border-t ${config.dividerClass}`} />
+      </div>
 
       {drinks.length === 0 ? (
-        <p className="text-gray-500 text-sm py-4">No drinks match your current filters.</p>
+        <p className="py-8 text-center text-sm text-gray-400">
+          {config.emptyText}
+        </p>
       ) : (
         <ul
           className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+          role="list"
           aria-label={`${config.label} drinks`}
         >
           {drinks.map(drink => (
-            <li key={drink.id}>
+            <li key={drink.id} role="listitem">
               <DrinkCard
                 drink={drink}
                 isSelected={drink.id === selectedId}

@@ -23,13 +23,12 @@ function App() {
    * handleSelect — called when the user clicks "Select to Compare" on a DrinkCard.
    *
    * Selecting a drink from brand X replaces any previous selection for that brand.
-   * It is impossible to select two drinks from the same brand simultaneously — the
-   * second click simply updates the same brand slot (duplicate-brand guard).
+   * Clicking the same drink again deselects it (toggle behaviour).
    */
   const handleSelect = useCallback((drink: Drink) => {
     setComparison(prev => ({
       ...prev,
-      [drink.brand]: drink,
+      [drink.brand]: prev[drink.brand]?.id === drink.id ? null : drink,
     }));
   }, []);
 
