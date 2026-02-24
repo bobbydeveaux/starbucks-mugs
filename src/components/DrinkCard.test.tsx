@@ -52,10 +52,10 @@ describe('DrinkCard', () => {
     expect(btn).toBeInTheDocument()
   })
 
-  it('renders "✓ Selected" CTA when selected', () => {
+  it('renders "Selected ✓" CTA when selected', () => {
     render(<DrinkCard drink={mockStarbucksDrink} isSelected={true} onSelect={vi.fn()} />)
     const btn = screen.getByRole('button')
-    expect(btn).toHaveTextContent('✓ Selected')
+    expect(btn).toHaveTextContent('Selected ✓')
   })
 
   it('calls onSelect with the drink when CTA is clicked', () => {
@@ -116,7 +116,7 @@ describe('DrinkCard', () => {
     expect(article?.className).toContain('ring-starbucks')
   })
 
-  it('sets aria-selected=true on article when selected', () => {
+  it('sets data-selected=true on article when selected', () => {
     const { container } = render(
       <DrinkCard drink={mockStarbucksDrink} isSelected={true} onSelect={vi.fn()} />
     )

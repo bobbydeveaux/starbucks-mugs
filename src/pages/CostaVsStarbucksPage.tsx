@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { DrinkCatalog } from '../components/DrinkCatalog';
+import { FilterBar } from '../components/FilterBar';
+import { SearchBox } from '../components/SearchBox';
 import { ComparisonPanel } from '../components/ComparisonPanel';
 import { useDrinks } from '../hooks/useDrinks';
 import type { Drink, ComparisonState, FilterState } from '../types';
@@ -76,18 +78,15 @@ export function CostaVsStarbucksPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filter controls (placeholder — wired in feat-filter-search tasks) */}
-        <div className="mb-4 flex gap-2 items-center">
-          <label htmlFor="search" className="sr-only">
-            Search drinks
-          </label>
-          <input
-            id="search"
-            type="search"
-            placeholder="Search drinks…"
-            value={filter.query}
-            onChange={e => setFilter(f => ({ ...f, query: e.target.value }))}
-            className="border rounded px-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-starbucks"
+        {/* Filter controls — FilterBar + SearchBox applied together via useDrinks */}
+        <div className="mb-6 flex flex-wrap gap-3 items-center">
+          <FilterBar
+            category={filter.category}
+            onCategoryChange={(category) => setFilter(f => ({ ...f, category }))}
+          />
+          <SearchBox
+            query={filter.query}
+            onQueryChange={(query) => setFilter(f => ({ ...f, query }))}
           />
         </div>
 

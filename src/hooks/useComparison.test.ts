@@ -92,11 +92,18 @@ describe('useComparison', () => {
     expect(result.current.selectedLambo).toBe(lambo);
   });
 
-  it('allows deselecting a car by setting null', () => {
+  it('allows deselecting a Ferrari by setting null', () => {
     const { result } = renderHook(() => useComparison());
     act(() => result.current.setSelectedFerrari(ferrari));
     act(() => result.current.setSelectedFerrari(null));
     expect(result.current.selectedFerrari).toBeNull();
+  });
+
+  it('allows deselecting a Lamborghini by setting null', () => {
+    const { result } = renderHook(() => useComparison());
+    act(() => result.current.setSelectedLambo(lambo));
+    act(() => result.current.setSelectedLambo(null));
+    expect(result.current.selectedLambo).toBeNull();
   });
 
   // -------------------------------------------------------------------------
@@ -149,6 +156,10 @@ describe('useComparison', () => {
       expect(stat).toHaveProperty('ferrariValue');
       expect(stat).toHaveProperty('lamboValue');
       expect(stat).toHaveProperty('winner');
+      expect(typeof stat.label).toBe('string');
+      expect(typeof stat.ferrariValue).toBe('number');
+      expect(typeof stat.lamboValue).toBe('number');
+      expect(['ferrari', 'lamborghini', 'tie']).toContain(stat.winner);
     }
   });
 
