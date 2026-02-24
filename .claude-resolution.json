@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in src/pages/CostaVsStarbucksPage.tsx (import conflict) and docs/components.md (documentation sections conflict). Both sides added independent, non-overlapping features so all content was preserved.",
-  "strategyUsed": "preserved both changes: HEAD added FilterBar/SearchBox imports and docs; origin/main added ComparisonPanel/NutritionBar/NutritionRow imports and docs. All were kept since the JSX body already used all three components and the doc sections are independent."
+  "filesResolved": 3,
+  "summary": "Resolved conflicts in .claude-output.json, index.html, and style.css. Kept HEAD PR metadata for .claude-output.json (filter bar PR #24). Merged HTML by preserving origin/main's CSP meta tag, accessibility improvements (autocomplete='off', aria-label on grid), and using year-range-label class consistently. Merged CSS by taking origin/main's polished filter-bar styles (per-element focus states, hidden spinners, green reset button) while adding min-height to results-count from HEAD to prevent layout shift.",
+  "strategyUsed": "kept HEAD for .claude-output.json (current PR metadata); merged index.html and style.css preferring origin/main's improved accessibility and styling while retaining HEAD's justify-content:center for filter bar and min-height for results count; used year-range-label class name consistently across HTML and CSS"
 }

@@ -1,10 +1,11 @@
 {
-  "prNumber": 99,
+  "prNumber": 93,
   "baseBranch": "main",
-  "headBranch": "feature/48-costa-vs-starbucks-sprint-2-issue-48",
+  "headBranch": "feature/24-best-starbucks-mugs-website-sprint-2-issue-24",
   "conflictedFiles": [
-    "docs/components.md",
-    "src/pages/CostaVsStarbucksPage.tsx"
+    ".claude-output.json",
+    "index.html",
+    "style.css"
   ],
-  "conflictCount": 2
+  "conflictCount": 3
 }
