@@ -87,15 +87,15 @@ describe('App — handleSelect', () => {
     expect(screen.getByText('Caffè Latte (Costa)')).toBeInTheDocument();
   });
 
-  it('selecting a drink shows it in the selection summary', async () => {
+  it('selecting a drink shows it in the comparison panel', async () => {
     await renderAndWait();
     const user = userEvent.setup();
 
     const selectBtn = screen.getAllByRole('button', { name: /select to compare/i })[0];
     await user.click(selectBtn);
 
-    // The "Current selection" section must be present and contain the selected name
-    const summary = screen.getByRole('region', { name: /current selection/i });
+    // The "Nutrition comparison" panel must be present and contain the selected name
+    const summary = screen.getByRole('region', { name: /nutrition comparison/i });
     expect(within(summary).getByText('Caffè Latte')).toBeInTheDocument();
   });
 
@@ -135,7 +135,7 @@ describe('App — handleSelect', () => {
     expect(flatWhiteBtn).toHaveTextContent(/selected/i);
   });
 
-  it('selecting one drink from each brand shows both in the summary', async () => {
+  it('selecting one drink from each brand shows both in the comparison panel', async () => {
     await renderAndWait();
     const user = userEvent.setup();
 
@@ -144,8 +144,8 @@ describe('App — handleSelect', () => {
     await user.click(buttons[0]);
     await user.click(buttons[buttons.length - 1]);
 
-    // Verify names appear in the "Current selection" summary panel specifically
-    const summary = screen.getByRole('region', { name: /current selection/i });
+    // Verify names appear in the "Nutrition comparison" panel specifically
+    const summary = screen.getByRole('region', { name: /nutrition comparison/i });
     expect(within(summary).getByText('Caffè Latte')).toBeInTheDocument();
     expect(within(summary).getByText('Caffè Latte (Costa)')).toBeInTheDocument();
   });
@@ -163,8 +163,8 @@ describe('App — handleSelect', () => {
 
     // No "Selected ✓" buttons should remain
     expect(screen.queryByRole('button', { name: /selected/i })).not.toBeInTheDocument();
-    // Selection summary section should be gone
-    expect(screen.queryByText(/your selection/i)).not.toBeInTheDocument();
+    // Comparison panel should be gone
+    expect(screen.queryByRole('region', { name: /nutrition comparison/i })).not.toBeInTheDocument();
   });
 
   it('shows an error message when fetch fails', async () => {
