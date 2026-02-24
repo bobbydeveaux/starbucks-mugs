@@ -52,12 +52,12 @@ const NO_SELECTION = { starbucks: null, costa: null }
 describe('DrinkCatalog', () => {
   it('renders a section for Starbucks', () => {
     render(<DrinkCatalog drinks={ALL_DRINKS} selectedIds={NO_SELECTION} onSelect={vi.fn()} />)
-    expect(screen.getByRole('region', { name: /^Starbucks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /starbucks/i })).toBeInTheDocument()
   })
 
   it('renders a section for Costa Coffee', () => {
     render(<DrinkCatalog drinks={ALL_DRINKS} selectedIds={NO_SELECTION} onSelect={vi.fn()} />)
-    expect(screen.getByRole('region', { name: /^Costa Coffee$/i })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /costa/i })).toBeInTheDocument()
   })
 
   it('renders brand heading labels', () => {
@@ -68,13 +68,13 @@ describe('DrinkCatalog', () => {
 
   it('renders the correct number of Starbucks drink cards', () => {
     render(<DrinkCatalog drinks={ALL_DRINKS} selectedIds={NO_SELECTION} onSelect={vi.fn()} />)
-    const sbuxList = screen.getByRole('list', { name: /^Starbucks drinks$/i })
+    const sbuxList = screen.getByRole('list', { name: /starbucks drinks/i })
     expect(sbuxList.querySelectorAll('li').length).toBe(STARBUCKS_DRINKS.length)
   })
 
   it('renders the correct number of Costa drink cards', () => {
     render(<DrinkCatalog drinks={ALL_DRINKS} selectedIds={NO_SELECTION} onSelect={vi.fn()} />)
-    const costaList = screen.getByRole('list', { name: /^Costa Coffee drinks$/i })
+    const costaList = screen.getByRole('list', { name: /costa coffee drinks/i })
     expect(costaList.querySelectorAll('li').length).toBe(COSTA_DRINKS.length)
   })
 

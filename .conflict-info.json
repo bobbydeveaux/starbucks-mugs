@@ -1,9 +1,14 @@
 {
-  "prNumber": 77,
+  "prNumber": 110,
   "baseBranch": "main",
-  "headBranch": "feature/69-ferrari-vs-lambo-website-sprint-1-issue-69",
+  "headBranch": "feature/76-ferrari-vs-lambo-website-sprint-2-issue-76",
   "conflictedFiles": [
-    "package-lock.json"
+    "docs/components.md",
+    "src/components/DrinkCatalog.test.tsx",
+    "src/hooks/useComparison.test.ts",
+    "src/hooks/useComparison.ts",
+    "src/utils/eraMatchSuggestion.test.ts",
+    "src/utils/eraMatchSuggestion.ts"
   ],
-  "conflictCount": 1
+  "conflictCount": 6
 }
