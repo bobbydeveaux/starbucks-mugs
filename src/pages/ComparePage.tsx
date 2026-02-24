@@ -53,7 +53,7 @@ function CarSelector({
 
 export function ComparePage() {
   const { ferrariCars, lamboCars, loading, error } = useCarCatalog();
-  const { selectedFerrari, selectedLambo, setSelectedFerrari, setSelectedLambo, winners } =
+  const { selectedFerrari, selectedLambo, setSelectedFerrari, setSelectedLambo, stats: winners } =
     useComparison();
 
   // Era-rival suggestion: surface the opponent rival closest in year to the

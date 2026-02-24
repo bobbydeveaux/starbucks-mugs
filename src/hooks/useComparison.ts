@@ -1,63 +1,87 @@
 import { useState, useMemo } from 'react';
 import type { CarModel, ComparisonStat } from '../types';
 
+/** Return shape of the useComparison hook */
 export interface UseComparisonResult {
+  /** Currently selected Ferrari model, or null if none selected */
   selectedFerrari: CarModel | null;
+  /** Currently selected Lamborghini model, or null if none selected */
   selectedLambo: CarModel | null;
+  /** Setter for the selected Ferrari */
   setSelectedFerrari: (car: CarModel | null) => void;
+  /** Setter for the selected Lamborghini */
   setSelectedLambo: (car: CarModel | null) => void;
-  /** Per-stat winner annotations. Empty array when fewer than two cars are selected. */
-  winners: ComparisonStat[];
-}
-
-interface StatConfig {
-  label: string;
-  getValue: (car: CarModel) => number;
-  /** true → higher value wins; false → lower value wins (e.g. 0–60 time) */
-  higherWins: boolean;
-}
-
-const STAT_CONFIGS: StatConfig[] = [
-  { label: 'Horsepower',      getValue: (c) => c.specs.hp,            higherWins: true  },
-  { label: 'Torque (lb-ft)', getValue: (c) => c.specs.torqueLbFt,    higherWins: true  },
-  { label: '0–60 mph (s)',   getValue: (c) => c.specs.zeroToSixtyMs, higherWins: false },
-  { label: 'Top Speed (mph)', getValue: (c) => c.specs.topSpeedMph,   higherWins: true  },
-];
-
-function computeWinner(
-  ferrariValue: number,
-  lamboValue: number,
-  higherWins: boolean,
-): 'ferrari' | 'lamborghini' | 'tie' {
-  if (ferrariValue === lamboValue) return 'tie';
-  if (higherWins) {
-    return ferrariValue > lamboValue ? 'ferrari' : 'lamborghini';
-  }
-  return ferrariValue < lamboValue ? 'ferrari' : 'lamborghini';
+  /**
+   * Per-stat comparison results computed from the two selected cars.
+   * Empty array when either car is not yet selected.
+   */
+  stats: ComparisonStat[];
 }
 
 /**
- * Manages which Ferrari and Lamborghini are selected for head-to-head comparison
- * and derives a per-stat winner annotation for each numeric spec.
+ * Determines the winner for a single numeric stat.
+ * @param ferrariValue - Ferrari's value for the stat.
+ * @param lamboValue   - Lamborghini's value for the stat.
+ * @param lowerIsBetter - True for stats where a lower value is better (e.g. 0-60 time).
+ */
+function winnerFor(
+  ferrariValue: number,
+  lamboValue: number,
+  lowerIsBetter: boolean,
+): 'ferrari' | 'lamborghini' | 'tie' {
+  if (ferrariValue === lamboValue) return 'tie';
+  if (lowerIsBetter) {
+    return ferrariValue < lamboValue ? 'ferrari' : 'lamborghini';
+  }
+  return ferrariValue > lamboValue ? 'ferrari' : 'lamborghini';
+}
+
+/**
+ * Manages the selected Ferrari and Lamborghini models and computes a
+ * per-stat winners breakdown whenever both cars are selected.
+ *
+ * @returns Selected cars, their setters, and an array of ComparisonStat objects.
+ *
+ * @example
+ * const { selectedFerrari, setSelectedFerrari, stats } = useComparison();
  */
 export function useComparison(): UseComparisonResult {
   const [selectedFerrari, setSelectedFerrari] = useState<CarModel | null>(null);
   const [selectedLambo, setSelectedLambo] = useState<CarModel | null>(null);
 
-  const winners = useMemo<ComparisonStat[]>(() => {
+  const stats = useMemo((): ComparisonStat[] => {
     if (!selectedFerrari || !selectedLambo) return [];
 
-    return STAT_CONFIGS.map(({ label, getValue, higherWins }) => {
-      const ferrariValue = getValue(selectedFerrari);
-      const lamboValue = getValue(selectedLambo);
-      return {
-        label,
-        ferrariValue,
-        lamboValue,
-        winner: computeWinner(ferrariValue, lamboValue, higherWins),
-      };
-    });
+    const f = selectedFerrari.specs;
+    const l = selectedLambo.specs;
+
+    return [
+      {
+        label: 'Horsepower',
+        ferrariValue: f.hp,
+        lamboValue: l.hp,
+        winner: winnerFor(f.hp, l.hp, false),
+      },
+      {
+        label: 'Torque (lb-ft)',
+        ferrariValue: f.torqueLbFt,
+        lamboValue: l.torqueLbFt,
+        winner: winnerFor(f.torqueLbFt, l.torqueLbFt, false),
+      },
+      {
+        label: '0–60 mph (s)',
+        ferrariValue: f.zeroToSixtyMs,
+        lamboValue: l.zeroToSixtyMs,
+        winner: winnerFor(f.zeroToSixtyMs, l.zeroToSixtyMs, true),
+      },
+      {
+        label: 'Top Speed (mph)',
+        ferrariValue: f.topSpeedMph,
+        lamboValue: l.topSpeedMph,
+        winner: winnerFor(f.topSpeedMph, l.topSpeedMph, false),
+      },
+    ];
   }, [selectedFerrari, selectedLambo]);
 
-  return { selectedFerrari, selectedLambo, setSelectedFerrari, setSelectedLambo, winners };
+  return { selectedFerrari, selectedLambo, setSelectedFerrari, setSelectedLambo, stats };
 }

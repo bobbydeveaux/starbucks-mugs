@@ -1,34 +1,50 @@
 import type { CarModel } from '../types';
 
 /**
- * Given a selected car and a catalog of cars from the opposing brand, returns
- * the era-rival whose model year is closest to the selected car's year.
+ * Suggests the best era-match rival for a selected car using the car's
+ * pre-authored `eraRivals` id list. Among the ids listed, it returns the
+ * rival whose year is closest to the selected car's year.
  *
- * Candidates are determined by the `eraRivals` id array embedded in the
- * selected car's data — the function does NOT brute-force the entire catalog.
+ * The function intentionally relies on `eraRivals` ids (pre-curated in the
+ * JSON catalog) rather than brute-force scanning all years in the rival
+ * catalog, keeping the matching logic deterministic and data-driven.
  *
- * Returns `null` when:
- * - `opponentCatalog` is empty
- * - `selected.eraRivals` is empty (no rivals defined for this model)
- * - None of the rival ids are found in `opponentCatalog`
+ * @param selected - The currently selected car whose rival we want to suggest.
+ * @param rivalCatalog - All available cars from the opposing brand.
+ * @returns The closest-year rival from the eraRivals list, or `null` if no
+ *          match can be found (empty catalog, empty eraRivals, or no eraRivals
+ *          ids are present in the provided catalog).
+ *
+ * @example
+ * const suggestion = eraMatchSuggestion(ferrariTestarossa, allLambos);
+ * // Returns the Lamborghini whose id appears in ferrariTestarossa.eraRivals
+ * // and whose year is nearest to 1984.
  */
 export function eraMatchSuggestion(
   selected: CarModel,
-  opponentCatalog: CarModel[],
+  rivalCatalog: CarModel[],
 ): CarModel | null {
-  if (opponentCatalog.length === 0 || selected.eraRivals.length === 0) {
+  if (!selected.eraRivals.length || !rivalCatalog.length) {
     return null;
   }
 
-  const rivalIdSet = new Set(selected.eraRivals);
-  const candidates = opponentCatalog.filter((car) => rivalIdSet.has(car.id));
+  // Build an id → car lookup for O(1) access
+  const rivalById = new Map<string, CarModel>(rivalCatalog.map((c) => [c.id, c]));
 
-  if (candidates.length === 0) return null;
+  // Collect only the pre-listed rivals that are present in the catalog
+  const candidates = selected.eraRivals
+    .map((id) => rivalById.get(id))
+    .filter((c): c is CarModel => c !== undefined);
 
-  // Pick the candidate whose year is closest to the selected car's year.
-  return candidates.reduce((best, car) => {
-    const delta = Math.abs(car.year - selected.year);
-    const bestDelta = Math.abs(best.year - selected.year);
-    return delta < bestDelta ? car : best;
+  if (!candidates.length) {
+    return null;
+  }
+
+  // Pick the candidate whose year is closest to the selected car's year;
+  // ties are broken in favour of the first candidate in the eraRivals list.
+  return candidates.reduce((best, current) => {
+    const bestDiff = Math.abs(best.year - selected.year);
+    const currentDiff = Math.abs(current.year - selected.year);
+    return currentDiff < bestDiff ? current : best;
   });
 }
