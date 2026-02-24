@@ -4,64 +4,51 @@
 
 ### Summary
 
-The PR correctly updates `app.js` and `app.test.js` to use `price_usd`, but **fails to update `mugs.json`**, which still uses the old `price` field. The code changes are incomplete and will break the live page entirely.
+The PR correctly implements the `loadMugs()` envelope refactor and renames `price` → `price_usd` in `app.js`, but ships with a **breaking production bug**: `mugs.json` was not updated to match.
 
 ---
 
-### CRITICAL: `mugs.json` not migrated — page will not render any cards
+### BLOCKING: `mugs.json` still uses `"price"`, app.js now expects `price_usd`
 
-**File:** `mugs.json` (unchanged)
+Every card render will throw a `TypeError`:
 
-```json
-{ "price": 12.95, ... }  // still "price", not "price_usd"
+```
+TypeError: Cannot read properties of undefined (reading 'toFixed')
 ```
 
-**File:** `app.js:44` (new code)
+**Where it breaks** — `app.js:44`, `app.js:61`, `app.js:100`:
 ```js
 card.setAttribute('aria-label', `${mug.name}, $${mug.price_usd.toFixed(2)}`);
+//                                                       ^^^^^^^^^ undefined
+price.textContent = `$${mug.price_usd.toFixed(2)}`;
+modalPrice.textContent = `$${mug.price_usd.toFixed(2)}`;
 ```
 
-**What happens at runtime:**
+**Why it's caught but still breaks**: The `.catch()` in the bootstrap chain captures errors thrown inside the `.then()` callback, so `renderCards()` throwing would redirect to the error message — meaning the catalog shows the failure state, not a partially-rendered grid.
 
-1. `loadMugs()` fetches `mugs.json` — bare array, so it's wrapped via the legacy guard into `{ version: '0', mugs: data }`.
-2. `renderCards(mugs)` calls `createCard(mug)` for each entry.
-3. `mug.price_usd` is `undefined` for every entry (the field is named `price` in the JSON).
-4. `undefined.toFixed(2)` throws `TypeError: Cannot read properties of undefined (reading 'toFixed')`.
-5. The `catch` handler fires and the grid shows only the error message: `"Failed to load mugs. Please try again later."` — no cards render.
-
-**Why the tests don't catch this:** `app.test.js` uses the `MUGS` fixture array (which was correctly updated to `price_usd`), not the real `mugs.json` file. Integration tests simulate the fetch with in-memory fixture data, so they never exercise the mismatch.
-
-**The docs already flagged this exact risk.** `docs/concepts/best-starbucks-mugs-website/ROAM.md` states:
-
-> "Before committing the new `mugs.json`, update all `mug.price` references in `app.js` and `app.test.js` to `mug.price_usd` **in the same commit** to keep the rename atomic."
-
-And `LLD.md` Step 1 of the migration strategy:
-
-> "Update `mugs.json`: … Rename `price` → `price_usd`."
-
-This step was skipped entirely.
-
-**Required fix:** Update all 6 entries in `mugs.json` to rename `"price"` → `"price_usd"`. Also wrap the root in the versioned envelope per the schema spec:
-
+**Root cause**: `mugs.json` entry at line 5 (and all 6 entries):
 ```json
-{
-  "version": "1.0",
-  "mugs": [
-    { "id": 1, "name": "Classic White Ceramic Mug", "price_usd": 12.95, ... },
-    ...
-  ]
-}
+"price": 12.95   // still the old field name
 ```
 
-(The legacy-array guard in `loadMugs()` means the bare-array format continues to work during migration, but the field rename has no equivalent guard and must be done explicitly.)
+The LLD explicitly calls for this migration in the same PR:
+> *"Schema migration: rename `price` → `price_usd` and restructure root from array to `{ version, mugs }` in `mugs.json`. Handled in a single file edit."*
+
+Neither the field rename nor the bare-array → envelope restructuring was applied to `mugs.json`.
+
+**Fix required**: Update `mugs.json` to rename all `price` fields to `price_usd` and wrap the root array in `{ "version": "1.0", "mugs": [...] }`.
 
 ---
 
 ### Non-blocking observations
 
-**Test isolation vs. real data:** Integration tests replicate the `parseMugsResponse` logic inline in `test_fetchSuccess` and `test_fetchLegacyArray` rather than importing the actual `loadMugs` function. This is understandable for a no-build test harness, but it means the tests can drift from the real implementation. Consider adding a test that reads `mugs.json` directly to validate the actual data file matches the schema (would have caught this bug).
+**Tests don't cover the actual `loadMugs()` function directly.** The new `parseMugsResponse` unit tests test a reimplemented inline copy of the parsing logic, not the real function. Integration tests also replicate the unwrap logic manually rather than calling `loadMugs()`. This means a regression in the actual `loadMugs()` body would go undetected by the new tests. Not blocking, but worth addressing.
 
-**`parseMugsResponse` duplication:** `app.test.js:360` reimplements the parsing logic as a standalone `parseMugsResponse` function. If the logic in `loadMugs()` ever changes (e.g., to handle `version` routing), the test copy won't follow automatically. Low priority, but worth noting for a later refactor.
+**No validation for malformed non-array objects.** If `mugs.json` returns `{}` or `{ "version": "1.0" }` (missing `mugs`), the destructure `({ mugs })` in the bootstrap yields `undefined`, and `renderCards(undefined)` would throw on `undefined.forEach`. The catch block handles it gracefully at runtime, but there is no early validation. Non-blocking edge case.
+
+---
+
+**Action required**: Update `mugs.json` to use `price_usd` and the versioned envelope format before this PR can be merged.
 
 **Action Required**: Please address the blocking issues above before merging.
 
