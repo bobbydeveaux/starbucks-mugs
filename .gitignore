@@ -4,3 +4,12 @@
 
 # Worker temporary state files (auto-added by COO)
 .claude-state.json
+
+# Node.js dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vite cache
+.vite/
