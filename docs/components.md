@@ -71,6 +71,68 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## FilterBar
+
+**File:** `src/components/FilterBar.tsx`
+
+Renders a row of pill-shaped toggle buttons — one per drink category plus an "All" option — that narrow the visible drink catalog to a single category.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `category` | `Category \| 'all'` | Currently active category filter |
+| `onCategoryChange` | `(category: Category \| 'all') => void` | Called when the user selects a different category |
+
+### Features
+
+- Six buttons: **All**, **Hot**, **Iced**, **Blended**, **Tea**, **Other**
+- Active button is highlighted with the Starbucks green fill; inactive buttons use a bordered outline style
+- `aria-pressed` on each button for screen-reader accessibility
+- Wrapped in a `role="group"` container with `aria-label="Filter by category"`
+
+### Usage
+
+```tsx
+<FilterBar
+  category={filter.category}
+  onCategoryChange={(category) => setFilter(f => ({ ...f, category }))}
+/>
+```
+
+---
+
+## SearchBox
+
+**File:** `src/components/SearchBox.tsx`
+
+Renders a controlled text input that triggers instant client-side filtering of the drink catalog on each keystroke.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `query` | `string` | Current search query string |
+| `onQueryChange` | `(query: string) => void` | Called on every keystroke with the updated query |
+
+### Features
+
+- `type="search"` input with browser-native clear button support
+- Visually-hidden `<label>` keeps the input accessible without cluttering the UI
+- Rounded pill styling consistent with `FilterBar`
+- Wired to `useDrinks` via `FilterState.query`; both category and text filters apply simultaneously
+
+### Usage
+
+```tsx
+<SearchBox
+  query={filter.query}
+  onQueryChange={(query) => setFilter(f => ({ ...f, query }))}
+/>
+```
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`
