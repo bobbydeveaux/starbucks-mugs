@@ -173,6 +173,15 @@ describe('useCarCatalog', () => {
     expect(lamboYears).toEqual([...lamboYears].sort((a, b) => a - b));
   });
 
+  it('derives availableDecades from both catalogs without duplicates', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.availableDecades).toEqual([1970, 1980]);
+    const uniqueDecades = [...new Set(result.current.availableDecades)];
+    expect(result.current.availableDecades).toEqual(uniqueDecades);
+  });
+
   // -------------------------------------------------------------------------
   // Era (decade) filtering
   // -------------------------------------------------------------------------

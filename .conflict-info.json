@@ -1,9 +1,9 @@
 {
-  "prNumber": 115,
+  "prNumber": 105,
   "baseBranch": "main",
-  "headBranch": "feature/71-ferrari-vs-lambo-website-sprint-2-issue-71",
+  "headBranch": "feature/84-ferrari-vs-lambo-website-sprint-2-issue-84",
   "conflictedFiles": [
-    ".claude-output.json",
+    "src/components/DrinkCatalog.test.tsx",
     "src/hooks/useCarCatalog.test.ts",
     "src/hooks/useCarCatalog.ts"
   ],

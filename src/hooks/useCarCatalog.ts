@@ -11,6 +11,8 @@ export interface UseCarCatalogResult {
   filteredFerraris: CarModel[];
   /** Lamborghini models that pass the current era and search filters */
   filteredLambos: CarModel[];
+  /** Available decade values derived from the loaded catalog data */
+  availableDecades: number[];
   /** Currently active decade filter, or undefined for all decades */
   era: number | undefined;
   /** Currently active search query (the debounced value applied to filtering) */
@@ -118,6 +120,14 @@ export function useCarCatalog(initialFilters?: CatalogFilters): UseCarCatalogRes
     };
   }, []);
 
+  // Derive sorted, unique decades from the loaded data
+  const availableDecades = useMemo(() => {
+    const decadeSet = new Set<number>();
+    for (const car of allFerraris) decadeSet.add(car.decade);
+    for (const car of allLambos) decadeSet.add(car.decade);
+    return Array.from(decadeSet).sort((a, b) => a - b);
+  }, [allFerraris, allLambos]);
+
   /** Apply era and search filters to a car array. */
   function applyFilters(cars: CarModel[], decade: number | undefined, query: string): CarModel[] {
     let result = cars;
@@ -149,6 +159,7 @@ export function useCarCatalog(initialFilters?: CatalogFilters): UseCarCatalogRes
     lamboCars: allLambos,
     filteredFerraris,
     filteredLambos,
+    availableDecades,
     era,
     search: rawSearch,
     setEra,
