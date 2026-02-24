@@ -75,12 +75,26 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 **File:** `src/types.ts`
 
+### Costa vs Starbucks types
+
 | Type | Description |
 |------|-------------|
 | `Brand` | `'starbucks' \| 'costa'` |
 | `Category` | `'hot' \| 'iced' \| 'blended' \| 'tea' \| 'other'` |
-| `Nutrition` | `{ calories_kcal, sugar_g, fat_g, protein_g, caffeine_mg }` |
+| `DrinkNutrition` | `{ calories_kcal, sugar_g, fat_g, protein_g, caffeine_mg }` |
 | `Drink` | Full drink entity including brand, category, size, image, and nutrition |
 | `DrinkCatalogEnvelope` | Root JSON structure for each brand's data file |
 | `ComparisonState` | `{ starbucks: Drink \| null; costa: Drink \| null }` |
 | `FilterState` | `{ category: Category \| 'all'; query: string }` |
+
+### Ferrari vs Lamborghini types
+
+| Type | Description |
+|------|-------------|
+| `CarBrand` | `'ferrari' \| 'lamborghini'` |
+| `CarSpecs` | `{ hp, torqueLbFt, zeroToSixtyMs, topSpeedMph, engineConfig }` |
+| `CarModel` | Full car entity: id, brand, model, year, decade, imageUrl, price?, specs, eraRivals |
+| `CarCatalogEnvelope` | Root JSON structure for each brand's car data file |
+| `CatalogFilters` | `{ decade?: number; search?: string }` — used by `useCarCatalog` |
+| `ComparisonStat` | Per-stat winner annotation: `{ label, ferrariValue, lamboValue, winner }` |
+| `CarComparisonState` | `{ ferrari: CarModel \| null; lamborghini: CarModel \| null }` |
