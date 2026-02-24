@@ -225,7 +225,135 @@ main {
   line-height: 1.6;
 }
 
+/* --- Filter Bar --- */
+#filter-bar {
+  background-color: #fff;
+  border-bottom: 1px solid #d4e6df;
+  padding: 0.875rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+}
+
+#search,
+#filter-series {
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid #c5d8d1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e3932;
+  background-color: #f5f5f0;
+}
+
+#search {
+  flex: 1 1 200px;
+  max-width: 320px;
+}
+
+#filter-series {
+  flex: 0 0 auto;
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.year-range {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #1e3932;
+  white-space: nowrap;
+}
+
+#year-min,
+#year-max {
+  height: 2.25rem;
+  width: 5rem;
+  padding: 0 0.5rem;
+  border: 1px solid #c5d8d1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e3932;
+  background-color: #f5f5f0;
+  text-align: center;
+}
+
+#filter-reset {
+  height: 2.25rem;
+  padding: 0 1rem;
+  background-color: transparent;
+  border: 1px solid #1e3932;
+  border-radius: 6px;
+  color: #1e3932;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+#filter-reset:hover {
+  background-color: #1e3932;
+  color: #fff;
+}
+
+#filter-reset:focus-visible {
+  outline: 2px solid #00704a;
+  outline-offset: 2px;
+}
+
+#search:focus,
+#filter-series:focus,
+#year-min:focus,
+#year-max:focus {
+  outline: 2px solid #00704a;
+  outline-offset: 0;
+  border-color: #00704a;
+}
+
+/* --- Results Count --- */
+#results-count {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem 0;
+  font-size: 0.875rem;
+  color: #555;
+  min-height: 1.5rem;
+}
+
+/* --- Empty State --- */
+.grid-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #555;
+  font-size: 1rem;
+}
+
 /* --- Responsive tweaks --- */
+@media (max-width: 600px) {
+  #filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #search,
+  #filter-series {
+    max-width: none;
+    width: 100%;
+  }
+
+  .year-range {
+    justify-content: flex-start;
+  }
+
+  #filter-reset {
+    align-self: flex-start;
+  }
+}
+
 @media (max-width: 400px) {
   .grid {
     grid-template-columns: 1fr;
