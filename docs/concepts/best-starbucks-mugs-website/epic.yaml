@@ -1,0 +1,51 @@
+Epics:
+- features:
+  - dependencies: []
+    description: Update mugs.json root structure to versioned envelope { version,
+      mugs[] }, rename price to price_usd, add series/year/region/edition/material/capacity_oz/tags
+      fields to all entries, and expand catalog to 50+ entries across City, Holiday,
+      You Are Here, Reserve, Siren, Anniversary, and Dot Collection series.
+    estimatedComplexity: medium
+    files:
+    - mugs.json
+    id: best-starbucks-mugs-website-feat-catalog-data
+    name: Expanded Mug Catalog Data
+    project: website
+    type: enabler
+  id: best-starbucks-mugs-website-epic-data-layer
+  name: Catalog Data Layer
+- features:
+  - dependencies:
+    - best-starbucks-mugs-website-feat-catalog-data
+    description: 'Add #filter-bar section to index.html with search input, series
+      dropdown, year-range inputs, and reset button. Implement filterMugs(), debounce(),
+      applyFilters(), populateSeriesFilter(), and updateResultsCount() in app.js.
+      Update loadMugs() to handle versioned envelope with legacy-array fallback. Add
+      results count and filter bar styles to style.css.'
+    estimatedComplexity: medium
+    files:
+    - app.js
+    - index.html
+    - style.css
+    id: best-starbucks-mugs-website-feat-filter-search
+    name: Filter Bar & Search Engine
+    project: website
+    type: feature
+  - dependencies:
+    - best-starbucks-mugs-website-feat-catalog-data
+    description: Update modal to display all metadata fields (series, year, region,
+      edition, material, capacity_oz, price_usd, tags) in a structured layout. Add
+      img.onerror handler in createCard and openModal to fall back to images/placeholder.svg.
+      Add placeholder SVG file (~400 bytes cup silhouette).
+    estimatedComplexity: low
+    files:
+    - app.js
+    - style.css
+    - images/placeholder.svg
+    id: best-starbucks-mugs-website-feat-modal-image
+    name: Enhanced Modal & Image Fallback
+    project: website
+    type: feature
+  id: best-starbucks-mugs-website-epic-catalog-ui
+  name: Catalog UI & Functionality
+Version: v1alpha1
