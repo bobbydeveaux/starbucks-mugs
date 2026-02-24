@@ -1,0 +1,21 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: best-starbucks-mugs-website-feat-catalog-data
+        name: Expanded Mug Catalog Data
+        type: enabler
+        files: [mugs.json package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+  - number: 2
+    features:
+      - id: best-starbucks-mugs-website-feat-filter-search
+        name: Filter Bar & Search Engine
+        type: feature
+        files: [app.js index.html style.css package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+  - number: 3
+    features:
+      - id: best-starbucks-mugs-website-feat-modal-image
+        name: Enhanced Modal & Image Fallback
+        type: feature
+        files: [app.js style.css images/placeholder.svg package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
