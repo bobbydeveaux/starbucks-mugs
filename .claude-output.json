@@ -1,0 +1,22 @@
+{
+  "prTitle": "fix: address code review feedback for handleSelect implementation",
+  "prBody": "## Summary\n\nThis PR addresses all blocking and non-blocking issues raised in the code review.\n\n### Blocking fix\n- **Removed `node_modules/` from git tracking**: Added `node_modules/`, `dist/`, and `.vite/` to `.gitignore` and ran `git rm -r --cached node_modules` to untrack the 11,711 previously committed files (eliminates the 2.3M-line diff)\n\n### Non-blocking fixes\n- **`aria-pressed` on `<article>` replaced with `data-selected`**: `aria-pressed` is a toggle-button ARIA state and is semantically incorrect on a non-interactive `<article>` element. Replaced with `data-selected` data attribute used purely as a CSS/test hook. The `<button>` inside still carries `aria-pressed` correctly.\n- **`selectedIds` memoized with `useMemo`**: The object literal was recreated on every render, defeating any `React.memo` optimisation. Now memoized on `comparison.starbucks?.id` and `comparison.costa?.id`.\n- **HLD.md updated**: Fixed Vite version (`5` → `6`) and data file paths (`drinks/starbucks.json` → `public/data/starbucks.json`) to match the actual implementation.\n- **Tests updated**: `App.test.tsx` updated to query `data-selected` instead of `aria-pressed` on article elements.\n\nAll 9 tests pass.\n\nCloses #46",
+  "testsPass": true,
+  "filesChanged": [
+    ".gitignore",
+    "src/components/DrinkCard.tsx",
+    "src/App.tsx",
+    "src/App.test.tsx",
+    "docs/concepts/costa-vs-starbucks/HLD.md"
+  ],
+  "docsUpdated": [
+    "docs/concepts/costa-vs-starbucks/HLD.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/costa-vs-starbucks/HLD.md",
+    "docs/concepts/costa-vs-starbucks/LLD.md",
+    "docs/concepts/costa-vs-starbucks/tasks.yaml",
+    "docs/concepts/costa-vs-starbucks/README.md"
+  ],
+  "completedTasks": [1, 2, 3, 4]
+}
