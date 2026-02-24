@@ -1,0 +1,59 @@
+GeneratedAt: "2026-02-24T00:20:48Z"
+Plan: website-starbucks-mugs-plan
+Sprints:
+- Features:
+  - FeatureID: website-starbucks-mugs-feat-catalog-and-modal
+    FeatureTitle: Mug Catalog Grid and Detail Modal
+    Tasks:
+    - AcceptanceCriteria:
+      - 'index.html has a #grid container and a #modal overlay with inner detail elements'
+      - mugs.json is valid JSON, contains at least 4 mug records, and stays under
+        10 KB
+      - All required fields (id, name, price, description, image) are present on each
+        record
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create index.html with the grid container and modal overlay markup.
+        Create mugs.json with the mug records array including name, price, description,
+        and image filename fields.
+      EstimatedEffort: S
+      Files:
+      - index.html
+      - mugs.json
+      ID: task-website-starbucks-mugs-feat-catalog-and-modal-1
+      Title: Scaffold HTML structure and mug data
+    - AcceptanceCriteria:
+      - Grid reflows from 1 column on mobile to 3+ columns on desktop
+      - Cards have visible hover feedback
+      - Modal overlay covers the full viewport with a semi-transparent backdrop and
+        centered content box
+      - Modal is hidden by default and visible when an .open class is applied
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-website-starbucks-mugs-feat-catalog-and-modal-1
+      Description: Write style.css covering the responsive card grid (CSS Grid or
+        Flexbox), card hover states, and the modal overlay with centered detail panel.
+        Ensure the layout works across mobile and desktop breakpoints.
+      EstimatedEffort: S
+      Files:
+      - style.css
+      ID: task-website-starbucks-mugs-feat-catalog-and-modal-2
+      Title: Implement responsive grid and modal styles
+    - AcceptanceCriteria:
+      - Cards render in the grid after page load with image, name, and price visible
+      - Clicking a card opens the modal populated with full mug details
+      - Clicking the overlay backdrop or pressing ESC closes the modal
+      - Images use loading='lazy' attribute
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-website-starbucks-mugs-feat-catalog-and-modal-1
+      - task-website-starbucks-mugs-feat-catalog-and-modal-2
+      Description: Write app.js to fetch mugs.json, dynamically render mug cards into
+        the grid with lazy-loaded images, and handle modal open/close on card click,
+        overlay click, and ESC key press.
+      EstimatedEffort: M
+      Files:
+      - app.js
+      ID: task-website-starbucks-mugs-feat-catalog-and-modal-3
+      Title: Implement data fetch, card rendering, and modal logic
+  Sprint: 1
