@@ -1,9 +1,10 @@
 {
-  "prNumber": 92,
+  "prNumber": 99,
   "baseBranch": "main",
-  "headBranch": "feature/50-costa-vs-starbucks-sprint-2-issue-50",
+  "headBranch": "feature/48-costa-vs-starbucks-sprint-2-issue-48",
   "conflictedFiles": [
-    "docs/components.md"
+    "docs/components.md",
+    "src/pages/CostaVsStarbucksPage.tsx"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }
