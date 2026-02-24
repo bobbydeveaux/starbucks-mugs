@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { DrinkCatalog } from '../components/DrinkCatalog';
+import { ComparisonPanel } from '../components/ComparisonPanel';
 import { useDrinks } from '../hooks/useDrinks';
 import type { Drink, ComparisonState, FilterState } from '../types';
 
@@ -44,8 +45,6 @@ export function CostaVsStarbucksPage() {
     starbucks: comparison.starbucks?.id ?? null,
     costa: comparison.costa?.id ?? null,
   }), [comparison.starbucks?.id, comparison.costa?.id]);
-
-  const hasSelection = comparison.starbucks !== null || comparison.costa !== null;
 
   if (loading) {
     return (
@@ -95,53 +94,12 @@ export function CostaVsStarbucksPage() {
         {/* Drink catalog — two brand sections with selection wiring */}
         <DrinkCatalog drinks={drinks} selectedIds={selectedIds} onSelect={handleSelect} />
 
-        {/* Comparison summary — shown once at least one drink is selected */}
-        {hasSelection && (
-          <section
-            aria-label="Current selection"
-            className="mt-10 p-6 bg-white rounded-lg shadow-sm border border-gray-200"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Your selection</h2>
-              <button
-                type="button"
-                onClick={handleClearComparison}
-                className="text-sm text-gray-500 hover:text-gray-700 underline"
-              >
-                Clear
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-starbucks mb-1">
-                  Starbucks
-                </p>
-                {comparison.starbucks ? (
-                  <p className="font-medium text-gray-900">{comparison.starbucks.name}</p>
-                ) : (
-                  <p className="text-gray-400 text-sm">No drink selected</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-costa mb-1">
-                  Costa
-                </p>
-                {comparison.costa ? (
-                  <p className="font-medium text-gray-900">{comparison.costa.name}</p>
-                ) : (
-                  <p className="text-gray-400 text-sm">No drink selected</p>
-                )}
-              </div>
-            </div>
-
-            {comparison.starbucks && comparison.costa && (
-              <p className="mt-4 text-sm text-gray-500">
-                Full nutrition comparison panel coming in the next sprint.
-              </p>
-            )}
-          </section>
-        )}
+        {/* Comparison panel — shown once at least one drink is selected */}
+        <ComparisonPanel
+          starbucksDrink={comparison.starbucks}
+          costaDrink={comparison.costa}
+          onClear={handleClearComparison}
+        />
       </main>
     </div>
   );
