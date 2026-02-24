@@ -39,8 +39,8 @@ Static Single-Page Application (SPA). No backend, no server-side rendering, no r
 | `FilterBar` | Category filter buttons (Hot, Iced, Blended, Tea, Other) |
 | `SearchBox` | Instant client-side search across both brands |
 | `useDrinks` hook | Loads JSON data, exposes filtered/searched drink lists and selected comparison state |
-| `drinks/starbucks.json` | Static nutritional data for 30+ Starbucks drinks |
-| `drinks/costa.json` | Static nutritional data for 30+ Costa drinks |
+| `public/data/starbucks.json` | Static nutritional data for 30+ Starbucks drinks |
+| `public/data/costa.json` | Static nutritional data for 30+ Costa drinks |
 
 ---
 
@@ -121,7 +121,7 @@ None. This is a fully static site.
 
 ### Frontend
 - **React 18** — component model, hooks-based state management
-- **Vite 5** — dev server and production bundler (fast HMR, optimised output)
+- **Vite 6** — dev server and production bundler (fast HMR, optimised output)
 - **Tailwind CSS 3** — utility classes; custom theme tokens for Starbucks green (`#00704A`) and Costa red (`#6B1E1E`)
 - **Recharts** — `<BarChart>` for nutrition comparison bars (lighter bundle than Chart.js for this use case)
 - **TypeScript** — type safety for drink schema and component props
