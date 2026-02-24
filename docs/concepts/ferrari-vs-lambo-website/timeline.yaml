@@ -1,0 +1,35 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-24T19:45:26Z
+  totalSprints: 2
+  totalDuration: 15 days
+
+sprints:
+  - number: 2
+    startDate: 2026-02-24
+    endDate: 2026-03-03
+    duration: 7 days
+    features:
+      - id: ferrari-vs-lambo-website-feat-car-catalog
+        name: Catalog Page & Car Cards
+        type: feature
+      - id: ferrari-vs-lambo-website-feat-filtering-search
+        name: Era Filter & Search
+        type: feature
+      - id: ferrari-vs-lambo-website-feat-comparison
+        name: Comparison View & Era Rival Suggestion
+        type: feature
+  - number: 1
+    startDate: 2026-03-04
+    endDate: 2026-03-11
+    duration: 7 days
+    features:
+      - id: ferrari-vs-lambo-website-feat-data-foundation
+        name: Static Data, Types & App Shell
+        type: enabler
+
+criticalPath:
+  - ferrari-vs-lambo-website-feat-data-foundation
+  - ferrari-vs-lambo-website-feat-car-catalog
+  - ferrari-vs-lambo-website-feat-filtering-search
