@@ -5,7 +5,7 @@
  * and manages a detail modal with open/close behaviour.
  */
 
-/** @type {{ id: number, name: string, price: number, image: string, description: string } | null} */
+/** @type {{ id: number, name: string, price_usd: number, image: string, description: string } | null} */
 let currentMug = null;
 
 const grid = document.getElementById('grid');
@@ -26,12 +26,12 @@ async function loadMugs() {
   if (!response.ok) {
     throw new Error(`Failed to fetch mugs.json: ${response.status}`);
   }
-  return response.json();
+  return response.json().then(data => data.mugs);
 }
 
 /**
  * Renders a mug card element.
- * @param {{ id: number, name: string, price: number, image: string, description: string }} mug
+ * @param {{ id: number, name: string, price_usd: number, image: string, description: string }} mug
  * @returns {HTMLElement}
  */
 function createCard(mug) {
@@ -39,7 +39,7 @@ function createCard(mug) {
   card.className = 'card';
   card.setAttribute('role', 'listitem');
   card.setAttribute('tabindex', '0');
-  card.setAttribute('aria-label', `${mug.name}, $${mug.price.toFixed(2)}`);
+  card.setAttribute('aria-label', `${mug.name}, $${mug.price_usd.toFixed(2)}`);
 
   const img = document.createElement('img');
   img.src = mug.image;
@@ -56,7 +56,7 @@ function createCard(mug) {
 
   const price = document.createElement('p');
   price.className = 'card-price';
-  price.textContent = `$${mug.price.toFixed(2)}`;
+  price.textContent = `$${mug.price_usd.toFixed(2)}`;
 
   body.appendChild(name);
   body.appendChild(price);
@@ -87,7 +87,7 @@ function renderCards(mugs) {
 
 /**
  * Opens the modal and populates it with the given mug's details.
- * @param {{ id: number, name: string, price: number, image: string, description: string }} mug
+ * @param {{ id: number, name: string, price_usd: number, image: string, description: string }} mug
  */
 function openModal(mug) {
   currentMug = mug;
@@ -95,7 +95,7 @@ function openModal(mug) {
   modalImage.src = mug.image;
   modalImage.alt = mug.name;
   modalName.textContent = mug.name;
-  modalPrice.textContent = `$${mug.price.toFixed(2)}`;
+  modalPrice.textContent = `$${mug.price_usd.toFixed(2)}`;
   modalDescription.textContent = mug.description;
 
   modal.hidden = false;
