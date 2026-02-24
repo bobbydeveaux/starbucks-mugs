@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Drink, DrinkCatalogEnvelope, FilterState } from '../types';
+import { filterDrinks } from '../utils/filterDrinks';
 
 /** Return shape of the useDrinks hook */
 export interface UseDrinksResult {
@@ -70,20 +71,10 @@ export function useDrinks(filter: FilterState): UseDrinksResult {
     };
   }, []);
 
-  const filtered = useMemo(() => {
-    let result = allDrinks;
-
-    if (filter.category !== 'all') {
-      result = result.filter((d) => d.category === filter.category);
-    }
-
-    const trimmed = filter.query.trim().toLowerCase();
-    if (trimmed) {
-      result = result.filter((d) => d.name.toLowerCase().includes(trimmed));
-    }
-
-    return result;
-  }, [allDrinks, filter.category, filter.query]);
+  const filtered = useMemo(
+    () => filterDrinks(allDrinks, filter),
+    [allDrinks, filter.category, filter.query],
+  );
 
   const starbucksDrinks = useMemo(
     () => filtered.filter((d) => d.brand === 'starbucks'),
