@@ -1,51 +1,128 @@
-import { BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer } from 'recharts';
-
 interface NutritionBarProps {
-  /** Nutritional value for the Costa drink */
-  costaValue: number;
-  /** Nutritional value for the Starbucks drink */
+  /** Human-readable label for this nutrient row, e.g. "Calories" */
+  label: string;
+  /** Starbucks drink's value for this nutrient */
   starbucksValue: number;
-  /** Optional unit label, e.g. "kcal", "g", "mg" */
-  unit?: string;
+  /** Costa drink's value for this nutrient */
+  costaValue: number;
+  /** Unit string appended to the displayed value, e.g. "kcal", "g", "mg" */
+  unit: string;
+  /**
+   * Whether a lower value is considered better (default: true).
+   * When true, the brand with the lower value gets a "winner" highlight.
+   * Pass false for nutrients where higher is preferable (e.g. protein).
+   */
+  lowerIsBetter?: boolean;
 }
 
-// Brand colours matching tailwind.config.ts tokens
-const COSTA_COLOR = '#6B1E1E';
-const STARBUCKS_COLOR = '#00704A';
+const BRAND_COLORS = {
+  starbucks: {
+    bar: 'bg-starbucks',
+    winner: 'font-bold text-starbucks',
+    label: 'text-starbucks',
+  },
+  costa: {
+    bar: 'bg-costa',
+    winner: 'font-bold text-costa',
+    label: 'text-costa',
+  },
+} as const;
 
-/**
- * NutritionBar renders a proportional horizontal bar chart for a single
- * nutrient using Recharts BarChart. The bar widths are scaled relative to
- * the higher of the two compared values, making it easy to compare at a glance.
- *
- * Costa (red) is shown in the top row; Starbucks (green) in the bottom row.
- */
-export function NutritionBar({ costaValue, starbucksValue, unit = '' }: NutritionBarProps) {
-  // Guard against division-by-zero when both values are 0
-  const max = Math.max(costaValue, starbucksValue) || 1;
+function computeWidthPercent(value: number, maxValue: number): number {
+  if (maxValue === 0) return 0;
+  return Math.round((value / maxValue) * 100);
+}
 
-  const data = [
-    { brand: 'Costa', value: costaValue },
-    { brand: 'Starbucks', value: starbucksValue },
-  ];
+function getWinner(
+  starbucksValue: number,
+  costaValue: number,
+  lowerIsBetter: boolean,
+): 'starbucks' | 'costa' | 'tie' {
+  if (starbucksValue === costaValue) return 'tie';
+  if (lowerIsBetter) {
+    return starbucksValue < costaValue ? 'starbucks' : 'costa';
+  }
+  return starbucksValue > costaValue ? 'starbucks' : 'costa';
+}
+
+interface BarRowProps {
+  brand: 'starbucks' | 'costa';
+  value: number;
+  unit: string;
+  widthPercent: number;
+  isWinner: boolean;
+}
+
+function BarRow({ brand, value, unit, widthPercent, isWinner }: BarRowProps) {
+  const colors = BRAND_COLORS[brand];
+  const brandLabel = brand === 'starbucks' ? 'Starbucks' : 'Costa';
 
   return (
-    <div role="img" aria-label={`Costa ${costaValue}${unit} vs Starbucks ${starbucksValue}${unit}`}>
-      <ResponsiveContainer width="100%" height={52}>
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 2, right: 4, bottom: 2, left: 0 }}
-          barCategoryGap="25%"
-        >
-          <XAxis type="number" domain={[0, max]} hide />
-          <YAxis type="category" dataKey="brand" hide width={0} />
-          <Bar dataKey="value" radius={[0, 3, 3, 0]} isAnimationActive={false}>
-            <Cell fill={COSTA_COLOR} />
-            <Cell fill={STARBUCKS_COLOR} />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="flex items-center gap-2">
+      <span
+        className={`w-20 shrink-0 text-xs text-right ${isWinner ? colors.winner : 'text-gray-600'}`}
+        aria-label={`${brandLabel}: ${value} ${unit}${isWinner ? ', lower' : ''}`}
+      >
+        {value} {unit}
+      </span>
+      <div
+        className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden"
+        role="meter"
+        aria-label={`${brandLabel} ${unit}`}
+        aria-valuenow={value}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${colors.bar}`}
+          style={{ width: `${widthPercent}%` }}
+        />
+      </div>
+      <span className={`w-20 shrink-0 text-xs ${colors.label} font-medium`}>
+        {brandLabel}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * NutritionBar renders a side-by-side visual bar comparison for a single
+ * nutrition metric between a Starbucks and a Costa drink.
+ *
+ * Each bar is scaled proportionally so the higher value spans the full
+ * available width. The brand with the better value is highlighted.
+ */
+export function NutritionBar({
+  label,
+  starbucksValue,
+  costaValue,
+  unit,
+  lowerIsBetter = true,
+}: NutritionBarProps) {
+  const maxValue = Math.max(starbucksValue, costaValue);
+  const sbuxWidth = computeWidthPercent(starbucksValue, maxValue);
+  const costaWidth = computeWidthPercent(costaValue, maxValue);
+  const winner = getWinner(starbucksValue, costaValue, lowerIsBetter);
+
+  return (
+    <div className="flex flex-col gap-1" data-testid="nutrition-bar">
+      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+        {label}
+      </span>
+      <BarRow
+        brand="starbucks"
+        value={starbucksValue}
+        unit={unit}
+        widthPercent={sbuxWidth}
+        isWinner={winner === 'starbucks'}
+      />
+      <BarRow
+        brand="costa"
+        value={costaValue}
+        unit={unit}
+        widthPercent={costaWidth}
+        isWinner={winner === 'costa'}
+      />
     </div>
   );
 }

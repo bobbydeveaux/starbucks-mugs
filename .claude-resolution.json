@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 7,
+  "summary": "Resolved 7 conflicted files by adopting origin/main's newer API throughout: NutritionBar now uses Tailwind/CSS bars with label+lowerIsBetter props instead of Recharts; ComparisonPanel uses starbucksDrink/costaDrink props with getNutritionRows and a table layout; CostaVsStarbucksPage adds FilterBar and SearchBox imports. All tests updated to match the new component APIs.",
+  "strategyUsed": "Chose origin/main for all conflicts. The already-staged ComparisonPanel.test.tsx used the origin/main prop names (starbucksDrink/costaDrink) and aria-label ('Drink comparison panel'), making origin/main the authoritative implementation. NutritionBar.tsx origin/main replaces Recharts with a pure CSS/Tailwind approach matching the origin/main NutritionBar tests. docs/components.md was merged to include FilterBar/SearchBox utility docs and the correct NutritionBar/ComparisonPanel API documentation from origin/main. DrinkCatalog.test.tsx uses less-strict regex patterns from origin/main to better match actual component aria-labels."
 }

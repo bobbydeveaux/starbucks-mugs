@@ -71,32 +71,103 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
-## NutritionBar
+## Utilities
 
-**File:** `src/components/NutritionBar.tsx`
+### filterDrinks
 
-Renders a proportional horizontal bar chart for a single nutrient using Recharts `BarChart`. Bar widths are scaled relative to the higher of the two compared values, making it easy to compare nutrients at a glance.
+**File:** `src/utils/filterDrinks.ts`
+
+Pure utility function that filters a drinks array by category and/or search query. Consumed by `useDrinks` to apply the active `FilterState`.
+
+#### Signature
+
+```typescript
+function filterDrinks(
+  drinks: Drink[],
+  category: Category | 'all',
+  query: string,
+): Drink[]
+```
+
+#### Behaviour
+
+| Scenario | Result |
+|----------|--------|
+| `category === 'all'`, empty query | All drinks returned unchanged |
+| Specific category | Only drinks with that `category` value |
+| Non-empty query | Case-insensitive substring match on `drink.name`; leading/trailing whitespace trimmed |
+| Both category and query active | AND logic — must satisfy both conditions |
+| Empty input array | Empty array returned without errors |
+
+#### Example
+
+```typescript
+import { filterDrinks } from '../utils/filterDrinks';
+
+// Only hot drinks whose name contains "flat" (case-insensitive)
+const result = filterDrinks(allDrinks, 'hot', 'flat');
+```
+
+---
+
+## FilterBar
+
+**File:** `src/components/FilterBar.tsx`
+
+Renders a row of pill-shaped toggle buttons — one per drink category plus an "All" option — that narrow the visible drink catalog to a single category.
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `costaValue` | `number` | — | Nutritional value for the Costa drink |
-| `starbucksValue` | `number` | — | Nutritional value for the Starbucks drink |
-| `unit` | `string` | `''` | Unit label appended to values in the accessible label (e.g. `"kcal"`, `"g"`) |
+| Prop | Type | Description |
+|------|------|-------------|
+| `category` | `Category \| 'all'` | Currently active category filter |
+| `onCategoryChange` | `(category: Category \| 'all') => void` | Called when the user selects a different category |
 
 ### Features
 
-- Costa (red `#6B1E1E`) shown in the top bar; Starbucks (green `#00704A`) in the bottom bar
-- Both bars scale proportionally to the maximum of the two values (domain `[0, max]`)
-- Animations disabled (`isAnimationActive={false}`) for test stability
-- `role="img"` wrapper with a descriptive `aria-label` for screen readers
-- Handles zero values gracefully (defaults domain max to `1` to avoid division-by-zero)
+- Six buttons: **All**, **Hot**, **Iced**, **Blended**, **Tea**, **Other**
+- Active button is highlighted with the Starbucks green fill; inactive buttons use a bordered outline style
+- `aria-pressed` on each button for screen-reader accessibility
+- Wrapped in a `role="group"` container with `aria-label="Filter by category"`
 
 ### Usage
 
 ```tsx
-<NutritionBar costaValue={144} starbucksValue={190} unit="kcal" />
+<FilterBar
+  category={filter.category}
+  onCategoryChange={(category) => setFilter(f => ({ ...f, category }))}
+/>
+```
+
+---
+
+## SearchBox
+
+**File:** `src/components/SearchBox.tsx`
+
+Renders a controlled text input that triggers instant client-side filtering of the drink catalog on each keystroke.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `query` | `string` | Current search query string |
+| `onQueryChange` | `(query: string) => void` | Called on every keystroke with the updated query |
+
+### Features
+
+- `type="search"` input with browser-native clear button support
+- Visually-hidden `<label>` keeps the input accessible without cluttering the UI
+- Rounded pill styling consistent with `FilterBar`
+- Wired to `useDrinks` via `FilterState.query`; both category and text filters apply simultaneously
+
+### Usage
+
+```tsx
+<SearchBox
+  query={filter.query}
+  onQueryChange={(query) => setFilter(f => ({ ...f, query }))}
+/>
 ```
 
 ---
@@ -105,42 +176,131 @@ Renders a proportional horizontal bar chart for a single nutrient using Recharts
 
 **File:** `src/components/ComparisonPanel.tsx`
 
-Displays a side-by-side nutritional comparison of one Costa drink and one Starbucks drink. Each of the five nutritional fields is visualised with a `NutritionBar`. Renders `null` when both drinks are `null`.
+Renders a side-by-side nutritional comparison of one Starbucks and one Costa drink.
 
 ### Props
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `starbucks` | `Drink \| null` | Selected Starbucks drink, or `null` |
-| `costa` | `Drink \| null` | Selected Costa drink, or `null` |
-| `onClear` | `() => void` | Callback to clear both selections |
+| `starbucksDrink` | `Drink \| null` | The selected Starbucks drink, or `null` if none selected |
+| `costaDrink` | `Drink \| null` | The selected Costa drink, or `null` if none selected |
+| `onClear` | `() => void` | Callback fired when the "Clear" button is clicked |
 
-### Nutritional fields shown
+### Features
 
-| Field | Unit |
-|-------|------|
-| Calories | kcal |
-| Sugar | g |
-| Fat | g |
-| Protein | g |
-| Caffeine | mg |
-
-### Behaviour
-
-- Renders `null` when both `starbucks` and `costa` are `null`
-- Shows drink names in brand-coloured headers (Costa red / Starbucks green)
-- When only one drink is selected, shows a prompt to select from the other brand
-- When both drinks are selected, renders full nutritional comparison rows with `NutritionBar`
-- Provides a "Clear" button that calls `onClear` to reset both selections
+- Returns `null` (renders nothing) when both drink slots are empty
+- Displays a prompt to select the missing brand when only one drink is selected
+- Renders a full side-by-side nutrition table once both slots are filled
+- Nutrition rows use `getNutritionRows` from `src/utils/getNutritionRows.ts`
+- Lower value in each row is highlighted in the brand's colour for quick visual scanning
+- "Clear" button calls `onClear` to reset both selections
 
 ### Usage
 
 ```tsx
 <ComparisonPanel
-  starbucks={comparison.starbucks}
-  costa={comparison.costa}
-  onClear={handleClearComparison}
+  starbucksDrink={comparison.starbucks}
+  costaDrink={comparison.costa}
+  onClear={() => setComparison({ starbucks: null, costa: null })}
 />
+```
+
+---
+
+## NutritionRow utility
+
+**File:** `src/utils/getNutritionRows.ts`
+
+Produces a labelled comparison row for every nutritional field.
+
+### Signature
+
+```ts
+function getNutritionRows(starbucksDrink: Drink, costaDrink: Drink): NutritionRow[]
+```
+
+### NutritionRow shape
+
+```ts
+interface NutritionRow {
+  label: string;         // e.g. "Calories"
+  unit: string;          // e.g. "kcal"
+  starbucksValue: number;
+  costaValue: number;
+}
+```
+
+### Fields returned (in order)
+
+| # | Label | Unit |
+|---|-------|------|
+| 1 | Calories | kcal |
+| 2 | Sugar | g |
+| 3 | Fat | g |
+| 4 | Protein | g |
+| 5 | Caffeine | mg |
+
+---
+
+## NutritionBar
+
+**File:** `src/components/NutritionBar.tsx`
+
+Renders a side-by-side visual bar comparison for a single nutrition metric between a Starbucks and a Costa drink. Each bar is scaled proportionally so the brand with the higher value spans the full available width.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | `string` | — | Human-readable nutrient label, e.g. `"Calories"` |
+| `starbucksValue` | `number` | — | Starbucks drink's value for this nutrient |
+| `costaValue` | `number` | — | Costa drink's value for this nutrient |
+| `unit` | `string` | — | Unit appended to displayed values, e.g. `"kcal"`, `"g"`, `"mg"` |
+| `lowerIsBetter` | `boolean` | `true` | When `true`, the lower value is highlighted as the winner. Pass `false` for protein where higher is preferable. |
+
+### Features
+
+- Bar widths are scaled proportionally: the higher of the two values occupies 100% of the available width
+- Winner highlighting: the brand with the better value is bolded and coloured in its brand colour
+- Tie state: neither brand is highlighted when values are equal
+- Starbucks bar uses `bg-starbucks` (`#00704A`) / Costa bar uses `bg-costa` (`#6B1E1E`)
+- Each bar is rendered as a `role="meter"` element with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax` for accessibility
+- Zero-safe: when both values are 0, both bars render at 0% width without errors
+
+### Usage
+
+```tsx
+// Lower is better (calories, sugar, fat — default)
+<NutritionBar
+  label="Calories"
+  starbucksValue={160}
+  costaValue={144}
+  unit="kcal"
+/>
+
+// Higher is better (protein)
+<NutritionBar
+  label="Protein"
+  starbucksValue={9}
+  costaValue={8}
+  unit="g"
+  lowerIsBetter={false}
+/>
+```
+
+### Typical usage inside a ComparisonPanel
+
+```tsx
+import { NutritionBar } from './NutritionBar';
+
+// Render one row per nutrient
+<div className="flex flex-col gap-4">
+  <NutritionBar label="Calories"  starbucksValue={sbux.nutrition.calories_kcal} costaValue={costa.nutrition.calories_kcal} unit="kcal" />
+  <NutritionBar label="Sugar"     starbucksValue={sbux.nutrition.sugar_g}       costaValue={costa.nutrition.sugar_g}       unit="g" />
+  <NutritionBar label="Fat"       starbucksValue={sbux.nutrition.fat_g}         costaValue={costa.nutrition.fat_g}         unit="g" />
+  <NutritionBar label="Protein"   starbucksValue={sbux.nutrition.protein_g}     costaValue={costa.nutrition.protein_g}     unit="g"  lowerIsBetter={false} />
+  <NutritionBar label="Caffeine"  starbucksValue={sbux.nutrition.caffeine_mg}   costaValue={costa.nutrition.caffeine_mg}   unit="mg" />
+</div>
 ```
 
 ---
