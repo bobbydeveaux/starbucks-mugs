@@ -57,6 +57,25 @@ export interface DrinkCatalogEnvelope {
 }
 
 // ---------------------------------------------------------------------------
+// Comparison utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * A single labelled row produced by `getNutritionRows`.
+ * Both brand values are always present; units are included for display.
+ */
+export interface NutritionRow {
+  /** Human-readable nutrient label, e.g. "Calories" */
+  label: string;
+  /** Costa drink's value for this nutrient */
+  costaValue: number;
+  /** Starbucks drink's value for this nutrient */
+  starbucksValue: number;
+  /** Unit suffix for display, e.g. "kcal", "g", "mg" */
+  unit: string;
+}
+
+// ---------------------------------------------------------------------------
 // Application state
 // ---------------------------------------------------------------------------
 
