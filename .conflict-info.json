@@ -1,12 +1,9 @@
 {
-  "prNumber": 26,
+  "prNumber": 59,
   "baseBranch": "main",
-  "headBranch": "feature/22-best-starbucks-mugs-website-sprint-1-issue-22",
+  "headBranch": "feature/39-costa-vs-starbucks-sprint-1-issue-39",
   "conflictedFiles": [
-    ".review-feedback.txt",
-    "app.js",
-    "app.test.js",
-    "mugs.json"
+    ".claude-output.json"
   ],
-  "conflictCount": 4
+  "conflictCount": 1
 }
