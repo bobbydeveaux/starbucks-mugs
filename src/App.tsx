@@ -3,6 +3,7 @@ import { CostaVsStarbucksPage } from './pages/CostaVsStarbucksPage';
 import { FerrariPage } from './pages/FerrariPage';
 import { LamborghiniPage } from './pages/LamborghiniPage';
 import { ComparePage } from './pages/ComparePage';
+import { CatalogPage } from './pages/CatalogPage';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/ferrari" element={<FerrariPage />} />
         <Route path="/lamborghini" element={<LamborghiniPage />} />
         <Route path="/compare" element={<ComparePage />} />
+        <Route path="/catalog" element={<CatalogPage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,55 +1,111 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { CarModel, CarCatalogEnvelope, CarBrand, CatalogFilters } from '../types';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import type { CarModel, CarCatalogEnvelope, CatalogFilters } from '../types';
 
 /** Return shape of the useCarCatalog hook */
 export interface UseCarCatalogResult {
-  /** Cars matching the current filters */
-  cars: CarModel[];
+  /** All Ferrari models from the JSON catalog (unfiltered) */
+  ferrariCars: CarModel[];
+  /** All Lamborghini models from the JSON catalog (unfiltered) */
+  lamboCars: CarModel[];
+  /** Ferrari models that pass the current era and search filters */
+  filteredFerraris: CarModel[];
+  /** Lamborghini models that pass the current era and search filters */
+  filteredLambos: CarModel[];
+  /** Available decade values derived from the loaded catalog data */
+  availableDecades: number[];
+  /** Currently active decade filter, or undefined for all decades */
+  era: number | undefined;
+  /** Currently active search query (the debounced value applied to filtering) */
+  search: string;
+  /** Set the decade filter; pass undefined to clear */
+  setEra: (decade: number | undefined) => void;
+  /** Set the search query; filtering is debounced by 300 ms */
+  setSearch: (query: string) => void;
   /** True while the initial JSON fetch is in flight */
   loading: boolean;
   /** Non-null when the fetch fails; contains an error message */
   error: string | null;
-  /** Sorted list of unique decades present in the full (unfiltered) catalog */
-  decades: number[];
 }
 
 /**
- * Fetches a single brand's car catalog JSON and exposes a filtered list
- * based on the given CatalogFilters.
+ * Fetches both brand JSON files in parallel and exposes era-filtered,
+ * debounced-search-filtered car lists for Ferrari and Lamborghini.
  *
- * @param brand   - Which brand's JSON to fetch ('ferrari' | 'lamborghini').
- * @param filters - Optional decade and search filters.
- * @returns Loading state, error state, filtered car array, and available decades.
+ * @param initialFilters - Optional initial filter values for decade and search.
+ * @returns Loading state, error state, raw car arrays, filtered car arrays,
+ *          and filter setter functions.
  *
  * @example
- * const { cars, loading, error, decades } = useCarCatalog('ferrari', { decade: 1980 });
+ * const { filteredFerraris, filteredLambos, setEra, setSearch, loading } =
+ *   useCarCatalog();
  */
-export function useCarCatalog(
-  brand: CarBrand,
-  filters: CatalogFilters = {},
-): UseCarCatalogResult {
-  const [allCars, setAllCars] = useState<CarModel[]>([]);
+export function useCarCatalog(initialFilters?: CatalogFilters): UseCarCatalogResult {
+  const [allFerraris, setAllFerraris] = useState<CarModel[]>([]);
+  const [allLambos, setAllLambos] = useState<CarModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Era filter applied immediately (no debounce needed — decade selection is
+  // a discrete UI action, not a keystroke-level event).
+  const [era, setEra] = useState<number | undefined>(initialFilters?.decade);
+
+  // Raw search query (what the user has typed) and debounced value (used in
+  // the filter memo, updated 300 ms after the last keystroke).
+  const [rawSearch, setRawSearch] = useState(initialFilters?.search ?? '');
+  const [debouncedSearch, setDebouncedSearch] = useState(initialFilters?.search ?? '');
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const setSearch = useCallback((query: string) => {
+    setRawSearch(query);
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(query);
+      debounceTimerRef.current = null;
+    }, 300);
+  }, []);
+
+  // Clear debounce timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Fetch both catalogs once on mount.
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
 
     async function fetchCars() {
       try {
-        const res = await fetch(`/data/${brand}.json`, { signal });
+        const [ferrariRes, lamboRes] = await Promise.all([
+          fetch('/data/ferrari.json', { signal }),
+          fetch('/data/lamborghini.json', { signal }),
+        ]);
 
-        if (!res.ok) {
-          throw new Error(`Failed to fetch ${brand}.json: ${res.status}`);
+        if (!ferrariRes.ok) {
+          throw new Error(`Failed to fetch ferrari.json: ${ferrariRes.status}`);
+        }
+        if (!lamboRes.ok) {
+          throw new Error(`Failed to fetch lamborghini.json: ${lamboRes.status}`);
         }
 
-        const envelope: CarCatalogEnvelope = await res.json();
-        setAllCars(envelope.cars);
+        const [ferrariEnvelope, lamboEnvelope]: [CarCatalogEnvelope, CarCatalogEnvelope] =
+          await Promise.all([ferrariRes.json(), lamboRes.json()]);
+
+        // Sort chronologically by year so consumers receive stable ordering.
+        const sortByYear = (a: CarModel, b: CarModel) => a.year - b.year;
+
+        setAllFerraris([...ferrariEnvelope.cars].sort(sortByYear));
+        setAllLambos([...lamboEnvelope.cars].sort(sortByYear));
         setLoading(false);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          // Component unmounted — ignore
+          // Component unmounted — ignore stale response.
           return;
         }
         setError(err instanceof Error ? err.message : 'Failed to load car data');
@@ -62,27 +118,53 @@ export function useCarCatalog(
     return () => {
       controller.abort();
     };
-  }, [brand]);
+  }, []);
 
-  const filtered = useMemo(() => {
-    let result = allCars;
+  // Derive sorted, unique decades from the loaded data
+  const availableDecades = useMemo(() => {
+    const decadeSet = new Set<number>();
+    for (const car of allFerraris) decadeSet.add(car.decade);
+    for (const car of allLambos) decadeSet.add(car.decade);
+    return Array.from(decadeSet).sort((a, b) => a - b);
+  }, [allFerraris, allLambos]);
 
-    if (filters.decade !== undefined) {
-      result = result.filter((c) => c.decade === filters.decade);
+  /** Apply era and search filters to a car array. */
+  function applyFilters(cars: CarModel[], decade: number | undefined, query: string): CarModel[] {
+    let result = cars;
+
+    if (decade !== undefined) {
+      result = result.filter((car) => car.decade === decade);
     }
 
-    const trimmed = (filters.search ?? '').trim().toLowerCase();
+    const trimmed = query.trim().toLowerCase();
     if (trimmed) {
-      result = result.filter((c) => c.model.toLowerCase().includes(trimmed));
+      result = result.filter((car) => car.model.toLowerCase().includes(trimmed));
     }
 
     return result;
-  }, [allCars, filters.decade, filters.search]);
+  }
 
-  const decades = useMemo(() => {
-    const set = new Set(allCars.map((c) => c.decade));
-    return Array.from(set).sort((a, b) => a - b);
-  }, [allCars]);
+  const filteredFerraris = useMemo(
+    () => applyFilters(allFerraris, era, debouncedSearch),
+    [allFerraris, era, debouncedSearch],
+  );
 
-  return { cars: filtered, loading, error, decades };
+  const filteredLambos = useMemo(
+    () => applyFilters(allLambos, era, debouncedSearch),
+    [allLambos, era, debouncedSearch],
+  );
+
+  return {
+    ferrariCars: allFerraris,
+    lamboCars: allLambos,
+    filteredFerraris,
+    filteredLambos,
+    availableDecades,
+    era,
+    search: rawSearch,
+    setEra,
+    setSearch,
+    loading,
+    error,
+  };
 }

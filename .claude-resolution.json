@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 5,
+  "summary": "Resolved conflicts in docs/components.md, CarCard.tsx, CarCard.test.tsx, useCarCatalog.ts, and useCarCatalog.test.ts",
+  "strategyUsed": "Used origin/main as primary for all five files: (1) docs/components.md — discarded HEAD's duplicate/old-API sections for CarCard, CatalogPage, and single-brand useCarCatalog; kept origin/main's new filter component docs (expanded dual-brand useCarCatalog API, EraFilter, SearchBar, CatalogFilters); (2) CarCard.tsx — used origin/main's structure (decade badge, engine config in specs row, 'Top Speed:' label, '✓ Selected' button text, correct alt/aria-label format) while adding focus ring color classes from HEAD for accessibility; (3) CarCard.test.tsx — used origin/main's more comprehensive test suite (15 tests) with decade badge, dual-brand fixtures, and '✓ Selected' assertion consistent with the component; (4) useCarCatalog.ts — used origin/main's dual-brand implementation (fetches both ferrari.json and lamborghini.json in parallel, exposes filteredFerraris/filteredLambos with debounced search and era filter) which is consistent with CatalogPage.tsx already in the codebase; (5) useCarCatalog.test.ts — used origin/main's comprehensive test suite covering parallel fetch, debounced search timing, era filtering, combined filters, initialFilters, and per-brand error handling"
 }
