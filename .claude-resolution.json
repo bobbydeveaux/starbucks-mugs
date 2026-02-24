@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in src/utils/getNutritionRows.ts and src/utils/getNutritionRows.test.ts by keeping the HEAD (feature branch) version, which is a superset of the origin/main version with null-safe drink parameters, maxValue for bar scaling, ariaLabel for WCAG accessibility, and a key field per nutrition row.",
+  "strategyUsed": "chose HEAD for both files — the feature branch implementation adds null handling (Drink | null params), maxValue computation, WCAG-compliant ariaLabel generation, and a structured NUTRITION_METRICS array, all of which are strictly more capable than the simpler origin/main version; the comprehensive HEAD test suite was preserved to match the richer implementation"
 }

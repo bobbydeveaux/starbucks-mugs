@@ -9,7 +9,7 @@
       "model": "350 GT",
       "year": 1963,
       "decade": 1960,
-      "image": "/images/lamborghini/350-gt.jpg",
+      "imageUrl": "/images/lamborghini/350-gt.jpg",
       "specs": {
         "hp": 270,
         "torqueLbFt": 221,
@@ -25,7 +25,7 @@
       "model": "400 GT",
       "year": 1965,
       "decade": 1960,
-      "image": "/images/lamborghini/400-gt.jpg",
+      "imageUrl": "/images/lamborghini/400-gt.jpg",
       "specs": {
         "hp": 320,
         "torqueLbFt": 239,
@@ -41,7 +41,7 @@
       "model": "Miura P400",
       "year": 1966,
       "decade": 1960,
-      "image": "/images/lamborghini/miura-p400.jpg",
+      "imageUrl": "/images/lamborghini/miura-p400.jpg",
       "specs": {
         "hp": 350,
         "torqueLbFt": 288,
@@ -57,7 +57,7 @@
       "model": "Espada",
       "year": 1968,
       "decade": 1960,
-      "image": "/images/lamborghini/espada.jpg",
+      "imageUrl": "/images/lamborghini/espada.jpg",
       "specs": {
         "hp": 325,
         "torqueLbFt": 268,
@@ -73,7 +73,7 @@
       "model": "Islero",
       "year": 1968,
       "decade": 1960,
-      "image": "/images/lamborghini/islero.jpg",
+      "imageUrl": "/images/lamborghini/islero.jpg",
       "specs": {
         "hp": 325,
         "torqueLbFt": 268,
@@ -89,7 +89,7 @@
       "model": "Jarama",
       "year": 1970,
       "decade": 1970,
-      "image": "/images/lamborghini/jarama.jpg",
+      "imageUrl": "/images/lamborghini/jarama.jpg",
       "specs": {
         "hp": 350,
         "torqueLbFt": 281,
@@ -105,7 +105,7 @@
       "model": "Miura SV",
       "year": 1971,
       "decade": 1970,
-      "image": "/images/lamborghini/miura-sv.jpg",
+      "imageUrl": "/images/lamborghini/miura-sv.jpg",
       "specs": {
         "hp": 385,
         "torqueLbFt": 295,
@@ -121,7 +121,7 @@
       "model": "Countach LP400",
       "year": 1974,
       "decade": 1970,
-      "image": "/images/lamborghini/countach-lp400.jpg",
+      "imageUrl": "/images/lamborghini/countach-lp400.jpg",
       "specs": {
         "hp": 375,
         "torqueLbFt": 268,
@@ -137,7 +137,7 @@
       "model": "Silhouette",
       "year": 1976,
       "decade": 1970,
-      "image": "/images/lamborghini/silhouette.jpg",
+      "imageUrl": "/images/lamborghini/silhouette.jpg",
       "specs": {
         "hp": 260,
         "torqueLbFt": 210,
@@ -153,7 +153,7 @@
       "model": "Jalpa",
       "year": 1981,
       "decade": 1980,
-      "image": "/images/lamborghini/jalpa.jpg",
+      "imageUrl": "/images/lamborghini/jalpa.jpg",
       "specs": {
         "hp": 255,
         "torqueLbFt": 225,
@@ -169,7 +169,7 @@
       "model": "Countach LP500S",
       "year": 1982,
       "decade": 1980,
-      "image": "/images/lamborghini/countach-lp500s.jpg",
+      "imageUrl": "/images/lamborghini/countach-lp500s.jpg",
       "specs": {
         "hp": 375,
         "torqueLbFt": 268,
@@ -185,7 +185,7 @@
       "model": "LM002",
       "year": 1986,
       "decade": 1980,
-      "image": "/images/lamborghini/lm002.jpg",
+      "imageUrl": "/images/lamborghini/lm002.jpg",
       "specs": {
         "hp": 444,
         "torqueLbFt": 369,
@@ -201,7 +201,7 @@
       "model": "Countach 25th Anniversary",
       "year": 1988,
       "decade": 1980,
-      "image": "/images/lamborghini/countach-25th-anniversary.jpg",
+      "imageUrl": "/images/lamborghini/countach-25th-anniversary.jpg",
       "specs": {
         "hp": 414,
         "torqueLbFt": 365,
@@ -217,7 +217,7 @@
       "model": "Diablo",
       "year": 1990,
       "decade": 1990,
-      "image": "/images/lamborghini/diablo.jpg",
+      "imageUrl": "/images/lamborghini/diablo.jpg",
       "specs": {
         "hp": 492,
         "torqueLbFt": 428,
@@ -233,7 +233,7 @@
       "model": "Diablo VT",
       "year": 1993,
       "decade": 1990,
-      "image": "/images/lamborghini/diablo-vt.jpg",
+      "imageUrl": "/images/lamborghini/diablo-vt.jpg",
       "specs": {
         "hp": 492,
         "torqueLbFt": 428,
@@ -249,7 +249,7 @@
       "model": "Diablo SE30",
       "year": 1994,
       "decade": 1990,
-      "image": "/images/lamborghini/diablo-se30.jpg",
+      "imageUrl": "/images/lamborghini/diablo-se30.jpg",
       "specs": {
         "hp": 525,
         "torqueLbFt": 428,
@@ -265,7 +265,7 @@
       "model": "Diablo SV",
       "year": 1996,
       "decade": 1990,
-      "image": "/images/lamborghini/diablo-sv.jpg",
+      "imageUrl": "/images/lamborghini/diablo-sv.jpg",
       "specs": {
         "hp": 510,
         "torqueLbFt": 428,
@@ -281,7 +281,7 @@
       "model": "Diablo GT",
       "year": 1999,
       "decade": 1990,
-      "image": "/images/lamborghini/diablo-gt.jpg",
+      "imageUrl": "/images/lamborghini/diablo-gt.jpg",
       "specs": {
         "hp": 575,
         "torqueLbFt": 465,
@@ -297,7 +297,7 @@
       "model": "Murciélago",
       "year": 2001,
       "decade": 2000,
-      "image": "/images/lamborghini/murcielago.jpg",
+      "imageUrl": "/images/lamborghini/murcielago.jpg",
       "specs": {
         "hp": 571,
         "torqueLbFt": 479,
@@ -313,7 +313,7 @@
       "model": "Gallardo",
       "year": 2003,
       "decade": 2000,
-      "image": "/images/lamborghini/gallardo.jpg",
+      "imageUrl": "/images/lamborghini/gallardo.jpg",
       "specs": {
         "hp": 493,
         "torqueLbFt": 376,
@@ -329,7 +329,7 @@
       "model": "Murciélago LP640",
       "year": 2006,
       "decade": 2000,
-      "image": "/images/lamborghini/murcielago-lp640.jpg",
+      "imageUrl": "/images/lamborghini/murcielago-lp640.jpg",
       "specs": {
         "hp": 631,
         "torqueLbFt": 487,
@@ -345,7 +345,7 @@
       "model": "Reventón",
       "year": 2007,
       "decade": 2000,
-      "image": "/images/lamborghini/reventon.jpg",
+      "imageUrl": "/images/lamborghini/reventon.jpg",
       "specs": {
         "hp": 641,
         "torqueLbFt": 487,
@@ -361,7 +361,7 @@
       "model": "Gallardo LP560-4",
       "year": 2008,
       "decade": 2000,
-      "image": "/images/lamborghini/gallardo-lp560-4.jpg",
+      "imageUrl": "/images/lamborghini/gallardo-lp560-4.jpg",
       "specs": {
         "hp": 552,
         "torqueLbFt": 398,
@@ -377,7 +377,7 @@
       "model": "Gallardo LP570-4 Superleggera",
       "year": 2010,
       "decade": 2010,
-      "image": "/images/lamborghini/gallardo-lp570-4-superleggera.jpg",
+      "imageUrl": "/images/lamborghini/gallardo-lp570-4-superleggera.jpg",
       "specs": {
         "hp": 562,
         "torqueLbFt": 398,
@@ -393,7 +393,7 @@
       "model": "Aventador LP700-4",
       "year": 2011,
       "decade": 2010,
-      "image": "/images/lamborghini/aventador-lp700-4.jpg",
+      "imageUrl": "/images/lamborghini/aventador-lp700-4.jpg",
       "specs": {
         "hp": 691,
         "torqueLbFt": 509,
@@ -409,7 +409,7 @@
       "model": "Sesto Elemento",
       "year": 2011,
       "decade": 2010,
-      "image": "/images/lamborghini/sesto-elemento.jpg",
+      "imageUrl": "/images/lamborghini/sesto-elemento.jpg",
       "specs": {
         "hp": 562,
         "torqueLbFt": 376,
@@ -425,7 +425,7 @@
       "model": "Huracán LP610-4",
       "year": 2014,
       "decade": 2010,
-      "image": "/images/lamborghini/huracan-lp610-4.jpg",
+      "imageUrl": "/images/lamborghini/huracan-lp610-4.jpg",
       "specs": {
         "hp": 602,
         "torqueLbFt": 413,
@@ -441,7 +441,7 @@
       "model": "Centenario",
       "year": 2016,
       "decade": 2010,
-      "image": "/images/lamborghini/centenario.jpg",
+      "imageUrl": "/images/lamborghini/centenario.jpg",
       "specs": {
         "hp": 759,
         "torqueLbFt": 509,
@@ -457,7 +457,7 @@
       "model": "Aventador S",
       "year": 2017,
       "decade": 2010,
-      "image": "/images/lamborghini/aventador-s.jpg",
+      "imageUrl": "/images/lamborghini/aventador-s.jpg",
       "specs": {
         "hp": 740,
         "torqueLbFt": 509,
@@ -473,7 +473,7 @@
       "model": "Huracán Performante",
       "year": 2017,
       "decade": 2010,
-      "image": "/images/lamborghini/huracan-performante.jpg",
+      "imageUrl": "/images/lamborghini/huracan-performante.jpg",
       "specs": {
         "hp": 631,
         "torqueLbFt": 443,
@@ -489,7 +489,7 @@
       "model": "Urus",
       "year": 2018,
       "decade": 2010,
-      "image": "/images/lamborghini/urus.jpg",
+      "imageUrl": "/images/lamborghini/urus.jpg",
       "specs": {
         "hp": 641,
         "torqueLbFt": 627,
@@ -505,7 +505,7 @@
       "model": "Aventador SVJ",
       "year": 2018,
       "decade": 2010,
-      "image": "/images/lamborghini/aventador-svj.jpg",
+      "imageUrl": "/images/lamborghini/aventador-svj.jpg",
       "specs": {
         "hp": 759,
         "torqueLbFt": 531,
@@ -521,7 +521,7 @@
       "model": "Sián FKP 37",
       "year": 2019,
       "decade": 2010,
-      "image": "/images/lamborghini/sian-fkp37.jpg",
+      "imageUrl": "/images/lamborghini/sian-fkp37.jpg",
       "specs": {
         "hp": 819,
         "torqueLbFt": 531,
@@ -537,7 +537,7 @@
       "model": "Huracán EVO",
       "year": 2020,
       "decade": 2020,
-      "image": "/images/lamborghini/huracan-evo.jpg",
+      "imageUrl": "/images/lamborghini/huracan-evo.jpg",
       "specs": {
         "hp": 631,
         "torqueLbFt": 443,
@@ -553,7 +553,7 @@
       "model": "Huracán STO",
       "year": 2020,
       "decade": 2020,
-      "image": "/images/lamborghini/huracan-sto.jpg",
+      "imageUrl": "/images/lamborghini/huracan-sto.jpg",
       "specs": {
         "hp": 631,
         "torqueLbFt": 417,
@@ -569,7 +569,7 @@
       "model": "Essenza SCV12",
       "year": 2021,
       "decade": 2020,
-      "image": "/images/lamborghini/essenza-scv12.jpg",
+      "imageUrl": "/images/lamborghini/essenza-scv12.jpg",
       "specs": {
         "hp": 830,
         "torqueLbFt": 531,
@@ -585,7 +585,7 @@
       "model": "Countach LPI 800-4",
       "year": 2021,
       "decade": 2020,
-      "image": "/images/lamborghini/countach-lpi-800-4.jpg",
+      "imageUrl": "/images/lamborghini/countach-lpi-800-4.jpg",
       "specs": {
         "hp": 814,
         "torqueLbFt": 531,
@@ -601,7 +601,7 @@
       "model": "Urus S",
       "year": 2022,
       "decade": 2020,
-      "image": "/images/lamborghini/urus-s.jpg",
+      "imageUrl": "/images/lamborghini/urus-s.jpg",
       "specs": {
         "hp": 657,
         "torqueLbFt": 627,
@@ -617,7 +617,7 @@
       "model": "Urus Performante",
       "year": 2022,
       "decade": 2020,
-      "image": "/images/lamborghini/urus-performante.jpg",
+      "imageUrl": "/images/lamborghini/urus-performante.jpg",
       "specs": {
         "hp": 657,
         "torqueLbFt": 627,
@@ -633,7 +633,7 @@
       "model": "Revuelto",
       "year": 2023,
       "decade": 2020,
-      "image": "/images/lamborghini/revuelto.jpg",
+      "imageUrl": "/images/lamborghini/revuelto.jpg",
       "specs": {
         "hp": 1001,
         "torqueLbFt": 531,
@@ -649,7 +649,7 @@
       "model": "Huracán Sterrato",
       "year": 2023,
       "decade": 2020,
-      "image": "/images/lamborghini/huracan-sterrato.jpg",
+      "imageUrl": "/images/lamborghini/huracan-sterrato.jpg",
       "specs": {
         "hp": 602,
         "torqueLbFt": 413,
@@ -665,7 +665,7 @@
       "model": "Revuelto Spider",
       "year": 2024,
       "decade": 2020,
-      "image": "/images/lamborghini/revuelto-spider.jpg",
+      "imageUrl": "/images/lamborghini/revuelto-spider.jpg",
       "specs": {
         "hp": 1001,
         "torqueLbFt": 531,
