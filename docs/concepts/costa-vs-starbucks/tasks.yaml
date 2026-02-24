@@ -1,181 +1,21 @@
-GeneratedAt: "2026-02-24T16:20:43Z"
+GeneratedAt: "2026-02-24T17:31:03Z"
 Plan: costa-vs-starbucks-plan
 Sprints:
-- Features:
-  - FeatureID: costa-vs-starbucks-feat-project-setup
-    FeatureTitle: Project Scaffolding
-    Tasks:
-    - AcceptanceCriteria:
-      - npm run dev starts the dev server without errors
-      - npm run build produces a dist/ bundle with no TypeScript or lint errors
-      - All declared dependencies resolve and import successfully
-      AgentType: frontend-engineer
-      Dependencies: []
-      Description: 'Initialise the project using Vite with the React-TypeScript template.
-        Install all runtime and dev dependencies: React 18, TypeScript, Recharts,
-        Tailwind CSS, Vitest, Playwright, and ESLint. Configure vite.config.ts with
-        path aliases and src/main.tsx as the entry point with a minimal App shell.'
-      EstimatedEffort: S
-      Files:
-      - vite.config.ts
-      - index.html
-      - src/main.tsx
-      - tsconfig.json
-      - package.json
-      ID: task-costa-vs-starbucks-feat-project-setup-1
-      Title: Scaffold Vite + React 18 + TypeScript project
-    - AcceptanceCriteria:
-      - tailwind.config.ts exports brand colour tokens accessible as Tailwind utility
-        classes (e.g. bg-starbucks, bg-costa)
-      - A smoke-rendered component using both brand colour classes displays correctly
-        in the browser
-      - No unused CSS purge warnings in the production build
-      AgentType: frontend-engineer
-      Dependencies:
-      - task-costa-vs-starbucks-feat-project-setup-1
-      Description: 'Set up Tailwind CSS with PostCSS and configure tailwind.config.ts
-        to extend the default theme with brand colour tokens: Starbucks green (#00704A)
-        and Costa red (#6B1E1E). Wire the Tailwind directives into the global stylesheet
-        imported by main.tsx.'
-      EstimatedEffort: S
-      Files:
-      - tailwind.config.ts
-      - src/index.css
-      ID: task-costa-vs-starbucks-feat-project-setup-2
-      Title: Configure Tailwind CSS with brand design tokens
-    - AcceptanceCriteria:
-      - CI workflow triggers on push and PR to main and all jobs complete successfully
-      - Lighthouse CI job enforces the <150 kB gzipped bundle budget defined in the
-        LLD
-      - netlify.toml includes a CSP header that restricts script-src and connect-src
-        to known origins
-      - Netlify preview deploy URL is posted as a PR comment on successful build
-      AgentType: devops-engineer
-      Dependencies:
-      - task-costa-vs-starbucks-feat-project-setup-1
-      Description: Create the GitHub Actions workflow (.github/workflows/ci.yml) with
-        jobs for lint, type-check, build, Lighthouse CI, and Netlify deploy. Add netlify.toml
-        defining the build command, publish directory, and Content-Security-Policy
-        response headers.
-      EstimatedEffort: M
-      Files:
-      - .github/workflows/ci.yml
-      - netlify.toml
-      ID: task-costa-vs-starbucks-feat-project-setup-3
-      Title: Add CI pipeline and Netlify deployment config
-  - FeatureID: costa-vs-starbucks-feat-data-layer
-    FeatureTitle: Drink Data Layer
-    Tasks:
-    - AcceptanceCriteria:
-      - src/types.ts exports Drink with all nutritional fields (calories_kcal, sugar_g,
-        fat_g, protein_g, caffeine_mg, size_ml)
-      - Brand, Category, ComparisonState, and FilterState types are exported
-      - TypeScript compiler reports zero errors on the file
-      AgentType: frontend-engineer
-      Dependencies: []
-      Description: 'Create src/types.ts with shared TypeScript interfaces and types:
-        Drink, Brand, Category, ComparisonState, and FilterState. These types must
-        match the LLD data model exactly and will be imported by all other modules.'
-      EstimatedEffort: S
-      Files:
-      - src/types.ts
-      ID: task-costa-vs-starbucks-feat-data-layer-1
-      Title: Define TypeScript types
-    - AcceptanceCriteria:
-      - Each JSON file contains 30 or more drink entries
-      - Every entry includes calories_kcal, sugar_g, fat_g, protein_g, caffeine_mg,
-        and size_ml
-      - JSON files are valid and parse without errors against the Drink type schema
-      AgentType: frontend-engineer
-      Dependencies:
-      - task-costa-vs-starbucks-feat-data-layer-1
-      Description: Create public/data/starbucks.json and public/data/costa.json each
-        containing 30+ drinks with all nutritional fields populated. Data must conform
-        to the Drink type defined in src/types.ts.
-      EstimatedEffort: M
-      Files:
-      - public/data/starbucks.json
-      - public/data/costa.json
-      ID: task-costa-vs-starbucks-feat-data-layer-2
-      Title: Populate static drink JSON data
-    - AcceptanceCriteria:
-      - Both JSON files are fetched in parallel and results are merged correctly by
-        brand
-      - Hook returns filtered lists based on FilterState (category, brand) and search
-        query
-      - Fetch errors set an error state without crashing the app
-      - Hook returns loading state while data is in flight
-      AgentType: frontend-engineer
-      Dependencies:
-      - task-costa-vs-starbucks-feat-data-layer-1
-      - task-costa-vs-starbucks-feat-data-layer-2
-      Description: Implement src/hooks/useDrinks.ts to fetch both JSON files in parallel
-        via Promise.all and expose filtered and searched drink lists. The hook must
-        handle fetch errors gracefully and support FilterState and search query inputs.
-      EstimatedEffort: M
-      Files:
-      - src/hooks/useDrinks.ts
-      ID: task-costa-vs-starbucks-feat-data-layer-3
-      Title: Implement useDrinks hook
-  - FeatureID: costa-vs-starbucks-feat-drink-cards
-    FeatureTitle: Drink Card Grid
-    Tasks:
-    - AcceptanceCriteria:
-      - DrinkCard renders name, category badge, brand-coloured border, and CTA button;
-        calls onSelect callback when CTA is clicked
-      - DrinkCatalog renders two labelled brand sections each containing a responsive
-        grid of DrinkCards
-      - Selected cards display a visible highlight/active state distinct from unselected
-        cards
-      - Components compile without TypeScript errors and render correctly with mock
-        data
-      AgentType: frontend-engineer
-      Dependencies: []
-      Description: Build DrinkCard with drink name, category badge, brand-coloured
-        border, and Select to Compare CTA button. Build DrinkCatalog rendering a responsive
-        CSS grid of DrinkCards for both brands, with brand section headers and a highlighted
-        selected state. Props interfaces must match the types defined in src/types.ts.
-      EstimatedEffort: M
-      Files:
-      - src/components/DrinkCard.tsx
-      - src/components/DrinkCatalog.tsx
-      ID: task-costa-vs-starbucks-feat-drink-cards-1
-      Title: Implement DrinkCard and DrinkCatalog components
-    - AcceptanceCriteria:
-      - Selecting a drink updates App state and the corresponding DrinkCard shows
-        selected highlight
-      - Attempting to select a second drink from the same brand replaces the previous
-        selection for that brand
-      - DrinkCatalog receives correct filtered/full drinks list and selectedIds from
-        App state
-      AgentType: frontend-engineer
-      Dependencies:
-      - task-costa-vs-starbucks-feat-drink-cards-1
-      Description: Connect DrinkCatalog into App.tsx by passing the drinks data from
-        the useDrinks hook and wiring the handleSelect handler to update selected
-        drink state. Ensure duplicate-brand selection guard is enforced (cannot select
-        two drinks from the same brand).
-      EstimatedEffort: S
-      Files:
-      - src/App.tsx
-      ID: task-costa-vs-starbucks-feat-drink-cards-2
-      Title: Wire handleSelect handlers in App.tsx
-  Sprint: 1
 - Features:
   - FeatureID: costa-vs-starbucks-feat-filter-search
     FeatureTitle: Category Filter and Search
     Tasks:
     - AcceptanceCriteria:
       - filterDrinks returns all drinks when category is 'All' and search is empty
-      - filterDrinks correctly filters by category and search string simultaneously
-      - Search is case-insensitive and matches on drink name
-      - Function is pure with no side effects and exports a named export
+      - filterDrinks filters by category and search string simultaneously
+      - Search matching is case-insensitive and matches on drink name
+      - Passing an empty drinks array returns an empty array without errors
       AgentType: frontend-engineer
       Dependencies: []
-      Description: Implement the filterDrinks utility function in src/utils/filterDrinks.ts.
-        The function must accept a drinks array, an active category filter (Hot |
-        Iced | Blended | Tea | Other | All), and a search string, then return the
-        filtered subset. Both filters are applied simultaneously using AND logic.
+      Description: Create the filterDrinks utility function in src/utils/filterDrinks.ts.
+        It should accept a drinks array, an active category (Hot | Iced | Blended
+        | Tea | Other | All), and a search string, then return the filtered subset.
+        This is pure logic with no UI dependency and is consumed by useDrinks.
       EstimatedEffort: S
       Files:
       - src/utils/filterDrinks.ts
@@ -183,19 +23,17 @@ Sprints:
       Title: Implement filterDrinks utility
     - AcceptanceCriteria:
       - FilterBar renders all six category buttons and highlights the active one
-      - Clicking a FilterBar button calls the onCategoryChange handler with the correct
-        category value
-      - SearchBox input is controlled and calls onSearchChange on every keystroke
-      - Both components are wired into useDrinks so changing either re-filters the
-        displayed drinks
+      - Clicking a FilterBar button updates the active category and re-filters drinks
+      - SearchBox input triggers instant filtering on each keystroke
+      - Both filter and search are applied together, narrowing results across both
+        brands simultaneously
       AgentType: frontend-engineer
       Dependencies:
       - task-costa-vs-starbucks-feat-filter-search-1
-      Description: Implement FilterBar.tsx with toggle buttons for Hot, Iced, Blended,
-        Tea, Other, and All categories, and SearchBox.tsx with a controlled text input
-        for instant client-side search. Both components receive their state and handlers
-        from the parent (App.tsx via useDrinks) and apply filters across both brands
-        simultaneously.
+      Description: Build FilterBar with toggle buttons for Hot, Iced, Blended, Tea,
+        Other, and All categories, and SearchBox with a controlled text input for
+        instant client-side search. Both components receive state and callbacks from
+        App.tsx via props and are applied simultaneously across both brands via useDrinks.
       EstimatedEffort: S
       Files:
       - src/components/FilterBar.tsx
@@ -206,37 +44,38 @@ Sprints:
     FeatureTitle: Side-by-Side Comparison Panel
     Tasks:
     - AcceptanceCriteria:
-      - getNutritionRows returns a correctly-shaped array of {label, value} rows for
-        every nutritional field on a Drink
-      - Function handles missing/undefined nutritional values gracefully without throwing
-      - Unit test covers a sample drink and verifies label text and value accuracy
+      - getNutritionRows returns a row for each nutritional field with correct label
+        and value mapping
+      - Function is fully typed with TypeScript using the Drink type from src/types.ts
+      - Unit test confirms correct row count and labels for a known fixture drink
+        object
       AgentType: frontend-engineer
       Dependencies: []
-      Description: Create the getNutritionRows utility function that takes a Drink
-        object and returns an array of labelled row data objects (label + value pairs)
-        for every nutritional field. Cover all fields defined in the TypeScript schema
-        in src/types.ts.
+      Description: Create the getNutritionRows utility function in src/utils/getNutritionRows.ts.
+        It should accept a Drink object and return an array of labelled row objects
+        (label, costaValue, starbucksValue) covering all nutritional fields defined
+        in the LLD types schema.
       EstimatedEffort: S
       Files:
       - src/utils/getNutritionRows.ts
       ID: task-costa-vs-starbucks-feat-comparison-panel-1
       Title: Implement getNutritionRows utility
     - AcceptanceCriteria:
-      - Panel renders two drink columns side-by-side with all nutritional rows aligned
-      - Selecting a second drink from the same brand is blocked and surfaced to the
-        user (e.g. warning message or disabled state)
-      - Clear/reset button deselects both drinks and returns the panel to its empty
-        state
-      - Component renders nothing meaningful (empty state) when fewer than two drinks
-        are selected
+      - Panel renders nutritional rows side-by-side for two drinks from different
+        brands
+      - Selecting two drinks of the same brand renders an error/guard message instead
+        of the comparison
+      - Clear button resets both selected drinks to null/undefined and hides the panel
+        or shows an empty state
+      - Component renders nothing (or a prompt) when fewer than two drinks are selected
       AgentType: frontend-engineer
       Dependencies:
       - task-costa-vs-starbucks-feat-comparison-panel-1
-      Description: Build the ComparisonPanel React component that accepts two selected
-        drinks (one per brand) and renders them in a side-by-side layout using rows
-        produced by getNutritionRows. Implement the same-brand duplicate selection
-        guard that prevents selecting two drinks from the same brand, and provide
-        a clear/reset action to deselect both drinks.
+      Description: Build ComparisonPanel.tsx to display two selected drinks (one Costa,
+        one Starbucks) in a side-by-side layout using rows from getNutritionRows.
+        Implement the same-brand duplicate selection guard that shows an error state
+        when both selections are the same brand, and expose a clear/reset action to
+        deselect both drinks.
       EstimatedEffort: M
       Files:
       - src/components/ComparisonPanel.tsx
@@ -246,22 +85,23 @@ Sprints:
     FeatureTitle: Visual Nutrition Bars
     Tasks:
     - AcceptanceCriteria:
-      - NutritionBar renders a Recharts BarChart with a single horizontal bar scaled
-        to (value / max) * 100%
-      - Bar renders correctly when value equals max (full width) and when value is
-        zero (empty bar)
-      - Component is exported and usable inside ComparisonPanel for each nutrition
-        row without layout breakage
+      - NutritionBar accepts props for both drink values and renders a proportional
+        bar scaled to the max of the two values
+      - Recharts BarChart is used for rendering with appropriate dimensions and no
+        unnecessary chrome
+      - Component is rendered within ComparisonPanel for each nutrition row without
+        layout breakage
       AgentType: frontend-engineer
       Dependencies: []
-      Description: Create src/components/NutritionBar.tsx rendering a proportional
-        horizontal bar per nutrient using Recharts BarChart. The bar width is scaled
-        relative to the higher of the two compared values so both brands are visually
-        comparable at a glance. Accept props for the nutrient value and the max reference
-        value.
+      Description: Create NutritionBar.tsx rendering a proportional horizontal bar
+        for a single nutrient using Recharts BarChart. The bar width is scaled relative
+        to the higher of the two compared values, making it easy to visually compare
+        nutrients at a glance. Integrate the component into ComparisonPanel for each
+        nutrition row.
       EstimatedEffort: S
       Files:
       - src/components/NutritionBar.tsx
+      - src/components/ComparisonPanel.tsx
       ID: task-costa-vs-starbucks-feat-nutrition-bars-1
       Title: Implement NutritionBar component
   Sprint: 2
