@@ -21,9 +21,10 @@ Renders a single drink as a card in the catalog grid.
 - Displays the drink name, category badge, calories, and serving size
 - Brand-coloured border (Starbucks green `#00704A` / Costa red `#6B1E1E`) for immediate brand identification
 - Lazy-loads the drink image with a graceful fallback placeholder on error
-- "Select to Compare" CTA button that toggles to "✓ Selected" when active
+- "Select to Compare" CTA button that toggles to "Selected ✓" when active
 - Highlighted ring when `isSelected` is `true` (distinct visual state)
-- `aria-selected` and `aria-pressed` attributes for accessibility
+- `data-selected` attribute on the article element for test/CSS selection hooks
+- `aria-pressed` on the CTA button for screen-reader toggle state
 
 ### Starbucks example
 
@@ -66,6 +67,45 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
   drinks={allDrinks}
   selectedIds={{ starbucks: 'sbux-flat-white', costa: null }}
   onSelect={handleSelect}
+/>
+```
+
+---
+
+---
+
+## ComparisonView
+
+**File:** `src/components/ComparisonView.tsx`
+
+Renders a side-by-side specification comparison panel for one Ferrari and one Lamborghini.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `ferrari` | `CarModel \| null` | The selected Ferrari, or `null` |
+| `lamborghini` | `CarModel \| null` | The selected Lamborghini, or `null` |
+| `stats` | `ComparisonStat[]` | Per-stat winner annotations produced by `useComparison` |
+
+### Features
+
+- **Empty state** — shows a prompt to select cars when either slot is empty
+- **Brand header row** — Ferrari (red badge) and Lamborghini (yellow badge) with model name, year, and engine config
+- **Stat table** — four rows: Horsepower, Torque (lb-ft), 0–60 mph (s), Top Speed (mph)
+- **Winner highlighting** — winning value shown in `ferrari-red` or `lambo-yellow`; losing value de-emphasised in gray
+- **Score summary** — "Ferrari leads X–Y" / "Lamborghini leads X–Y" / "It's a tie!" beneath the table
+- Each stat row has `data-winner` attribute for targeted styling or testing
+
+### Usage
+
+```tsx
+const { selectedFerrari, selectedLambo, winners } = useComparison();
+
+<ComparisonView
+  ferrari={selectedFerrari}
+  lamborghini={selectedLambo}
+  stats={winners}
 />
 ```
 
