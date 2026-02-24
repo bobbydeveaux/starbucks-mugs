@@ -1,0 +1,13 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: costa-mugs-feat-catalog-data
+        name: Mug Catalog Data
+        type: enabler
+        files: [data/mugs.json package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+      - id: costa-mugs-feat-site-ui
+        name: Catalog UI with Search and Detail Modal
+        type: feature
+        files: [index.html app.js styles.css images/placeholder.svg package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]

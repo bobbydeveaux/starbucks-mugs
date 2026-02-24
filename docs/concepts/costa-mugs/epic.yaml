@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: 'Create the versioned mugs.json catalog file with fields: id, name,
       series, region, material, price_usd, image_url, description'
     estimatedComplexity: low
@@ -10,7 +11,8 @@ Epics:
     name: Mug Catalog Data
     project: website
     type: enabler
-  - dependencies:
+  - Sprint: 1
+    dependencies:
     - costa-mugs-feat-catalog-data
     description: Implement index.html page shell, app.js with loadMugs, createCard,
       renderCards, filterMugs, applyFilters, openModal, and closeModal — rendering
@@ -25,6 +27,6 @@ Epics:
     name: Catalog UI with Search and Detail Modal
     project: website
     type: feature
-  id: costa-mugs-epic-site
-  name: Costa Mugs Static Site
+  ID: costa-mugs-epic-site
+  Name: Costa Mugs Static Site
 Version: v1alpha1
