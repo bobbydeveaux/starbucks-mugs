@@ -1,177 +1,169 @@
 import { describe, it, expect } from 'vitest';
-import { eraMatchSuggestion } from './eraMatchSuggestion';
+import { yearToDecade, eraMatchSuggestion } from './eraMatchSuggestion';
 import type { CarModel } from '../types';
 
 // ---------------------------------------------------------------------------
-// Test helpers
+// Fixtures
 // ---------------------------------------------------------------------------
 
-function makeCar(
-  overrides: Pick<CarModel, 'id' | 'brand' | 'model' | 'year'> & Partial<CarModel>,
-): CarModel {
+function makeCar(overrides: Partial<CarModel> & { id: string; year: number }): CarModel {
   return {
+    id: overrides.id,
+    brand: overrides.brand ?? 'ferrari',
+    model: overrides.model ?? overrides.id,
+    year: overrides.year,
     decade: Math.floor(overrides.year / 10) * 10,
     imageUrl: '/images/placeholder.jpg',
     specs: {
-      hp: 300,
-      torqueLbFt: 250,
-      zeroToSixtyMs: 5.0,
+      hp: 400,
+      torqueLbFt: 300,
+      zeroToSixtyMs: 4.5,
       topSpeedMph: 180,
-      engineConfig: 'V12, 4.0L',
+      engineConfig: 'V12, 5.0L',
     },
-    eraRivals: [],
+    eraRivals: overrides.eraRivals ?? [],
     ...overrides,
   };
 }
 
+const ferrariTestarossa = makeCar({ id: 'ferrari-testarossa-1984', brand: 'ferrari', year: 1984, model: 'Testarossa' });
+const ferrariF40 = makeCar({ id: 'ferrari-f40-1987', brand: 'ferrari', year: 1987, model: 'F40' });
+const ferrari308 = makeCar({ id: 'ferrari-308-1975', brand: 'ferrari', year: 1975, model: '308 GTB' });
+
+const lamboCountach = makeCar({ id: 'lamborghini-countach-1974', brand: 'lamborghini', year: 1974, model: 'Countach' });
+const lamboJalpa = makeCar({ id: 'lamborghini-jalpa-1981', brand: 'lamborghini', year: 1981, model: 'Jalpa' });
+const lamboDialablo = makeCar({ id: 'lamborghini-diablo-1990', brand: 'lamborghini', year: 1990, model: 'Diablo' });
+
 // ---------------------------------------------------------------------------
-// Fixture cars
+// yearToDecade tests
 // ---------------------------------------------------------------------------
 
-const lambo1963 = makeCar({ id: 'lamborghini-350-gt-1963', brand: 'lamborghini', model: '350 GT', year: 1963 });
-const lambo1966 = makeCar({ id: 'lamborghini-miura-p400-1966', brand: 'lamborghini', model: 'Miura P400', year: 1966 });
-const lambo1971 = makeCar({ id: 'lamborghini-countach-lp500-1971', brand: 'lamborghini', model: 'Countach LP500', year: 1971 });
-const lambo1985 = makeCar({ id: 'lamborghini-countach-5000-qv-1985', brand: 'lamborghini', model: 'Countach 5000 QV', year: 1985 });
+describe('yearToDecade', () => {
+  it('maps the first year of a decade to that decade', () => {
+    expect(yearToDecade(1980)).toBe(1980);
+    expect(yearToDecade(1990)).toBe(1990);
+    expect(yearToDecade(2000)).toBe(2000);
+  });
 
-const ferrari1962 = makeCar({
-  id: 'ferrari-250-gto-1962',
-  brand: 'ferrari',
-  model: '250 GTO',
-  year: 1962,
-  eraRivals: ['lamborghini-350-gt-1963'],
-});
+  it('maps mid-decade years to the correct decade floor', () => {
+    expect(yearToDecade(1984)).toBe(1980);
+    expect(yearToDecade(1987)).toBe(1980);
+    expect(yearToDecade(1995)).toBe(1990);
+    expect(yearToDecade(2023)).toBe(2020);
+  });
 
-const ferrari1984 = makeCar({
-  id: 'ferrari-testarossa-1984',
-  brand: 'ferrari',
-  model: 'Testarossa',
-  year: 1984,
-  eraRivals: ['lamborghini-countach-lp500-1971', 'lamborghini-countach-5000-qv-1985'],
-});
+  it('maps the last year of a decade correctly', () => {
+    expect(yearToDecade(1989)).toBe(1980);
+    expect(yearToDecade(1999)).toBe(1990);
+    expect(yearToDecade(2009)).toBe(2000);
+  });
 
-const ferrariNoRivals = makeCar({
-  id: 'ferrari-250-testa-rossa-1957',
-  brand: 'ferrari',
-  model: '250 Testa Rossa',
-  year: 1957,
-  eraRivals: [],
-});
-
-const ferrariUnknownRivals = makeCar({
-  id: 'ferrari-unknown-rivals',
-  brand: 'ferrari',
-  model: 'Unknown',
-  year: 1990,
-  eraRivals: ['lamborghini-does-not-exist-1990'],
+  it('handles year 1950', () => {
+    expect(yearToDecade(1950)).toBe(1950);
+    expect(yearToDecade(1957)).toBe(1950);
+  });
 });
 
 // ---------------------------------------------------------------------------
-// Tests
+// eraMatchSuggestion tests
 // ---------------------------------------------------------------------------
 
 describe('eraMatchSuggestion', () => {
-  describe('exact match', () => {
-    it('returns the sole eraRival when only one is listed and present in catalog', () => {
-      const result = eraMatchSuggestion(ferrari1962, [lambo1963]);
-      expect(result).toBe(lambo1963);
-    });
+  // -------------------------------------------------------------------------
+  // Empty catalog
+  // -------------------------------------------------------------------------
 
-    it('returns the rival with the exact same year when available', () => {
-      const lambo1984 = makeCar({ id: 'lamborghini-1984', brand: 'lamborghini', model: 'Test 1984', year: 1984 });
-      const selected = makeCar({
-        id: 'ferrari-1984',
-        brand: 'ferrari',
-        model: 'Test Ferrari',
-        year: 1984,
-        eraRivals: ['lamborghini-1984', 'lamborghini-countach-5000-qv-1985'],
-      });
-      const result = eraMatchSuggestion(selected, [lambo1984, lambo1985]);
-      expect(result).toBe(lambo1984);
-    });
+  it('returns null when the opponent catalog is empty', () => {
+    expect(eraMatchSuggestion(ferrariTestarossa, [])).toBeNull();
   });
 
-  describe('nearest-year match', () => {
-    it('returns the eraRival whose year is closest when no exact match exists', () => {
-      // ferrari1984 has eraRivals: [countach-1971, countach-5000-qv-1985]
-      // |1984 - 1971| = 13, |1984 - 1985| = 1 → lambo1985 is closer
-      const result = eraMatchSuggestion(ferrari1984, [lambo1971, lambo1985]);
-      expect(result).toBe(lambo1985);
+  // -------------------------------------------------------------------------
+  // Curated eraRivals takes precedence
+  // -------------------------------------------------------------------------
+
+  it('returns the first eraRival whose ID is in the opponent catalog', () => {
+    const ferrari = makeCar({
+      id: 'ferrari-testarossa-1984',
+      year: 1984,
+      eraRivals: ['lamborghini-countach-1974', 'lamborghini-jalpa-1981'],
     });
 
-    it('returns the closer of two rivals when years straddle the selected year', () => {
-      // selected year 1964, rivals at 1963 (diff=1) and 1966 (diff=2)
-      const selected = makeCar({
-        id: 'ferrari-275-gtb-1964',
-        brand: 'ferrari',
-        model: '275 GTB',
-        year: 1964,
-        eraRivals: ['lamborghini-350-gt-1963', 'lamborghini-miura-p400-1966'],
-      });
-      const result = eraMatchSuggestion(selected, [lambo1963, lambo1966]);
-      expect(result).toBe(lambo1963); // diff 1 < diff 2
-    });
-
-    it('returns the first listed rival on a tie (equal year distance)', () => {
-      // rivals equidistant: 1963 (diff=1) and 1965 (diff=1) from year 1964
-      const lambo1965 = makeCar({ id: 'lamborghini-400-gt-1965', brand: 'lamborghini', model: '400 GT', year: 1965 });
-      const selected = makeCar({
-        id: 'ferrari-tie',
-        brand: 'ferrari',
-        model: 'Tie Ferrari',
-        year: 1964,
-        eraRivals: ['lamborghini-350-gt-1963', 'lamborghini-400-gt-1965'],
-      });
-      const result = eraMatchSuggestion(selected, [lambo1963, lambo1965]);
-      // Both have diff=1; the first listed (lambo1963) should be returned
-      expect(result).toBe(lambo1963);
-    });
+    const result = eraMatchSuggestion(ferrari, [lamboCountach, lamboJalpa, lamboDialablo]);
+    expect(result?.id).toBe('lamborghini-countach-1974');
   });
 
-  describe('edge cases — empty / missing data', () => {
-    it('returns null when the rival catalog is empty', () => {
-      const result = eraMatchSuggestion(ferrari1962, []);
-      expect(result).toBeNull();
+  it('skips eraRivals IDs that do not appear in the opponent catalog', () => {
+    const ferrari = makeCar({
+      id: 'ferrari-testarossa-1984',
+      year: 1984,
+      eraRivals: ['lamborghini-missing-model', 'lamborghini-jalpa-1981'],
     });
 
-    it('returns null when the selected car has no eraRivals', () => {
-      const result = eraMatchSuggestion(ferrariNoRivals, [lambo1963, lambo1966]);
-      expect(result).toBeNull();
-    });
-
-    it('returns null when eraRivals ids are not present in the rival catalog', () => {
-      const result = eraMatchSuggestion(ferrariUnknownRivals, [lambo1963, lambo1966]);
-      expect(result).toBeNull();
-    });
-
-    it('returns null when both selected car has no eraRivals and catalog is empty', () => {
-      const result = eraMatchSuggestion(ferrariNoRivals, []);
-      expect(result).toBeNull();
-    });
-
-    it('ignores catalog cars whose ids are not in eraRivals', () => {
-      // ferrari1962 only lists lambo1963 as eraRival; lambo1966 is in catalog but should be ignored
-      const result = eraMatchSuggestion(ferrari1962, [lambo1963, lambo1966]);
-      expect(result).toBe(lambo1963);
-    });
-
-    it('returns null when only some eraRivals ids are in catalog but none match', () => {
-      const selectedWithPartialRivals = makeCar({
-        id: 'ferrari-partial',
-        brand: 'ferrari',
-        model: 'Partial',
-        year: 1970,
-        eraRivals: ['lamborghini-does-not-exist'],
-      });
-      const result = eraMatchSuggestion(selectedWithPartialRivals, [lambo1963, lambo1966]);
-      expect(result).toBeNull();
-    });
+    const result = eraMatchSuggestion(ferrari, [lamboJalpa, lamboDialablo]);
+    expect(result?.id).toBe('lamborghini-jalpa-1981');
   });
 
-  describe('catalog with a single rival', () => {
-    it('returns the only eraRival regardless of year distance', () => {
-      // ferrari1984 lists both lambo1971 and lambo1985; catalog only has lambo1971
-      const result = eraMatchSuggestion(ferrari1984, [lambo1971]);
-      expect(result).toBe(lambo1971);
+  it('falls back to nearest-year when no eraRival IDs match the catalog', () => {
+    const ferrari = makeCar({
+      id: 'ferrari-testarossa-1984',
+      year: 1984,
+      eraRivals: ['lamborghini-missing-1', 'lamborghini-missing-2'],
     });
+
+    // lamboJalpa (1981) is 3 years away; lamboDialablo (1990) is 6 years away.
+    const result = eraMatchSuggestion(ferrari, [lamboJalpa, lamboDialablo]);
+    expect(result?.id).toBe('lamborghini-jalpa-1981');
+  });
+
+  // -------------------------------------------------------------------------
+  // Nearest-year fallback
+  // -------------------------------------------------------------------------
+
+  it('returns the closest opponent by year when eraRivals is empty', () => {
+    // ferrariTestarossa year=1984; countach=1974 (delta 10), jalpa=1981 (delta 3)
+    const result = eraMatchSuggestion(ferrariTestarossa, [lamboCountach, lamboJalpa]);
+    expect(result?.id).toBe('lamborghini-jalpa-1981');
+  });
+
+  it('returns the only opponent in a single-element catalog', () => {
+    const result = eraMatchSuggestion(ferrariTestarossa, [lamboCountach]);
+    expect(result?.id).toBe('lamborghini-countach-1974');
+  });
+
+  it('returns the earlier opponent on an exact tie in year distance', () => {
+    // ferrari year=1980; candidate A year=1975 (delta 5), candidate B year=1985 (delta 5)
+    // reduce keeps the first minimum, so it returns whichever comes first in the array
+    const ferrari = makeCar({ id: 'ferrari-1980', year: 1980 });
+    const earlier = makeCar({ id: 'lambo-1975', brand: 'lamborghini', year: 1975 });
+    const later = makeCar({ id: 'lambo-1985', brand: 'lamborghini', year: 1985 });
+
+    const result = eraMatchSuggestion(ferrari, [earlier, later]);
+    // On tie the reduce keeps the first element (earlier)
+    expect(result?.id).toBe('lambo-1975');
+  });
+
+  it('handles a car with a year earlier than all opponents', () => {
+    // ferrari308 year=1975; all lambos are after
+    const result = eraMatchSuggestion(ferrari308, [lamboJalpa, lamboDialablo]);
+    // jalpa=1981 delta 6, diablo=1990 delta 15 → jalpa wins
+    expect(result?.id).toBe('lamborghini-jalpa-1981');
+  });
+
+  it('handles a car with a year later than all opponents', () => {
+    // ferrariF40 year=1987; countach=1974 delta 13, jalpa=1981 delta 6
+    const result = eraMatchSuggestion(ferrariF40, [lamboCountach, lamboJalpa]);
+    expect(result?.id).toBe('lamborghini-jalpa-1981');
+  });
+
+  // -------------------------------------------------------------------------
+  // Exact-year match
+  // -------------------------------------------------------------------------
+
+  it('returns the opponent with the exact same year when available', () => {
+    const ferrari = makeCar({ id: 'ferrari-1981', year: 1981 });
+    const exactMatch = makeCar({ id: 'lambo-exact-1981', brand: 'lamborghini', year: 1981 });
+
+    const result = eraMatchSuggestion(ferrari, [lamboCountach, exactMatch, lamboDialablo]);
+    expect(result?.id).toBe('lambo-exact-1981');
   });
 });

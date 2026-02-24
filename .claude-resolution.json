@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in src/utils/filterDrinks.ts and docs/components.md. For filterDrinks.ts, kept the 3-parameter function signature (drinks, category, query) used by the existing tests and useDrinks.ts hook, while also incorporating the CATEGORIES and CATEGORY_LABELS constants added by origin/main (required by FilterBar.tsx). For docs/components.md, preserved both the filterDrinks utility documentation from HEAD and the FilterBar/SearchBox/ComparisonPanel/NutritionRow/NutritionBar component documentation from origin/main.",
-  "strategyUsed": "preserved both changes: kept HEAD function signature for filterDrinks (compatible with existing tests and useDrinks hook), added origin/main constants (CATEGORIES, CATEGORY_LABELS) needed by FilterBar; merged both documentation sections in docs/components.md"
+  "filesResolved": 4,
+  "summary": "Resolved 4 conflicts: src/hooks/useCarCatalog.ts, src/hooks/useCarCatalog.test.ts, src/utils/eraMatchSuggestion.ts, and src/utils/eraMatchSuggestion.test.ts. For useCarCatalog, kept the HEAD (sprint 2) version which provides internal debounced state management, exposing filteredFerraris/filteredLambos arrays plus setEra/setSearch/era/search setters. For eraMatchSuggestion, kept the HEAD version which includes the yearToDecade helper and a 2-strategy matching algorithm (eraRivals first, then nearest-year fallback). Tests were kept consistent with their matching implementation.",
+  "strategyUsed": "chose HEAD for all 4 files — the HEAD branch represents sprint 2 feature work with richer functionality: useCarCatalog has internal debounced state (setEra, setSearch, filteredFerraris, filteredLambos) while origin/main had a simpler read-only filtered API; eraMatchSuggestion has a nearest-year fallback when no eraRivals match while origin/main returns null in that case"
 }

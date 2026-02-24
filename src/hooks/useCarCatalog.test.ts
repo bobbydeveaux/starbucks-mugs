@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useCarCatalog } from './useCarCatalog';
 import type { CarCatalogEnvelope } from '../types';
 
@@ -19,15 +19,8 @@ const ferrariEnvelope: CarCatalogEnvelope = {
       year: 1984,
       decade: 1980,
       imageUrl: '/images/ferrari/testarossa.jpg',
-      price: 87000,
-      specs: {
-        hp: 390,
-        torqueLbFt: 362,
-        zeroToSixtyMs: 5.2,
-        topSpeedMph: 181,
-        engineConfig: 'Flat-12, 4.9L',
-      },
-      eraRivals: ['lambo-countach-lp500s-1982'],
+      specs: { hp: 385, torqueLbFt: 361, zeroToSixtyMs: 5.8, topSpeedMph: 181, engineConfig: 'Flat-12, 4.9L' },
+      eraRivals: ['lamborghini-countach-lp500s-1982'],
     },
     {
       id: 'ferrari-f40-1987',
@@ -36,31 +29,18 @@ const ferrariEnvelope: CarCatalogEnvelope = {
       year: 1987,
       decade: 1980,
       imageUrl: '/images/ferrari/f40.jpg',
-      price: 400000,
-      specs: {
-        hp: 478,
-        torqueLbFt: 424,
-        zeroToSixtyMs: 3.8,
-        topSpeedMph: 201,
-        engineConfig: 'V8 Twin-Turbo, 3.0L',
-      },
-      eraRivals: ['lambo-countach-25th-1988'],
+      specs: { hp: 478, torqueLbFt: 424, zeroToSixtyMs: 3.8, topSpeedMph: 201, engineConfig: 'Twin-Turbo V8, 2.9L' },
+      eraRivals: [],
     },
     {
-      id: 'ferrari-250-gto-1962',
+      id: 'ferrari-308-gtb-1975',
       brand: 'ferrari',
-      model: '250 GTO',
-      year: 1962,
-      decade: 1960,
-      imageUrl: '/images/ferrari/250-gto.jpg',
-      specs: {
-        hp: 296,
-        torqueLbFt: 210,
-        zeroToSixtyMs: 6.1,
-        topSpeedMph: 174,
-        engineConfig: 'V12, 3.0L',
-      },
-      eraRivals: ['lamborghini-350-gt-1963'],
+      model: '308 GTB',
+      year: 1975,
+      decade: 1970,
+      imageUrl: '/images/ferrari/308-gtb.jpg',
+      specs: { hp: 255, torqueLbFt: 209, zeroToSixtyMs: 6.5, topSpeedMph: 155, engineConfig: 'V8, 3.0L' },
+      eraRivals: [],
     },
   ],
 };
@@ -77,46 +57,27 @@ const lamboEnvelope: CarCatalogEnvelope = {
       year: 1982,
       decade: 1980,
       imageUrl: '/images/lamborghini/countach-lp500s.jpg',
-      price: 100000,
-      specs: {
-        hp: 375,
-        torqueLbFt: 268,
-        zeroToSixtyMs: 4.9,
-        topSpeedMph: 183,
-        engineConfig: 'V12, 4.8L',
-      },
-      eraRivals: ['ferrari-testarossa-1984'],
+      specs: { hp: 375, torqueLbFt: 268, zeroToSixtyMs: 5.6, topSpeedMph: 182, engineConfig: 'V12, 4.8L' },
+      eraRivals: [],
     },
     {
-      id: 'lamborghini-350-gt-1963',
+      id: 'lamborghini-jalpa-1981',
       brand: 'lamborghini',
-      model: '350 GT',
-      year: 1963,
-      decade: 1960,
-      imageUrl: '/images/lamborghini/350-gt.jpg',
-      specs: {
-        hp: 270,
-        torqueLbFt: 221,
-        zeroToSixtyMs: 6.7,
-        topSpeedMph: 152,
-        engineConfig: 'V12, 3.5L',
-      },
-      eraRivals: ['ferrari-250-gto-1962'],
+      model: 'Jalpa',
+      year: 1981,
+      decade: 1980,
+      imageUrl: '/images/lamborghini/jalpa.jpg',
+      specs: { hp: 255, torqueLbFt: 225, zeroToSixtyMs: 6.8, topSpeedMph: 155, engineConfig: 'V8, 3.5L' },
+      eraRivals: [],
     },
     {
-      id: 'lamborghini-diablo-1990',
+      id: 'lamborghini-urraco-1970',
       brand: 'lamborghini',
-      model: 'Diablo',
-      year: 1990,
-      decade: 1990,
-      imageUrl: '/images/lamborghini/diablo.jpg',
-      specs: {
-        hp: 492,
-        torqueLbFt: 428,
-        zeroToSixtyMs: 4.1,
-        topSpeedMph: 202,
-        engineConfig: 'V12, 5.7L',
-      },
+      model: 'Urraco',
+      year: 1970,
+      decade: 1970,
+      imageUrl: '/images/lamborghini/urraco.jpg',
+      specs: { hp: 220, torqueLbFt: 181, zeroToSixtyMs: 7.5, topSpeedMph: 150, engineConfig: 'V8, 2.5L' },
       eraRivals: [],
     },
   ],
@@ -147,10 +108,12 @@ function mockFetch(
 
 describe('useCarCatalog', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.stubGlobal('fetch', mockFetch());
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -158,12 +121,14 @@ describe('useCarCatalog', () => {
   // Loading state
   // -------------------------------------------------------------------------
 
-  it('starts in loading state', () => {
+  it('starts in loading state with empty arrays', () => {
     const { result } = renderHook(() => useCarCatalog());
     expect(result.current.loading).toBe(true);
     expect(result.current.error).toBeNull();
     expect(result.current.ferrariCars).toEqual([]);
     expect(result.current.lamboCars).toEqual([]);
+    expect(result.current.filteredFerraris).toEqual([]);
+    expect(result.current.filteredLambos).toEqual([]);
   });
 
   it('clears loading state after data is fetched', async () => {
@@ -173,7 +138,7 @@ describe('useCarCatalog', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Parallel fetch and data
+  // Parallel fetch and data integrity
   // -------------------------------------------------------------------------
 
   it('fetches both JSON files in parallel via Promise.all', async () => {
@@ -189,44 +154,7 @@ describe('useCarCatalog', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('returns ferrari cars separately from lambo cars', async () => {
-    const { result } = renderHook(() => useCarCatalog());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.ferrariCars).toHaveLength(ferrariEnvelope.cars.length);
-    expect(result.current.lamboCars).toHaveLength(lamboEnvelope.cars.length);
-
-    result.current.ferrariCars.forEach((car) => expect(car.brand).toBe('ferrari'));
-    result.current.lamboCars.forEach((car) => expect(car.brand).toBe('lamborghini'));
-  });
-
-  // -------------------------------------------------------------------------
-  // Chronological sorting
-  // -------------------------------------------------------------------------
-
-  it('sorts ferrari cars chronologically by year (ascending)', async () => {
-    const { result } = renderHook(() => useCarCatalog());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    const years = result.current.ferrariCars.map((car) => car.year);
-    const sorted = [...years].sort((a, b) => a - b);
-    expect(years).toEqual(sorted);
-  });
-
-  it('sorts lambo cars chronologically by year (ascending)', async () => {
-    const { result } = renderHook(() => useCarCatalog());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    const years = result.current.lamboCars.map((car) => car.year);
-    const sorted = [...years].sort((a, b) => a - b);
-    expect(years).toEqual(sorted);
-  });
-
-  // -------------------------------------------------------------------------
-  // Decade filter
-  // -------------------------------------------------------------------------
-
-  it('returns all cars when no decade filter is set', async () => {
+  it('populates ferrariCars and lamboCars with unfiltered data', async () => {
     const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -234,88 +162,228 @@ describe('useCarCatalog', () => {
     expect(result.current.lamboCars).toHaveLength(lamboEnvelope.cars.length);
   });
 
-  it('filters ferrari cars by decade', async () => {
-    const { result } = renderHook(() => useCarCatalog({ decade: 1980 }));
+  it('sorts cars chronologically by year', async () => {
+    const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    result.current.ferrariCars.forEach((car) => expect(car.decade).toBe(1980));
+    const ferrariYears = result.current.ferrariCars.map((c) => c.year);
+    const lamboYears = result.current.lamboCars.map((c) => c.year);
 
-    const expected1980s = ferrariEnvelope.cars.filter((c) => c.decade === 1980).length;
-    expect(result.current.ferrariCars).toHaveLength(expected1980s);
-  });
-
-  it('filters lambo cars by decade', async () => {
-    const { result } = renderHook(() => useCarCatalog({ decade: 1980 }));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    result.current.lamboCars.forEach((car) => expect(car.decade).toBe(1980));
-
-    const expected1980s = lamboEnvelope.cars.filter((c) => c.decade === 1980).length;
-    expect(result.current.lamboCars).toHaveLength(expected1980s);
-  });
-
-  it('returns empty arrays when no cars match the decade', async () => {
-    const { result } = renderHook(() => useCarCatalog({ decade: 2050 }));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.ferrariCars).toHaveLength(0);
-    expect(result.current.lamboCars).toHaveLength(0);
+    expect(ferrariYears).toEqual([...ferrariYears].sort((a, b) => a - b));
+    expect(lamboYears).toEqual([...lamboYears].sort((a, b) => a - b));
   });
 
   // -------------------------------------------------------------------------
-  // Search filter
+  // Era (decade) filtering
   // -------------------------------------------------------------------------
 
-  it('filters cars by model name search (case-insensitive)', async () => {
-    const { result } = renderHook(() => useCarCatalog({ search: 'testarossa' }));
+  it('returns all cars when no era filter is set', async () => {
+    const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.ferrariCars.length).toBeGreaterThan(0);
-    result.current.ferrariCars.forEach((car) =>
-      expect(car.model.toLowerCase()).toContain('testarossa'),
-    );
+    expect(result.current.filteredFerraris).toHaveLength(ferrariEnvelope.cars.length);
+    expect(result.current.filteredLambos).toHaveLength(lamboEnvelope.cars.length);
+  });
+
+  it('filters to only the selected decade when setEra is called', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setEra(1980); });
+
+    // ferrariEnvelope has 2 cars in decade=1980, lamboEnvelope has 2
+    expect(result.current.filteredFerraris.every((c) => c.decade === 1980)).toBe(true);
+    expect(result.current.filteredFerraris).toHaveLength(2);
+    expect(result.current.filteredLambos.every((c) => c.decade === 1980)).toBe(true);
+    expect(result.current.filteredLambos).toHaveLength(2);
+  });
+
+  it('filters to a different decade correctly', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setEra(1970); });
+
+    expect(result.current.filteredFerraris).toHaveLength(1);
+    expect(result.current.filteredFerraris[0].id).toBe('ferrari-308-gtb-1975');
+    expect(result.current.filteredLambos).toHaveLength(1);
+    expect(result.current.filteredLambos[0].id).toBe('lamborghini-urraco-1970');
+  });
+
+  it('returns empty arrays when no cars match the selected decade', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setEra(2000); });
+
+    expect(result.current.filteredFerraris).toHaveLength(0);
+    expect(result.current.filteredLambos).toHaveLength(0);
+  });
+
+  it('restores all cars when era is cleared (set to undefined)', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setEra(1980); });
+    expect(result.current.filteredFerraris).toHaveLength(2);
+
+    act(() => { result.current.setEra(undefined); });
+    expect(result.current.filteredFerraris).toHaveLength(ferrariEnvelope.cars.length);
+  });
+
+  // -------------------------------------------------------------------------
+  // Debounced search filtering
+  // -------------------------------------------------------------------------
+
+  it('exposes the raw search value immediately via search field', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setSearch('Testa'); });
+    expect(result.current.search).toBe('Testa');
+  });
+
+  it('does NOT apply search filter immediately (debounce pending)', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setSearch('Testarossa'); });
+
+    // Filter should still show all cars before 300 ms elapses
+    expect(result.current.filteredFerraris).toHaveLength(ferrariEnvelope.cars.length);
+  });
+
+  it('applies search filter after 300 ms debounce', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setSearch('Testarossa'); });
+    act(() => { vi.advanceTimersByTime(300); });
+
+    expect(result.current.filteredFerraris).toHaveLength(1);
+    expect(result.current.filteredFerraris[0].model).toBe('Testarossa');
+  });
+
+  it('resets the 300 ms timer when user keeps typing', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setSearch('T'); });
+    act(() => { vi.advanceTimersByTime(200); });
+    act(() => { result.current.setSearch('Te'); });
+    act(() => { vi.advanceTimersByTime(200); });
+
+    // Only 200 ms have passed since the last keystroke — filter not applied yet.
+    expect(result.current.filteredFerraris).toHaveLength(ferrariEnvelope.cars.length);
+
+    act(() => { vi.advanceTimersByTime(100); });
+
+    // Now 300 ms since last keystroke — filter applied.
+    expect(result.current.filteredFerraris.every((c) =>
+      c.model.toLowerCase().includes('te'),
+    )).toBe(true);
   });
 
   it('search is case-insensitive', async () => {
-    const { result: lower } = renderHook(() => useCarCatalog({ search: 'testarossa' }));
-    const { result: upper } = renderHook(() => useCarCatalog({ search: 'TESTAROSSA' }));
-
-    await waitFor(() => expect(lower.current.loading).toBe(false));
-    await waitFor(() => expect(upper.current.loading).toBe(false));
-
-    expect(lower.current.ferrariCars.length).toBe(upper.current.ferrariCars.length);
-  });
-
-  it('returns empty list when search matches no cars', async () => {
-    const { result } = renderHook(() => useCarCatalog({ search: 'zzznomatch999' }));
+    const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.ferrariCars).toHaveLength(0);
-    expect(result.current.lamboCars).toHaveLength(0);
+    act(() => { result.current.setSearch('TESTAROSSA'); });
+    act(() => { vi.advanceTimersByTime(300); });
+
+    expect(result.current.filteredFerraris).toHaveLength(1);
+    expect(result.current.filteredFerraris[0].model).toBe('Testarossa');
   });
 
-  it('trims whitespace from search query', async () => {
-    const { result: padded } = renderHook(() => useCarCatalog({ search: '  F40  ' }));
-    const { result: clean } = renderHook(() => useCarCatalog({ search: 'F40' }));
+  it('trims whitespace from the search query', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
-    await waitFor(() => expect(padded.current.loading).toBe(false));
-    await waitFor(() => expect(clean.current.loading).toBe(false));
+    act(() => { result.current.setSearch('  F40  '); });
+    act(() => { vi.advanceTimersByTime(300); });
 
-    expect(padded.current.ferrariCars.length).toBe(clean.current.ferrariCars.length);
+    expect(result.current.filteredFerraris).toHaveLength(1);
+    expect(result.current.filteredFerraris[0].model).toBe('F40');
+  });
+
+  it('returns empty arrays when query matches no models', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setSearch('zzznomatch999'); });
+    act(() => { vi.advanceTimersByTime(300); });
+
+    expect(result.current.filteredFerraris).toHaveLength(0);
+    expect(result.current.filteredLambos).toHaveLength(0);
+  });
+
+  it('clears search filter when query is set to empty string', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setSearch('F40'); });
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(result.current.filteredFerraris).toHaveLength(1);
+
+    act(() => { result.current.setSearch(''); });
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(result.current.filteredFerraris).toHaveLength(ferrariEnvelope.cars.length);
   });
 
   // -------------------------------------------------------------------------
-  // Combined decade + search filter
+  // Combined era + search filtering
   // -------------------------------------------------------------------------
 
-  it('applies decade and search filters simultaneously', async () => {
-    const { result } = renderHook(() => useCarCatalog({ decade: 1980, search: 'Testarossa' }));
+  it('applies era and search filters simultaneously', async () => {
+    const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    result.current.ferrariCars.forEach((car) => {
-      expect(car.decade).toBe(1980);
-      expect(car.model.toLowerCase()).toContain('testarossa');
-    });
+    act(() => { result.current.setEra(1980); });
+    act(() => { result.current.setSearch('F40'); });
+    act(() => { vi.advanceTimersByTime(300); });
+
+    expect(result.current.filteredFerraris).toHaveLength(1);
+    expect(result.current.filteredFerraris[0].model).toBe('F40');
+    expect(result.current.filteredFerraris[0].decade).toBe(1980);
+  });
+
+  it('restores full era results when search is cleared', async () => {
+    const { result } = renderHook(() => useCarCatalog());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => { result.current.setEra(1980); });
+    act(() => { result.current.setSearch('F40'); });
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(result.current.filteredFerraris).toHaveLength(1);
+
+    act(() => { result.current.setSearch(''); });
+    act(() => { vi.advanceTimersByTime(300); });
+    // Now era=1980 only, so 2 ferraris
+    expect(result.current.filteredFerraris).toHaveLength(2);
+  });
+
+  // -------------------------------------------------------------------------
+  // initialFilters support
+  // -------------------------------------------------------------------------
+
+  it('respects initial decade filter', async () => {
+    const { result } = renderHook(() => useCarCatalog({ decade: 1980 }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.era).toBe(1980);
+    expect(result.current.filteredFerraris.every((c) => c.decade === 1980)).toBe(true);
+  });
+
+  it('respects initial search filter after debounce', async () => {
+    const { result } = renderHook(() => useCarCatalog({ search: 'Testarossa' }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Initial search is applied without waiting for a keystroke debounce
+    act(() => { vi.advanceTimersByTime(0); });
+    expect(result.current.search).toBe('Testarossa');
+    expect(result.current.filteredFerraris.every((c) =>
+      c.model.toLowerCase().includes('testarossa'),
+    )).toBe(true);
   });
 
   // -------------------------------------------------------------------------
@@ -323,10 +391,7 @@ describe('useCarCatalog', () => {
   // -------------------------------------------------------------------------
 
   it('sets error state and clears loading when fetch fails', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new Error('Network error')),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
     const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -337,52 +402,35 @@ describe('useCarCatalog', () => {
   });
 
   it('sets error when ferrari.json returns a non-ok response', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes('ferrari')) {
-          return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(lamboEnvelope),
-        });
-      }),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url.includes('ferrari')) {
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(lamboEnvelope) });
+    }));
 
     const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.error).toMatch(/ferrari\.json/);
-    expect(result.current.ferrariCars).toHaveLength(0);
   });
 
   it('sets error when lamborghini.json returns a non-ok response', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes('lamborghini')) {
-          return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(ferrariEnvelope),
-        });
-      }),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url.includes('lamborghini')) {
+        return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(ferrariEnvelope) });
+    }));
 
     const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.error).toMatch(/lamborghini\.json/);
-    expect(result.current.lamboCars).toHaveLength(0);
   });
 
-  it('does not crash the app on fetch failure (error returned, not thrown)', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new Error('Network error')),
-    );
+  it('does not crash on fetch failure (error returned, not thrown)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
     const { result } = renderHook(() => useCarCatalog());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -390,18 +438,5 @@ describe('useCarCatalog', () => {
     expect(result.current.error).not.toBeNull();
     expect(result.current.loading).toBe(false);
     expect(result.current.ferrariCars).toEqual([]);
-    expect(result.current.lamboCars).toEqual([]);
-  });
-
-  // -------------------------------------------------------------------------
-  // Default parameter
-  // -------------------------------------------------------------------------
-
-  it('works with no arguments (empty filters)', async () => {
-    const { result } = renderHook(() => useCarCatalog());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.ferrariCars).toHaveLength(ferrariEnvelope.cars.length);
-    expect(result.current.lamboCars).toHaveLength(lamboEnvelope.cars.length);
   });
 });
