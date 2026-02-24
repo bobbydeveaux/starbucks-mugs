@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 4,
-  "summary": "Resolved conflicts in 4 files: .claude-output.json, src/types.ts, public/data/starbucks.json, public/data/costa.json. Used origin/main as the canonical base for all files — it contains a more carefully curated dataset (consistent 185mg caffeine for Costa espresso-based drinks, proper menu naming conventions, no duplicate IDs) and a more complete implementation description (includes the useDrinks hook). Retained completedTasks field from HEAD in .claude-output.json.",
-  "strategyUsed": "src/types.ts: chose origin/main — adds JSDoc section comments, renames Nutrition to DrinkNutrition (matching the hook imports), makes image optional; .claude-output.json: merged — used origin/main prTitle/prBody/filesChanged (reflects full implementation with useDrinks hook), kept HEAD's completedTasks:[1,2]; public/data/starbucks.json: chose origin/main — consistent naming (Caffè Latte/Mocha/Americano), proper IDs (sbux-latte vs sbux-caffe-latte), 32 well-curated drinks across all 5 categories, no duplicate entries; public/data/costa.json: chose origin/main — consistent 185mg caffeine for espresso-based drinks, accurate menu names (Latte/Mocha instead of Caffe Latte/Caffe Mocha), 31 drinks across all 5 categories, single clean espresso entry (HEAD had duplicate IDs for espresso)"
+  "filesResolved": 1,
+  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
+  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
 }

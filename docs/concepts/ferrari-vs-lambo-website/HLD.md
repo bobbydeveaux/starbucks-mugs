@@ -1,4 +1,4 @@
-# High-Level Design: starbucks-mugs
+# High-Level Design: Ferrari vs Lambo Website
 
 **Created:** 2026-02-24T19:37:44Z
 **Status:** Draft
@@ -117,7 +117,7 @@ None. Zero server-side runtime.
 - **GitHub Actions** — CI: lint → test → build on PR; deploy on merge to `main`
 
 ### Data Storage
-- Static JSON files in `src/data/` — versioned in git, no external DB
+- Static JSON files in `public/data/` — versioned in git, no external DB, served via fetch('/data/…')
 - Car images in `public/images/{brand}/` — self-hosted, served from CDN
 
 ---
