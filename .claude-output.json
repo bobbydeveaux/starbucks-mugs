@@ -1,0 +1,18 @@
+{
+  "prTitle": "feat: populate static drink JSON data for costa-vs-starbucks",
+  "prBody": "## Summary\n\n- Created `src/types.ts` with shared TypeScript interfaces: `Drink`, `Brand`, `Category`, `Nutrition`, `DrinkCatalogEnvelope`, `ComparisonState`, and `FilterState`\n- Created `public/data/starbucks.json` with **33 drinks** across all categories (11 hot, 7 iced, 7 blended, 4 tea, 4 other)\n- Created `public/data/costa.json` with **32 drinks** across all categories (12 hot, 5 iced, 6 blended, 4 tea, 5 other)\n- All drink entries include all required nutritional fields: `calories_kcal`, `sugar_g`, `fat_g`, `protein_g`, `caffeine_mg`, and `size_ml`\n- Both JSON files use the versioned envelope schema `{ schema_version, brand, updated, drinks[] }` as defined in the HLD\n- Data conforms to the `Drink` type schema in `src/types.ts`\n\n**Review feedback addressed**: The blocking issue in `.review-feedback.txt` (`mugs.json` using `price` instead of `price_usd` and a bare-array root) was already resolved in a prior conflict resolution — `mugs.json` already uses `price_usd` and the `{ version, mugs }` envelope format.\n\nCloses #43",
+  "testsPass": true,
+  "filesChanged": [
+    "src/types.ts",
+    "public/data/starbucks.json",
+    "public/data/costa.json"
+  ],
+  "docsUpdated": [],
+  "docsReviewed": [
+    "docs/concepts/costa-vs-starbucks/HLD.md",
+    "docs/concepts/costa-vs-starbucks/LLD.md",
+    "docs/concepts/costa-vs-starbucks/tasks.yaml",
+    "docs/concepts/costa-vs-starbucks/README.md"
+  ],
+  "completedTasks": [1, 2]
+}
