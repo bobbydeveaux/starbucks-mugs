@@ -1,17 +1,52 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline';"
-    />
-    <title>Costa vs Starbucks — Drink Comparison</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline';" />
+  <title>Starbucks Mugs — Collectible Catalog</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Starbucks Mugs</h1>
+    <p class="subtitle">Browse our collection of collectible Starbucks mugs</p>
+  </header>
+
+  <section id="filter-bar" aria-label="Filter mugs">
+    <input id="search" type="search" placeholder="Search mugs…" aria-label="Search mugs" />
+    <select id="filter-series" aria-label="Filter by series">
+      <option value="">All Series</option>
+    </select>
+    <label class="year-range-label">
+      Year:
+      <input id="year-min" type="number" min="1990" max="2030" placeholder="From" aria-label="Year from" />
+      <span aria-hidden="true">–</span>
+      <input id="year-max" type="number" min="1990" max="2030" placeholder="To" aria-label="Year to" />
+    </label>
+    <button id="filter-reset" type="button">Reset</button>
+  </section>
+  <p id="results-count" aria-live="polite" aria-atomic="true"></p>
+
+  <main>
+    <div id="grid" class="grid" role="list" aria-label="Mug catalog"></div>
+  </main>
+
+  <!-- Modal overlay -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-name" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close" aria-label="Close">&times;</button>
+      <img id="modal-image" src="" alt="" class="modal-image" loading="lazy" />
+      <div class="modal-details">
+        <h2 id="modal-name" class="modal-name"></h2>
+        <p id="modal-price" class="modal-price"></p>
+        <p id="modal-description" class="modal-description"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
 </html>
