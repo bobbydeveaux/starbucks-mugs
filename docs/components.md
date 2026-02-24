@@ -71,6 +71,74 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## useCarCatalog hook
+
+**File:** `src/hooks/useCarCatalog.ts`
+
+Fetches both brand car catalog JSON files in parallel and exposes filtered, chronologically-sorted car arrays. Manages era decade filter state and debounced search query state internally.
+
+### Return value
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `filteredFerraris` | `CarModel[]` | Ferrari models matching active filters, sorted by year |
+| `filteredLambos` | `CarModel[]` | Lamborghini models matching active filters, sorted by year |
+| `loading` | `boolean` | `true` while the initial JSON fetch is in flight |
+| `error` | `string \| null` | Non-null when the fetch fails |
+| `era` | `number \| undefined` | Currently active decade filter (e.g. `1980`); `undefined` = all eras |
+| `setEra` | `(decade: number \| undefined) => void` | Set or clear the era decade filter |
+| `search` | `string` | Raw (non-debounced) search string as typed by the user |
+| `setSearch` | `(query: string) => void` | Update the search string; applied after 300 ms debounce |
+
+### Behaviour
+
+- Fetches `/data/ferrari.json` and `/data/lamborghini.json` in parallel on mount
+- Sorts both arrays chronologically by year ascending
+- Era filter: when set, only cars whose `decade` matches are returned
+- Search filter: case-insensitive match on `model` name; debounced by 300 ms
+- Both filters are applied simultaneously
+
+### Usage
+
+```tsx
+const { filteredFerraris, filteredLambos, setEra, setSearch } = useCarCatalog();
+
+// Filter to 1980s models
+setEra(1980);
+
+// Search model names (debounced 300 ms)
+setSearch('Testarossa');
+
+// Clear era filter
+setEra(undefined);
+```
+
+---
+
+## eraMatchSuggestion utility
+
+**File:** `src/utils/eraMatchSuggestion.ts`
+
+Pure function that maps any car model year to its decade bucket label. Used by the EraFilter component to render decade selector buttons.
+
+### Signature
+
+```typescript
+function eraMatchSuggestion(year: number): string
+```
+
+### Examples
+
+```typescript
+eraMatchSuggestion(1984) // → "1980s"
+eraMatchSuggestion(1963) // → "1960s"
+eraMatchSuggestion(2023) // → "2020s"
+eraMatchSuggestion(1960) // → "1960s"  (first year of decade)
+eraMatchSuggestion(1969) // → "1960s"  (last year of decade)
+```
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`
