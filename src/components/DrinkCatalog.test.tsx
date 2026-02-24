@@ -52,12 +52,12 @@ const NO_SELECTION = { starbucks: null, costa: null }
 describe('DrinkCatalog', () => {
   it('renders a section for Starbucks', () => {
     render(<DrinkCatalog drinks={ALL_DRINKS} selectedIds={NO_SELECTION} onSelect={vi.fn()} />)
-    expect(screen.getByRole('region', { name: /^Starbucks$/i })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /starbucks/i })).toBeInTheDocument()
   })
 
   it('renders a section for Costa Coffee', () => {
     render(<DrinkCatalog drinks={ALL_DRINKS} selectedIds={NO_SELECTION} onSelect={vi.fn()} />)
-    expect(screen.getByRole('region', { name: /^Costa Coffee$/i })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /costa/i })).toBeInTheDocument()
   })
 
   it('renders brand heading labels', () => {

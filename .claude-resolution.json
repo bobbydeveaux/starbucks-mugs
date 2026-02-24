@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 3,
+  "summary": "Resolved conflicts in DrinkCatalog.test.tsx (2 regex patterns), useCarCatalog.ts (implementation merge), and useCarCatalog.test.ts (fixtures and test cases)",
+  "strategyUsed": "Used origin/main as primary for all three files: (1) DrinkCatalog.test.tsx — chose origin/main's lenient /starbucks/i and /costa/i regex patterns, which correctly match the component's aria-label values ('Starbucks drinks', 'Costa Coffee drinks') unlike HEAD's exact-match patterns; (2) useCarCatalog.ts — used origin/main's superior implementation (ref-based debounce, initialFilters support, ferrariCars/lamboCars naming consistent with CatalogPage.tsx) and merged in HEAD's availableDecades computed property; (3) useCarCatalog.test.ts — used origin/main's fixture data, fake-timer setup, and comprehensive debounce test suite, while adding HEAD's availableDecades test updated to expect [1970, 1980] to match origin/main's fixture decades"
 }
