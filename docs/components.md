@@ -389,6 +389,43 @@ interface UseCarCatalogResult {
 
 ---
 
+## ComparisonView
+
+**File:** `src/components/ComparisonView.tsx`
+
+Renders a side-by-side specification comparison panel for one Ferrari and one Lamborghini.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `ferrari` | `CarModel \| null` | The selected Ferrari, or `null` |
+| `lamborghini` | `CarModel \| null` | The selected Lamborghini, or `null` |
+| `stats` | `ComparisonStat[]` | Per-stat winner annotations produced by `useComparison` |
+
+### Features
+
+- **Empty state** — shows a prompt to select cars when either slot is empty
+- **Brand header row** — Ferrari (red badge) and Lamborghini (yellow badge) with model name, year, and engine config
+- **Stat table** — four rows: Horsepower, Torque (lb-ft), 0–60 mph (s), Top Speed (mph)
+- **Winner highlighting** — winning value shown in `ferrari-red` or `lambo-yellow`; losing value de-emphasised in gray
+- **Score summary** — "Ferrari leads X–Y" / "Lamborghini leads X–Y" / "It's a tie!" beneath the table
+- Each stat row has `data-winner` attribute for targeted styling or testing
+
+### Usage
+
+```tsx
+const { selectedFerrari, selectedLambo, winners } = useComparison();
+
+<ComparisonView
+  ferrari={selectedFerrari}
+  lamborghini={selectedLambo}
+  stats={winners}
+/>
+```
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`

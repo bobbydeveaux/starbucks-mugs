@@ -15,7 +15,7 @@ export interface UseComparisonResult {
    * Per-stat comparison results computed from the two selected cars.
    * Empty array when either car is not yet selected.
    */
-  stats: ComparisonStat[];
+  winners: ComparisonStat[];
 }
 
 /**
@@ -43,13 +43,13 @@ function winnerFor(
  * @returns Selected cars, their setters, and an array of ComparisonStat objects.
  *
  * @example
- * const { selectedFerrari, setSelectedFerrari, stats } = useComparison();
+ * const { selectedFerrari, setSelectedFerrari, winners } = useComparison();
  */
 export function useComparison(): UseComparisonResult {
   const [selectedFerrari, setSelectedFerrari] = useState<CarModel | null>(null);
   const [selectedLambo, setSelectedLambo] = useState<CarModel | null>(null);
 
-  const stats = useMemo((): ComparisonStat[] => {
+  const winners = useMemo((): ComparisonStat[] => {
     if (!selectedFerrari || !selectedLambo) return [];
 
     const f = selectedFerrari.specs;
@@ -83,5 +83,5 @@ export function useComparison(): UseComparisonResult {
     ];
   }, [selectedFerrari, selectedLambo]);
 
-  return { selectedFerrari, selectedLambo, setSelectedFerrari, setSelectedLambo, stats };
+  return { selectedFerrari, selectedLambo, setSelectedFerrari, setSelectedLambo, winners };
 }

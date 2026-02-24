@@ -65,9 +65,9 @@ describe('useComparison', () => {
     expect(result.current.selectedLambo).toBeNull();
   });
 
-  it('starts with an empty stats array', () => {
+  it('starts with an empty winners array', () => {
     const { result } = renderHook(() => useComparison());
-    expect(result.current.stats).toEqual([]);
+    expect(result.current.winners).toEqual([]);
   });
 
   it('exposes setSelectedFerrari and setSelectedLambo setters', () => {
@@ -107,42 +107,42 @@ describe('useComparison', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Stats — empty when one or both cars are missing
+  // Winners — empty when one or both cars are missing
   // -------------------------------------------------------------------------
 
-  it('returns empty stats when only ferrari is selected', () => {
+  it('returns empty winners when only ferrari is selected', () => {
     const { result } = renderHook(() => useComparison());
     act(() => result.current.setSelectedFerrari(ferrari));
-    expect(result.current.stats).toEqual([]);
+    expect(result.current.winners).toEqual([]);
   });
 
-  it('returns empty stats when only lambo is selected', () => {
+  it('returns empty winners when only lambo is selected', () => {
     const { result } = renderHook(() => useComparison());
     act(() => result.current.setSelectedLambo(lambo));
-    expect(result.current.stats).toEqual([]);
+    expect(result.current.winners).toEqual([]);
   });
 
-  it('returns empty stats after deselecting a car', () => {
+  it('returns empty winners after deselecting a car', () => {
     const { result } = renderHook(() => useComparison());
     act(() => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
     act(() => result.current.setSelectedFerrari(null));
-    expect(result.current.stats).toEqual([]);
+    expect(result.current.winners).toEqual([]);
   });
 
   // -------------------------------------------------------------------------
-  // Stats — correct shape when both cars are selected
+  // Winners — correct shape when both cars are selected
   // -------------------------------------------------------------------------
 
-  it('returns four stats when both cars are selected', () => {
+  it('returns four winners when both cars are selected', () => {
     const { result } = renderHook(() => useComparison());
     act(() => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    expect(result.current.stats).toHaveLength(4);
+    expect(result.current.winners).toHaveLength(4);
   });
 
   it('each stat has label, ferrariValue, lamboValue, and winner fields', () => {
@@ -151,7 +151,7 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    for (const stat of result.current.stats) {
+    for (const stat of result.current.winners) {
       expect(stat).toHaveProperty('label');
       expect(stat).toHaveProperty('ferrariValue');
       expect(stat).toHaveProperty('lamboValue');
@@ -169,7 +169,7 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    const labels = result.current.stats.map((s) => s.label);
+    const labels = result.current.winners.map((s) => s.label);
     expect(labels).toContain('Horsepower');
     expect(labels).toContain('Torque (lb-ft)');
     expect(labels).toContain('0–60 mph (s)');
@@ -187,7 +187,7 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    const hp = result.current.stats.find((s) => s.label === 'Horsepower')!;
+    const hp = result.current.winners.find((s) => s.label === 'Horsepower')!;
     expect(hp.ferrariValue).toBe(390);
     expect(hp.lamboValue).toBe(375);
     expect(hp.winner).toBe('ferrari');
@@ -200,7 +200,7 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    const torque = result.current.stats.find((s) => s.label === 'Torque (lb-ft)')!;
+    const torque = result.current.winners.find((s) => s.label === 'Torque (lb-ft)')!;
     expect(torque.winner).toBe('ferrari');
   });
 
@@ -211,7 +211,7 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    const topSpeed = result.current.stats.find((s) => s.label === 'Top Speed (mph)')!;
+    const topSpeed = result.current.winners.find((s) => s.label === 'Top Speed (mph)')!;
     expect(topSpeed.winner).toBe('lamborghini');
   });
 
@@ -226,7 +226,7 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    const zeroSixty = result.current.stats.find((s) => s.label === '0–60 mph (s)')!;
+    const zeroSixty = result.current.winners.find((s) => s.label === '0–60 mph (s)')!;
     expect(zeroSixty.winner).toBe('lamborghini');
   });
 
@@ -241,13 +241,13 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(ferrariTwin as unknown as CarModel);
     });
-    for (const stat of result.current.stats) {
+    for (const stat of result.current.winners) {
       expect(stat.winner).toBe('tie');
     }
   });
 
   // -------------------------------------------------------------------------
-  // Stats reflect correct raw values
+  // Winners reflect correct raw values
   // -------------------------------------------------------------------------
 
   it('ferrariValue and lamboValue match the selected cars specs', () => {
@@ -256,16 +256,16 @@ describe('useComparison', () => {
       result.current.setSelectedFerrari(ferrari);
       result.current.setSelectedLambo(lambo);
     });
-    const hp = result.current.stats.find((s) => s.label === 'Horsepower')!;
+    const hp = result.current.winners.find((s) => s.label === 'Horsepower')!;
     expect(hp.ferrariValue).toBe(ferrari.specs.hp);
     expect(hp.lamboValue).toBe(lambo.specs.hp);
   });
 
   // -------------------------------------------------------------------------
-  // Reactivity — stats update when selection changes
+  // Reactivity — winners update when selection changes
   // -------------------------------------------------------------------------
 
-  it('stats update when a new car is selected', () => {
+  it('winners update when a new car is selected', () => {
     const betterLambo: CarModel = {
       ...lambo,
       specs: { ...lambo.specs, hp: 500 },
@@ -277,12 +277,12 @@ describe('useComparison', () => {
       result.current.setSelectedLambo(lambo);
     });
 
-    const hpBefore = result.current.stats.find((s) => s.label === 'Horsepower')!;
+    const hpBefore = result.current.winners.find((s) => s.label === 'Horsepower')!;
     expect(hpBefore.winner).toBe('ferrari');
 
     act(() => result.current.setSelectedLambo(betterLambo));
 
-    const hpAfter = result.current.stats.find((s) => s.label === 'Horsepower')!;
+    const hpAfter = result.current.winners.find((s) => s.label === 'Horsepower')!;
     expect(hpAfter.lamboValue).toBe(500);
     expect(hpAfter.winner).toBe('lamborghini');
   });

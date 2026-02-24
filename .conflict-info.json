@@ -1,13 +1,14 @@
 {
-  "prNumber": 106,
+  "prNumber": 110,
   "baseBranch": "main",
-  "headBranch": "feature/82-ferrari-vs-lambo-website-sprint-2-issue-82",
+  "headBranch": "feature/76-ferrari-vs-lambo-website-sprint-2-issue-76",
   "conflictedFiles": [
     "docs/components.md",
-    "src/components/CarCard.test.tsx",
-    "src/components/CarCard.tsx",
-    "src/hooks/useCarCatalog.test.ts",
-    "src/hooks/useCarCatalog.ts"
+    "src/components/DrinkCatalog.test.tsx",
+    "src/hooks/useComparison.test.ts",
+    "src/hooks/useComparison.ts",
+    "src/utils/eraMatchSuggestion.test.ts",
+    "src/utils/eraMatchSuggestion.ts"
   ],
-  "conflictCount": 5
+  "conflictCount": 6
 }
