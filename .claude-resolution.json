@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in src/pages/CostaVsStarbucksPage.tsx (import conflict) and docs/components.md (documentation sections conflict). Both sides added independent, non-overlapping features so all content was preserved.",
+  "strategyUsed": "preserved both changes: HEAD added FilterBar/SearchBox imports and docs; origin/main added ComparisonPanel/NutritionBar/NutritionRow imports and docs. All were kept since the JSX body already used all three components and the doc sections are independent."
 }
