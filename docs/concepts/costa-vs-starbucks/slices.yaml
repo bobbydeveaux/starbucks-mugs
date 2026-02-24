@@ -1,0 +1,31 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: costa-vs-starbucks-feat-project-setup
+        name: Project Scaffolding
+        type: enabler
+        files: [vite.config.ts tailwind.config.ts index.html src/main.tsx .github/workflows/ci.yml netlify.toml package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+      - id: costa-vs-starbucks-feat-data-layer
+        name: Drink Data Layer
+        type: enabler
+        files: [src/types.ts src/hooks/useDrinks.ts public/data/starbucks.json public/data/costa.json package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+      - id: costa-vs-starbucks-feat-drink-cards
+        name: Drink Card Grid
+        type: feature
+        files: [src/components/DrinkCard.tsx src/components/DrinkCatalog.tsx src/App.tsx package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+  - number: 2
+    features:
+      - id: costa-vs-starbucks-feat-filter-search
+        name: Category Filter and Search
+        type: feature
+        files: [src/components/FilterBar.tsx src/components/SearchBox.tsx src/utils/filterDrinks.ts package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+      - id: costa-vs-starbucks-feat-comparison-panel
+        name: Side-by-Side Comparison Panel
+        type: feature
+        files: [src/components/ComparisonPanel.tsx src/utils/getNutritionRows.ts package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
+      - id: costa-vs-starbucks-feat-nutrition-bars
+        name: Visual Nutrition Bars
+        type: feature
+        files: [src/components/NutritionBar.tsx package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml]
