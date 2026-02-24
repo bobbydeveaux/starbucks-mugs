@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 4,
-  "summary": "Resolved 4 conflicts: src/hooks/useCarCatalog.ts, src/hooks/useCarCatalog.test.ts, src/utils/eraMatchSuggestion.ts, and src/utils/eraMatchSuggestion.test.ts. For useCarCatalog, kept the HEAD (sprint 2) version which provides internal debounced state management, exposing filteredFerraris/filteredLambos arrays plus setEra/setSearch/era/search setters. For eraMatchSuggestion, kept the HEAD version which includes the yearToDecade helper and a 2-strategy matching algorithm (eraRivals first, then nearest-year fallback). Tests were kept consistent with their matching implementation.",
-  "strategyUsed": "chose HEAD for all 4 files — the HEAD branch represents sprint 2 feature work with richer functionality: useCarCatalog has internal debounced state (setEra, setSearch, filteredFerraris, filteredLambos) while origin/main had a simpler read-only filtered API; eraMatchSuggestion has a nearest-year fallback when no eraRivals match while origin/main returns null in that case"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in src/utils/getNutritionRows.ts and src/utils/getNutritionRows.test.ts by keeping the HEAD (feature branch) version, which is a superset of the origin/main version with null-safe drink parameters, maxValue for bar scaling, ariaLabel for WCAG accessibility, and a key field per nutrition row.",
+  "strategyUsed": "chose HEAD for both files — the feature branch implementation adds null handling (Drink | null params), maxValue computation, WCAG-compliant ariaLabel generation, and a structured NUTRITION_METRICS array, all of which are strictly more capable than the simpler origin/main version; the comprehensive HEAD test suite was preserved to match the richer implementation"
 }
