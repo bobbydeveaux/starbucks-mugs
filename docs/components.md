@@ -71,6 +71,136 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## FilterBar
+
+**File:** `src/components/FilterBar.tsx`
+
+Renders a row of pill-shaped toggle buttons — one per drink category plus an "All" option — that narrow the visible drink catalog to a single category.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `category` | `Category \| 'all'` | Currently active category filter |
+| `onCategoryChange` | `(category: Category \| 'all') => void` | Called when the user selects a different category |
+
+### Features
+
+- Six buttons: **All**, **Hot**, **Iced**, **Blended**, **Tea**, **Other**
+- Active button is highlighted with the Starbucks green fill; inactive buttons use a bordered outline style
+- `aria-pressed` on each button for screen-reader accessibility
+- Wrapped in a `role="group"` container with `aria-label="Filter by category"`
+
+### Usage
+
+```tsx
+<FilterBar
+  category={filter.category}
+  onCategoryChange={(category) => setFilter(f => ({ ...f, category }))}
+/>
+```
+
+---
+
+## SearchBox
+
+**File:** `src/components/SearchBox.tsx`
+
+Renders a controlled text input that triggers instant client-side filtering of the drink catalog on each keystroke.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `query` | `string` | Current search query string |
+| `onQueryChange` | `(query: string) => void` | Called on every keystroke with the updated query |
+
+### Features
+
+- `type="search"` input with browser-native clear button support
+- Visually-hidden `<label>` keeps the input accessible without cluttering the UI
+- Rounded pill styling consistent with `FilterBar`
+- Wired to `useDrinks` via `FilterState.query`; both category and text filters apply simultaneously
+
+### Usage
+
+```tsx
+<SearchBox
+  query={filter.query}
+  onQueryChange={(query) => setFilter(f => ({ ...f, query }))}
+/>
+```
+
+---
+
+## ComparisonPanel
+
+**File:** `src/components/ComparisonPanel.tsx`
+
+Renders a side-by-side nutritional comparison of one Starbucks and one Costa drink.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `starbucksDrink` | `Drink \| null` | The selected Starbucks drink, or `null` if none selected |
+| `costaDrink` | `Drink \| null` | The selected Costa drink, or `null` if none selected |
+| `onClear` | `() => void` | Callback fired when the "Clear" button is clicked |
+
+### Features
+
+- Returns `null` (renders nothing) when both drink slots are empty
+- Displays a prompt to select the missing brand when only one drink is selected
+- Renders a full side-by-side nutrition table once both slots are filled
+- Nutrition rows use `getNutritionRows` from `src/utils/getNutritionRows.ts`
+- Lower value in each row is highlighted in the brand's colour for quick visual scanning
+- "Clear" button calls `onClear` to reset both selections
+
+### Usage
+
+```tsx
+<ComparisonPanel
+  starbucksDrink={comparison.starbucks}
+  costaDrink={comparison.costa}
+  onClear={() => setComparison({ starbucks: null, costa: null })}
+/>
+```
+
+---
+
+## NutritionRow utility
+
+**File:** `src/utils/getNutritionRows.ts`
+
+Produces a labelled comparison row for every nutritional field.
+
+### Signature
+
+```ts
+function getNutritionRows(starbucksDrink: Drink, costaDrink: Drink): NutritionRow[]
+```
+
+### NutritionRow shape
+
+```ts
+interface NutritionRow {
+  label: string;         // e.g. "Calories"
+  unit: string;          // e.g. "kcal"
+  starbucksValue: number;
+  costaValue: number;
+}
+```
+
+### Fields returned (in order)
+
+| # | Label | Unit |
+|---|-------|------|
+| 1 | Calories | kcal |
+| 2 | Sugar | g |
+| 3 | Fat | g |
+| 4 | Protein | g |
+| 5 | Caffeine | mg |
+
 ---
 
 ## NutritionBar

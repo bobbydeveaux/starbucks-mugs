@@ -1,19 +1,19 @@
-import type { Drink, FilterState } from '../types';
+import type { Drink, Category, FilterState } from '../types';
 
 /**
- * Pure utility function that filters a drinks array by category and search query.
+ * Filters an array of drinks by category and free-text search query.
+ *
+ * - Category `'all'` matches every drink regardless of its category.
+ * - Search matching is case-insensitive and matches on the drink name.
+ * - Both filters are applied simultaneously (AND logic).
  *
  * @param drinks - Full list of drinks to filter.
- * @param filter - Active category and free-text search query.
- * @returns Drinks that match both the category filter and the search query.
+ * @param filter - Active category and search query.
+ * @returns A new array containing only the drinks that match the filter.
  *
  * @example
- * // Filter to hot drinks only
- * filterDrinks(allDrinks, { category: 'hot', query: '' });
- *
- * @example
- * // Filter by name search across all categories
- * filterDrinks(allDrinks, { category: 'all', query: 'latte' });
+ * filterDrinks(allDrinks, { category: 'hot', query: 'latte' });
+ * // → drinks in the "hot" category whose name includes "latte" (case-insensitive)
  */
 export function filterDrinks(drinks: Drink[], filter: FilterState): Drink[] {
   let result = drinks;
@@ -29,3 +29,23 @@ export function filterDrinks(drinks: Drink[], filter: FilterState): Drink[] {
 
   return result;
 }
+
+/** All valid category values, including the synthetic "all" option. */
+export const CATEGORIES: Array<Category | 'all'> = [
+  'all',
+  'hot',
+  'iced',
+  'blended',
+  'tea',
+  'other',
+];
+
+/** Human-readable label for each category value. */
+export const CATEGORY_LABELS: Record<Category | 'all', string> = {
+  all: 'All',
+  hot: 'Hot',
+  iced: 'Iced',
+  blended: 'Blended',
+  tea: 'Tea',
+  other: 'Other',
+};
