@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Starbucks Mugs</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
@@ -13,16 +13,17 @@
   </header>
 
   <main>
-    <div id="grid" class="grid" role="list" aria-label="Mug catalog"></div>
+    <div id="grid" class="grid" role="list" aria-label="Mug catalog" aria-live="polite"></div>
   </main>
 
+  <!-- Modal overlay -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-name" hidden>
     <div class="modal-backdrop"></div>
     <div class="modal-content">
-      <button class="modal-close" aria-label="Close">&times;</button>
-      <img id="modal-image" src="" alt="" class="modal-image" loading="lazy">
+      <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+      <img id="modal-image" src="" alt="" class="modal-image" loading="lazy" />
       <div class="modal-details">
-        <h2 id="modal-name"></h2>
+        <h2 id="modal-name" class="modal-name"></h2>
         <p id="modal-price" class="modal-price"></p>
         <p id="modal-description" class="modal-description"></p>
       </div>

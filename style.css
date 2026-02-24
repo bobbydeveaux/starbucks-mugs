@@ -1,4 +1,8 @@
-/* Reset & base */
+/* =========================================================
+   Starbucks Mugs Catalog – Styles
+   ========================================================= */
+
+/* --- Reset & Base --- */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -12,7 +16,7 @@ body {
   min-height: 100vh;
 }
 
-/* Header */
+/* --- Header --- */
 header {
   background-color: #1e3932;
   color: #fff;
@@ -32,21 +36,21 @@ header .subtitle {
   opacity: 0.8;
 }
 
-/* Main layout */
+/* --- Main layout --- */
 main {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
 }
 
-/* Card grid — 1 column mobile → 2 → 3+ desktop */
+/* --- Card Grid — 1 column mobile → 2 → 3+ desktop --- */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.5rem;
 }
 
-/* Error message */
+/* --- Error message --- */
 .grid-error {
   grid-column: 1 / -1;
   text-align: center;
@@ -55,7 +59,7 @@ main {
   font-size: 1rem;
 }
 
-/* Card */
+/* --- Card --- */
 .card {
   background: #fff;
   border-radius: 12px;
@@ -67,12 +71,16 @@ main {
   flex-direction: column;
 }
 
-.card:hover,
-.card:focus-visible {
+.card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
-  outline: 2px solid #00704a;
+}
+
+.card:focus-visible {
+  outline: 3px solid #00704a;
   outline-offset: 2px;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
 }
 
 .card-image {
@@ -103,7 +111,7 @@ main {
   font-weight: 600;
 }
 
-/* Modal */
+/* --- Modal Overlay --- */
 .modal {
   position: fixed;
   inset: 0;
@@ -124,6 +132,7 @@ main {
   background-color: rgba(0, 0, 0, 0.55);
 }
 
+/* Centered content box */
 .modal-content {
   position: relative;
   background: #fff;
@@ -139,10 +148,17 @@ main {
 }
 
 @keyframes modal-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
+/* Close button */
 .modal-close {
   position: absolute;
   top: 0.75rem;
@@ -167,6 +183,13 @@ main {
   background: rgba(0, 0, 0, 0.75);
 }
 
+.modal-close:focus-visible {
+  outline: 2px solid #00704a;
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* Modal image */
 .modal-image {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -175,6 +198,7 @@ main {
   border-radius: 16px 16px 0 0;
 }
 
+/* Modal detail area */
 .modal-details {
   padding: 1.5rem;
   display: flex;
@@ -182,10 +206,11 @@ main {
   gap: 0.5rem;
 }
 
-.modal-details h2 {
+.modal-name {
   font-size: 1.3rem;
   font-weight: 700;
   color: #1e3932;
+  padding-right: 1.5rem; /* avoid overlap with close button */
 }
 
 .modal-price {
@@ -200,7 +225,7 @@ main {
   line-height: 1.6;
 }
 
-/* Responsive tweaks */
+/* --- Responsive tweaks --- */
 @media (max-width: 400px) {
   .grid {
     grid-template-columns: 1fr;
