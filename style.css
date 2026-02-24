@@ -225,7 +225,141 @@ main {
   line-height: 1.6;
 }
 
+/* --- Filter Bar --- */
+#filter-bar {
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0dc;
+  padding: 0.75rem 1.5rem;
+}
+
+.filter-bar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#search {
+  flex: 1 1 200px;
+  min-width: 160px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #c8c8c0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e3932;
+  background: #fafaf8;
+  outline: none;
+}
+
+#search:focus {
+  border-color: #00704a;
+  box-shadow: 0 0 0 2px rgba(0, 112, 74, 0.2);
+}
+
+#filter-series {
+  flex: 0 1 180px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #c8c8c0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e3932;
+  background: #fafaf8;
+  cursor: pointer;
+  outline: none;
+}
+
+#filter-series:focus {
+  border-color: #00704a;
+  box-shadow: 0 0 0 2px rgba(0, 112, 74, 0.2);
+}
+
+.year-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: #1e3932;
+  white-space: nowrap;
+}
+
+#year-min,
+#year-max {
+  width: 80px;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid #c8c8c0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e3932;
+  background: #fafaf8;
+  outline: none;
+}
+
+#year-min:focus,
+#year-max:focus {
+  border-color: #00704a;
+  box-shadow: 0 0 0 2px rgba(0, 112, 74, 0.2);
+}
+
+#filter-reset {
+  padding: 0.45rem 1rem;
+  background-color: #1e3932;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  white-space: nowrap;
+}
+
+#filter-reset:hover {
+  background-color: #00704a;
+}
+
+#filter-reset:focus-visible {
+  outline: 2px solid #00704a;
+  outline-offset: 2px;
+}
+
+/* Results count */
+#results-count {
+  max-width: 1200px;
+  margin: 0.5rem auto 0;
+  padding: 0 1.5rem;
+  font-size: 0.85rem;
+  color: #555;
+  min-height: 1.2em;
+}
+
+/* Empty-state message when filter yields zero results */
+.grid-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #666;
+  font-size: 1rem;
+}
+
 /* --- Responsive tweaks --- */
+@media (max-width: 600px) {
+  .filter-bar-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #search,
+  #filter-series {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  #filter-reset {
+    width: 100%;
+  }
+}
+
 @media (max-width: 400px) {
   .grid {
     grid-template-columns: 1fr;
