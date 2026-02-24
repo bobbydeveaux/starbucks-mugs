@@ -71,6 +71,139 @@ Renders two brand sections, each containing a responsive grid of `DrinkCard` com
 
 ---
 
+## ComparisonPanel
+
+**File:** `src/components/ComparisonPanel.tsx`
+
+Renders a side-by-side nutritional comparison of one Starbucks and one Costa drink.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `starbucksDrink` | `Drink \| null` | The selected Starbucks drink, or `null` if none selected |
+| `costaDrink` | `Drink \| null` | The selected Costa drink, or `null` if none selected |
+| `onClear` | `() => void` | Callback fired when the "Clear" button is clicked |
+
+### Features
+
+- Returns `null` (renders nothing) when both drink slots are empty
+- Displays a prompt to select the missing brand when only one drink is selected
+- Renders a full side-by-side nutrition table once both slots are filled
+- Nutrition rows use `getNutritionRows` from `src/utils/getNutritionRows.ts`
+- Lower value in each row is highlighted in the brand's colour for quick visual scanning
+- "Clear" button calls `onClear` to reset both selections
+
+### Usage
+
+```tsx
+<ComparisonPanel
+  starbucksDrink={comparison.starbucks}
+  costaDrink={comparison.costa}
+  onClear={() => setComparison({ starbucks: null, costa: null })}
+/>
+```
+
+---
+
+## NutritionRow utility
+
+**File:** `src/utils/getNutritionRows.ts`
+
+Produces a labelled comparison row for every nutritional field.
+
+### Signature
+
+```ts
+function getNutritionRows(starbucksDrink: Drink, costaDrink: Drink): NutritionRow[]
+```
+
+### NutritionRow shape
+
+```ts
+interface NutritionRow {
+  label: string;         // e.g. "Calories"
+  unit: string;          // e.g. "kcal"
+  starbucksValue: number;
+  costaValue: number;
+}
+```
+
+### Fields returned (in order)
+
+| # | Label | Unit |
+|---|-------|------|
+| 1 | Calories | kcal |
+| 2 | Sugar | g |
+| 3 | Fat | g |
+| 4 | Protein | g |
+| 5 | Caffeine | mg |
+
+---
+
+## NutritionBar
+
+**File:** `src/components/NutritionBar.tsx`
+
+Renders a side-by-side visual bar comparison for a single nutrition metric between a Starbucks and a Costa drink. Each bar is scaled proportionally so the brand with the higher value spans the full available width.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | `string` | — | Human-readable nutrient label, e.g. `"Calories"` |
+| `starbucksValue` | `number` | — | Starbucks drink's value for this nutrient |
+| `costaValue` | `number` | — | Costa drink's value for this nutrient |
+| `unit` | `string` | — | Unit appended to displayed values, e.g. `"kcal"`, `"g"`, `"mg"` |
+| `lowerIsBetter` | `boolean` | `true` | When `true`, the lower value is highlighted as the winner. Pass `false` for protein where higher is preferable. |
+
+### Features
+
+- Bar widths are scaled proportionally: the higher of the two values occupies 100% of the available width
+- Winner highlighting: the brand with the better value is bolded and coloured in its brand colour
+- Tie state: neither brand is highlighted when values are equal
+- Starbucks bar uses `bg-starbucks` (`#00704A`) / Costa bar uses `bg-costa` (`#6B1E1E`)
+- Each bar is rendered as a `role="meter"` element with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax` for accessibility
+- Zero-safe: when both values are 0, both bars render at 0% width without errors
+
+### Usage
+
+```tsx
+// Lower is better (calories, sugar, fat — default)
+<NutritionBar
+  label="Calories"
+  starbucksValue={160}
+  costaValue={144}
+  unit="kcal"
+/>
+
+// Higher is better (protein)
+<NutritionBar
+  label="Protein"
+  starbucksValue={9}
+  costaValue={8}
+  unit="g"
+  lowerIsBetter={false}
+/>
+```
+
+### Typical usage inside a ComparisonPanel
+
+```tsx
+import { NutritionBar } from './NutritionBar';
+
+// Render one row per nutrient
+<div className="flex flex-col gap-4">
+  <NutritionBar label="Calories"  starbucksValue={sbux.nutrition.calories_kcal} costaValue={costa.nutrition.calories_kcal} unit="kcal" />
+  <NutritionBar label="Sugar"     starbucksValue={sbux.nutrition.sugar_g}       costaValue={costa.nutrition.sugar_g}       unit="g" />
+  <NutritionBar label="Fat"       starbucksValue={sbux.nutrition.fat_g}         costaValue={costa.nutrition.fat_g}         unit="g" />
+  <NutritionBar label="Protein"   starbucksValue={sbux.nutrition.protein_g}     costaValue={costa.nutrition.protein_g}     unit="g"  lowerIsBetter={false} />
+  <NutritionBar label="Caffeine"  starbucksValue={sbux.nutrition.caffeine_mg}   costaValue={costa.nutrition.caffeine_mg}   unit="mg" />
+</div>
+```
+
+---
+
 ## TypeScript Types
 
 **File:** `src/types.ts`

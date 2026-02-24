@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in eraMatchSuggestion.ts and eraMatchSuggestion.test.ts by choosing the origin/main version for both files. The two branches had a semantic difference: HEAD implemented a fallback to the full catalog when no eraRivals matched, while origin/main strictly returns null in that case. The origin/main approach is more principled for a pre-curated dataset, keeping the suggestion logic deterministic and data-driven.",
+  "strategyUsed": "chose origin/main for both files — the stricter null-return behavior (no full-catalog fallback) is more appropriate for pre-curated eraRivals data; the origin/main implementation also uses a Map for O(1) ID lookups and the origin/main test suite is more comprehensive with nested describe blocks covering all edge cases"
 }
