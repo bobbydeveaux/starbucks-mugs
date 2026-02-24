@@ -1,0 +1,9 @@
+{
+  "prTitle": "feat: add filter bar HTML and CSS for mugs catalog",
+  "prBody": "## Summary\n\n- Replaced the React app entry `index.html` with the Starbucks mugs collector catalog HTML structure (header, filter bar, grid, modal)\n- Added `#filter-bar` section between header and main with all specified controls:\n  - `#search` — text search input with `aria-label`\n  - `#filter-series` — series dropdown with \"All Series\" default option\n  - `#year-min` / `#year-max` — year-range number inputs inside a labeled group\n  - `#filter-reset` — reset button\n- Added `#results-count` paragraph with `aria-live=\"polite\"` and `aria-atomic=\"true\"` for accessible live region updates\n- Added comprehensive CSS for the filter bar:\n  - Flexbox layout that wraps gracefully on smaller viewports\n  - Inputs and selects styled with Starbucks brand colors (`#1e3932`, `#00704a`)\n  - Reset button with hover and `focus-visible` states\n  - Focus rings on all interactive controls (WCAG 2.1 AA)\n  - Empty-state `.grid-empty` styles\n  - Results count styles with max-width alignment\n  - Responsive breakpoints: mobile (≤600px) stacks controls vertically; small (≤400px) forces single-column grid\n\nCloses #24",
+  "testsPass": true,
+  "filesChanged": ["index.html", "style.css"],
+  "docsUpdated": [],
+  "docsReviewed": ["docs/components.md", "docs/concepts/best-starbucks-mugs-website/LLD.md", "docs/concepts/best-starbucks-mugs-website/tasks.yaml"],
+  "completedTasks": [1]
+}

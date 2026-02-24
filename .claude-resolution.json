@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "summary": "Resolved conflict in docs/components.md by preserving documentation from both branches. HEAD added Ferrari vs Lamborghini components (SearchBar, EraFilter, CatalogFilters, useCarCatalog hook); origin/main added Costa vs Starbucks components (FilterBar, SearchBox, ComparisonPanel, NutritionRow utility, NutritionBar). All sections were non-overlapping so both sets were kept.",
+  "strategyUsed": "preserved both changes — Costa/Starbucks component docs from origin/main (FilterBar, SearchBox, ComparisonPanel, NutritionRow, NutritionBar) placed first, followed by Ferrari/Lamborghini component docs from HEAD (SearchBar, EraFilter, CatalogFilters, useCarCatalog), then shared TypeScript Types section"
 }
