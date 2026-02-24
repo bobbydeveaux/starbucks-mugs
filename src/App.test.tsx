@@ -164,7 +164,7 @@ describe('App — handleSelect', () => {
     // No "Selected ✓" buttons should remain
     expect(screen.queryByRole('button', { name: /selected/i })).not.toBeInTheDocument();
     // Comparison panel section should be gone
-    expect(screen.queryByRole('region', { name: /drink comparison panel/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/side-by-side comparison/i)).not.toBeInTheDocument();
   });
 
   it('shows an error message when fetch fails', async () => {

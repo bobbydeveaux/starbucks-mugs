@@ -1,9 +1,15 @@
 {
-  "prNumber": 77,
+  "prNumber": 91,
   "baseBranch": "main",
-  "headBranch": "feature/69-ferrari-vs-lambo-website-sprint-1-issue-69",
+  "headBranch": "feature/64-costa-vs-starbucks-sprint-2-issue-64",
   "conflictedFiles": [
-    "package-lock.json"
+    "docs/components.md",
+    "src/App.test.tsx",
+    "src/components/ComparisonPanel.test.tsx",
+    "src/components/ComparisonPanel.tsx",
+    "src/pages/CostaVsStarbucksPage.tsx",
+    "src/utils/getNutritionRows.test.ts",
+    "src/utils/getNutritionRows.ts"
   ],
-  "conflictCount": 1
+  "conflictCount": 7
 }

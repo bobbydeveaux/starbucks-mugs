@@ -2,21 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { getNutritionRows } from './getNutritionRows';
 import type { Drink } from '../types';
 
-const costaDrink: Drink = {
-  id: 'costa-flat-white',
-  brand: 'costa',
-  name: 'Flat White',
-  category: 'hot',
-  size_ml: 300,
-  nutrition: {
-    calories_kcal: 144,
-    sugar_g: 12,
-    fat_g: 8,
-    protein_g: 8,
-    caffeine_mg: 185,
-  },
-};
-
 const starbucksDrink: Drink = {
   id: 'sbux-flat-white',
   brand: 'starbucks',
@@ -32,64 +17,72 @@ const starbucksDrink: Drink = {
   },
 };
 
+const costaDrink: Drink = {
+  id: 'costa-flat-white',
+  brand: 'costa',
+  name: 'Flat White',
+  category: 'hot',
+  size_ml: 300,
+  nutrition: {
+    calories_kcal: 144,
+    sugar_g: 12,
+    fat_g: 8,
+    protein_g: 8,
+    caffeine_mg: 185,
+  },
+};
+
 describe('getNutritionRows', () => {
-  it('returns exactly 5 rows', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
+  it('returns exactly 5 rows (one per nutritional field)', () => {
+    const rows = getNutritionRows(starbucksDrink, costaDrink);
     expect(rows).toHaveLength(5);
   });
 
-  it('returns rows with labels Calories, Sugar, Fat, Protein, Caffeine in order', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
-    expect(rows.map(r => r.label)).toEqual(['Calories', 'Sugar', 'Fat', 'Protein', 'Caffeine']);
+  it('returns rows with the correct labels in order', () => {
+    const rows = getNutritionRows(starbucksDrink, costaDrink);
+    expect(rows.map((r) => r.label)).toEqual([
+      'Calories',
+      'Sugar',
+      'Fat',
+      'Protein',
+      'Caffeine',
+    ]);
   });
 
-  it('maps calories_kcal correctly', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
-    const calories = rows.find(r => r.label === 'Calories')!;
-    expect(calories.costaValue).toBe(144);
-    expect(calories.starbucksValue).toBe(160);
-    expect(calories.unit).toBe('kcal');
+  it('returns rows with the correct units', () => {
+    const rows = getNutritionRows(starbucksDrink, costaDrink);
+    expect(rows.map((r) => r.unit)).toEqual(['kcal', 'g', 'g', 'g', 'mg']);
   });
 
-  it('maps sugar_g correctly', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
-    const sugar = rows.find(r => r.label === 'Sugar')!;
-    expect(sugar.costaValue).toBe(12);
-    expect(sugar.starbucksValue).toBe(14);
-    expect(sugar.unit).toBe('g');
+  it('maps starbucksValue correctly for each field', () => {
+    const rows = getNutritionRows(starbucksDrink, costaDrink);
+    expect(rows[0].starbucksValue).toBe(160); // calories
+    expect(rows[1].starbucksValue).toBe(14);  // sugar
+    expect(rows[2].starbucksValue).toBe(6);   // fat
+    expect(rows[3].starbucksValue).toBe(9);   // protein
+    expect(rows[4].starbucksValue).toBe(130); // caffeine
   });
 
-  it('maps fat_g correctly', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
-    const fat = rows.find(r => r.label === 'Fat')!;
-    expect(fat.costaValue).toBe(8);
-    expect(fat.starbucksValue).toBe(6);
-    expect(fat.unit).toBe('g');
+  it('maps costaValue correctly for each field', () => {
+    const rows = getNutritionRows(starbucksDrink, costaDrink);
+    expect(rows[0].costaValue).toBe(144); // calories
+    expect(rows[1].costaValue).toBe(12);  // sugar
+    expect(rows[2].costaValue).toBe(8);   // fat
+    expect(rows[3].costaValue).toBe(8);   // protein
+    expect(rows[4].costaValue).toBe(185); // caffeine
   });
 
-  it('maps protein_g correctly', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
-    const protein = rows.find(r => r.label === 'Protein')!;
-    expect(protein.costaValue).toBe(8);
-    expect(protein.starbucksValue).toBe(9);
-    expect(protein.unit).toBe('g');
-  });
-
-  it('maps caffeine_mg correctly', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
-    const caffeine = rows.find(r => r.label === 'Caffeine')!;
-    expect(caffeine.costaValue).toBe(185);
-    expect(caffeine.starbucksValue).toBe(130);
-    expect(caffeine.unit).toBe('mg');
-  });
-
-  it('each row has costaValue, starbucksValue, label, and unit', () => {
-    const rows = getNutritionRows(costaDrink, starbucksDrink);
-    for (const row of rows) {
-      expect(row).toHaveProperty('label');
-      expect(row).toHaveProperty('costaValue');
-      expect(row).toHaveProperty('starbucksValue');
-      expect(row).toHaveProperty('unit');
-    }
+  it('handles drinks with zero values without error', () => {
+    const zeroDrink: Drink = {
+      id: 'sbux-water',
+      brand: 'starbucks',
+      name: 'Water',
+      category: 'other',
+      size_ml: 500,
+      nutrition: { calories_kcal: 0, sugar_g: 0, fat_g: 0, protein_g: 0, caffeine_mg: 0 },
+    };
+    const rows = getNutritionRows(zeroDrink, costaDrink);
+    expect(rows).toHaveLength(5);
+    rows.forEach((r) => expect(r.starbucksValue).toBe(0));
   });
 });

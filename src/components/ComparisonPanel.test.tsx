@@ -1,27 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ComparisonPanel } from './ComparisonPanel';
-import type { Drink, ComparisonState } from '../types';
-
-const costaDrink: Drink = {
-  id: 'costa-flat-white',
-  brand: 'costa',
-  name: 'Costa Flat White',
-  category: 'hot',
-  size_ml: 300,
-  nutrition: {
-    calories_kcal: 144,
-    sugar_g: 12,
-    fat_g: 8,
-    protein_g: 8,
-    caffeine_mg: 185,
-  },
-};
+import type { Drink } from '../types';
 
 const starbucksDrink: Drink = {
   id: 'sbux-flat-white',
   brand: 'starbucks',
-  name: 'Starbucks Flat White',
+  name: 'Flat White',
   category: 'hot',
   size_ml: 354,
   nutrition: {
@@ -33,73 +18,183 @@ const starbucksDrink: Drink = {
   },
 };
 
-const emptyComparison: ComparisonState = { starbucks: null, costa: null };
-const fullComparison: ComparisonState = { starbucks: starbucksDrink, costa: costaDrink };
-const starbucksOnly: ComparisonState = { starbucks: starbucksDrink, costa: null };
-const costaOnly: ComparisonState = { starbucks: null, costa: costaDrink };
+const costaDrink: Drink = {
+  id: 'costa-flat-white',
+  brand: 'costa',
+  name: 'Flat White',
+  category: 'hot',
+  size_ml: 300,
+  nutrition: {
+    calories_kcal: 144,
+    sugar_g: 12,
+    fat_g: 8,
+    protein_g: 8,
+    caffeine_mg: 185,
+  },
+};
 
 describe('ComparisonPanel', () => {
-  it('renders nothing when no drinks are selected', () => {
-    const { container } = render(
-      <ComparisonPanel comparison={emptyComparison} onClear={vi.fn()} />
-    );
-    expect(container.firstChild).toBeNull();
+  describe('no selection', () => {
+    it('renders nothing when both drinks are null', () => {
+      const { container } = render(
+        <ComparisonPanel starbucksDrink={null} costaDrink={null} onClear={vi.fn()} />
+      );
+      expect(container.firstChild).toBeNull();
+    });
   });
 
-  it('renders the panel when at least one drink is selected', () => {
-    render(<ComparisonPanel comparison={starbucksOnly} onClear={vi.fn()} />);
-    expect(screen.getByRole('region', { name: /comparison/i })).toBeInTheDocument();
+  describe('partial selection — only Starbucks selected', () => {
+    it('renders the panel section', () => {
+      render(
+        <ComparisonPanel starbucksDrink={starbucksDrink} costaDrink={null} onClear={vi.fn()} />
+      );
+      expect(screen.getByRole('region', { name: /comparison panel/i })).toBeInTheDocument();
+    });
+
+    it('shows the Starbucks drink name', () => {
+      render(
+        <ComparisonPanel starbucksDrink={starbucksDrink} costaDrink={null} onClear={vi.fn()} />
+      );
+      expect(screen.getByText('Flat White')).toBeInTheDocument();
+    });
+
+    it('prompts to select a Costa drink', () => {
+      render(
+        <ComparisonPanel starbucksDrink={starbucksDrink} costaDrink={null} onClear={vi.fn()} />
+      );
+      expect(screen.getByText(/select a costa drink/i)).toBeInTheDocument();
+    });
+
+    it('does not render the nutrition table', () => {
+      render(
+        <ComparisonPanel starbucksDrink={starbucksDrink} costaDrink={null} onClear={vi.fn()} />
+      );
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    });
   });
 
-  it('shows a prompt when only one drink is selected', () => {
-    render(<ComparisonPanel comparison={costaOnly} onClear={vi.fn()} />);
-    expect(
-      screen.getByText(/select one drink from each brand/i)
-    ).toBeInTheDocument();
+  describe('partial selection — only Costa selected', () => {
+    it('prompts to select a Starbucks drink', () => {
+      render(
+        <ComparisonPanel starbucksDrink={null} costaDrink={costaDrink} onClear={vi.fn()} />
+      );
+      expect(screen.getByText(/select a starbucks drink/i)).toBeInTheDocument();
+    });
+
+    it('shows the Costa drink name', () => {
+      render(
+        <ComparisonPanel starbucksDrink={null} costaDrink={costaDrink} onClear={vi.fn()} />
+      );
+      expect(screen.getByText('Flat White')).toBeInTheDocument();
+    });
   });
 
-  it('renders all 5 nutrition row labels when both drinks selected', () => {
-    render(<ComparisonPanel comparison={fullComparison} onClear={vi.fn()} />);
-    expect(screen.getByText('Calories')).toBeInTheDocument();
-    expect(screen.getByText('Sugar')).toBeInTheDocument();
-    expect(screen.getByText('Fat')).toBeInTheDocument();
-    expect(screen.getByText('Protein')).toBeInTheDocument();
-    expect(screen.getByText('Caffeine')).toBeInTheDocument();
+  describe('full comparison — both drinks selected', () => {
+    it('renders the heading', () => {
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={vi.fn()}
+        />
+      );
+      expect(screen.getByText('Side-by-Side Comparison')).toBeInTheDocument();
+    });
+
+    it('renders the nutrition comparison table', () => {
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={vi.fn()}
+        />
+      );
+      expect(screen.getByRole('table', { name: /nutrition comparison/i })).toBeInTheDocument();
+    });
+
+    it('renders a row for each nutritional field (5 rows)', () => {
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={vi.fn()}
+        />
+      );
+      expect(screen.getByText('Calories')).toBeInTheDocument();
+      expect(screen.getByText('Sugar')).toBeInTheDocument();
+      expect(screen.getByText('Fat')).toBeInTheDocument();
+      expect(screen.getByText('Protein')).toBeInTheDocument();
+      expect(screen.getByText('Caffeine')).toBeInTheDocument();
+    });
+
+    it('renders Starbucks nutritional values', () => {
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={vi.fn()}
+        />
+      );
+      expect(screen.getByText('160')).toBeInTheDocument(); // calories
+      expect(screen.getByText('130')).toBeInTheDocument(); // caffeine
+    });
+
+    it('renders Costa nutritional values', () => {
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={vi.fn()}
+        />
+      );
+      expect(screen.getByText('144')).toBeInTheDocument(); // calories
+      expect(screen.getByText('185')).toBeInTheDocument(); // caffeine
+    });
+
+    it('renders both drink names', () => {
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={vi.fn()}
+        />
+      );
+      const flatWhites = screen.getAllByText('Flat White');
+      expect(flatWhites).toHaveLength(2);
+    });
+
+    it('does not show the prompt text', () => {
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={vi.fn()}
+        />
+      );
+      expect(screen.queryByText(/select a starbucks drink/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/select a costa drink/i)).not.toBeInTheDocument();
+    });
   });
 
-  it('renders drink names in the header columns', () => {
-    render(<ComparisonPanel comparison={fullComparison} onClear={vi.fn()} />);
-    expect(screen.getByText('Costa Flat White')).toBeInTheDocument();
-    expect(screen.getByText('Starbucks Flat White')).toBeInTheDocument();
-  });
+  describe('Clear button', () => {
+    it('renders the Clear button when at least one drink is selected', () => {
+      render(
+        <ComparisonPanel starbucksDrink={starbucksDrink} costaDrink={null} onClear={vi.fn()} />
+      );
+      expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
+    });
 
-  it('renders Costa calorie value', () => {
-    render(<ComparisonPanel comparison={fullComparison} onClear={vi.fn()} />);
-    expect(screen.getByLabelText(/costa: 144 kcal/i)).toBeInTheDocument();
-  });
-
-  it('renders Starbucks calorie value', () => {
-    render(<ComparisonPanel comparison={fullComparison} onClear={vi.fn()} />);
-    expect(screen.getByLabelText(/starbucks: 160 kcal/i)).toBeInTheDocument();
-  });
-
-  it('calls onClear when the Clear button is clicked', () => {
-    const onClear = vi.fn();
-    render(<ComparisonPanel comparison={fullComparison} onClear={onClear} />);
-    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
-    expect(onClear).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders an error/guard message when both drinks are the same brand', () => {
-    // Construct an edge-case ComparisonState where both slots hold drinks from the
-    // same brand (e.g. via props manipulation or unexpected state). The component
-    // should defensively guard against this scenario.
-    const sameBrandComparison: ComparisonState = {
-      starbucks: starbucksDrink,
-      costa: { ...starbucksDrink, id: 'sbux-mocha', name: 'Starbucks Mocha' },
-    };
-    render(<ComparisonPanel comparison={sameBrandComparison} onClear={vi.fn()} />);
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(/same brand/i);
+    it('calls onClear when the Clear button is clicked', () => {
+      const onClear = vi.fn();
+      render(
+        <ComparisonPanel
+          starbucksDrink={starbucksDrink}
+          costaDrink={costaDrink}
+          onClear={onClear}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+      expect(onClear).toHaveBeenCalledTimes(1);
+    });
   });
 });

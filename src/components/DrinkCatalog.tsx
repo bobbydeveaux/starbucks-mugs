@@ -44,7 +44,6 @@ function BrandSection({
     <section aria-label={`${config.label} drinks`}>
       <div className="mb-4 flex items-center gap-3">
         <h2
-          id={`${brand}-heading`}
           className={`text-xl font-bold ${config.headingClass}`}
         >
           {config.label}

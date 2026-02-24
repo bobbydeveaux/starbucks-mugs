@@ -121,6 +121,6 @@ describe('DrinkCard', () => {
       <DrinkCard drink={mockStarbucksDrink} isSelected={true} onSelect={vi.fn()} />
     )
     const article = container.querySelector('article')
-    expect(article).toHaveAttribute('aria-selected', 'true')
+    expect(article).toHaveAttribute('data-selected', 'true')
   })
 })

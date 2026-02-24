@@ -1,55 +1,57 @@
 import type { Drink } from '../types';
 
-/** A single row in the side-by-side nutrition comparison table */
+/** A single comparison row for one nutritional field */
 export interface NutritionRow {
+  /** Human-readable field name, e.g. "Calories" */
   label: string;
-  costaValue: number;
-  starbucksValue: number;
+  /** Unit string appended after each value, e.g. "kcal" */
   unit: string;
+  starbucksValue: number;
+  costaValue: number;
 }
 
 /**
- * Builds an ordered list of nutrition comparison rows from two drinks.
+ * Produces a comparison row for every nutritional field defined in DrinkNutrition.
  *
- * @param costa    - The selected Costa drink.
- * @param starbucks - The selected Starbucks drink.
- * @returns An array of {@link NutritionRow} objects covering all nutritional fields.
+ * @param starbucksDrink - The selected Starbucks drink.
+ * @param costaDrink     - The selected Costa drink.
+ * @returns Array of labelled nutrition rows, one per field.
  *
  * @example
- * const rows = getNutritionRows(costaDrink, starbucksDrink);
- * // [{ label: 'Calories', costaValue: 144, starbucksValue: 160, unit: 'kcal' }, ...]
+ * const rows = getNutritionRows(starbucksDrink, costaDrink);
+ * // [{ label: 'Calories', unit: 'kcal', starbucksValue: 160, costaValue: 144 }, ...]
  */
-export function getNutritionRows(costa: Drink, starbucks: Drink): NutritionRow[] {
+export function getNutritionRows(starbucksDrink: Drink, costaDrink: Drink): NutritionRow[] {
   return [
     {
       label: 'Calories',
-      costaValue: costa.nutrition.calories_kcal,
-      starbucksValue: starbucks.nutrition.calories_kcal,
       unit: 'kcal',
+      starbucksValue: starbucksDrink.nutrition.calories_kcal,
+      costaValue: costaDrink.nutrition.calories_kcal,
     },
     {
       label: 'Sugar',
-      costaValue: costa.nutrition.sugar_g,
-      starbucksValue: starbucks.nutrition.sugar_g,
       unit: 'g',
+      starbucksValue: starbucksDrink.nutrition.sugar_g,
+      costaValue: costaDrink.nutrition.sugar_g,
     },
     {
       label: 'Fat',
-      costaValue: costa.nutrition.fat_g,
-      starbucksValue: starbucks.nutrition.fat_g,
       unit: 'g',
+      starbucksValue: starbucksDrink.nutrition.fat_g,
+      costaValue: costaDrink.nutrition.fat_g,
     },
     {
       label: 'Protein',
-      costaValue: costa.nutrition.protein_g,
-      starbucksValue: starbucks.nutrition.protein_g,
       unit: 'g',
+      starbucksValue: starbucksDrink.nutrition.protein_g,
+      costaValue: costaDrink.nutrition.protein_g,
     },
     {
       label: 'Caffeine',
-      costaValue: costa.nutrition.caffeine_mg,
-      starbucksValue: starbucks.nutrition.caffeine_mg,
       unit: 'mg',
+      starbucksValue: starbucksDrink.nutrition.caffeine_mg,
+      costaValue: costaDrink.nutrition.caffeine_mg,
     },
   ];
 }
