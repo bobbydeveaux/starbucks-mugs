@@ -58,10 +58,11 @@ interface CarModel {
 ```
 
 **Data files:**
-- `src/data/ferrari.json` — array of `CarModel[]`
-- `src/data/lamborghini.json` — array of `CarModel[]`
+- `public/data/ferrari.json` — `CarCatalogEnvelope` (fetched via `fetch('/data/ferrari.json')`)
+- `public/data/lamborghini.json` — `CarCatalogEnvelope` (fetched via `fetch('/data/lamborghini.json')`)
 
 Both follow the same envelope pattern as the existing `useDrinks` hook data.
+The `image` field in the JSON corresponds to `imageUrl` in the `CarModel` TypeScript interface.
 
 ---
 
@@ -72,9 +73,18 @@ No HTTP API. Data access is via static JSON imports resolved by Vite at build ti
 **Hook interface (internal contract):**
 
 ```ts
-// useCarCatalog
-useCarCatalog(brand: "ferrari" | "lamborghini", filters: CatalogFilters)
-  => { cars: CarModel[], loading: boolean }
+// useCarCatalog — takes no parameters; loads both catalogs on mount
+useCarCatalog()
+  => {
+    filteredFerraris: CarModel[],  // sorted by year ascending
+    filteredLambos: CarModel[],    // sorted by year ascending
+    loading: boolean,
+    error: string | null,
+    era: number | undefined,
+    setEra: (decade: number | undefined) => void,
+    searchValue: string,           // raw (un-debounced) value for controlled input
+    setSearch: (query: string) => void  // debounced 300 ms internally
+  }
 
 interface CatalogFilters {
   decade?: number;      // e.g. 1980 filters to 1980–1989
