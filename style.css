@@ -340,6 +340,7 @@ main {
 
 #filter-reset:focus-visible {
   outline: 2px solid #00704a;
+  outline-offset: 2px;
 }
 
 /* --- Results count --- */

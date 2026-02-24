@@ -1,11 +1,10 @@
 {
-  "prNumber": 93,
+  "prNumber": 88,
   "baseBranch": "main",
-  "headBranch": "feature/24-best-starbucks-mugs-website-sprint-2-issue-24",
+  "headBranch": "feature/25-best-starbucks-mugs-website-sprint-2-issue-25",
   "conflictedFiles": [
     ".claude-output.json",
-    "index.html",
     "style.css"
   ],
-  "conflictCount": 3
+  "conflictCount": 2
 }

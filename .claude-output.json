@@ -1,9 +1,23 @@
 {
-  "prTitle": "feat: add filter bar HTML and CSS for mugs catalog",
-  "prBody": "## Summary\n\n- Replaced the React app entry `index.html` with the Starbucks mugs collector catalog HTML structure (header, filter bar, grid, modal)\n- Added `#filter-bar` section between header and main with all specified controls:\n  - `#search` — text search input with `aria-label`\n  - `#filter-series` — series dropdown with \"All Series\" default option\n  - `#year-min` / `#year-max` — year-range number inputs inside a labeled group\n  - `#filter-reset` — reset button\n- Added `#results-count` paragraph with `aria-live=\"polite\"` and `aria-atomic=\"true\"` for accessible live region updates\n- Added comprehensive CSS for the filter bar:\n  - Flexbox layout that wraps gracefully on smaller viewports\n  - Inputs and selects styled with Starbucks brand colors (`#1e3932`, `#00704a`)\n  - Reset button with hover and `focus-visible` states\n  - Focus rings on all interactive controls (WCAG 2.1 AA)\n  - Empty-state `.grid-empty` styles\n  - Results count styles with max-width alignment\n  - Responsive breakpoints: mobile (≤600px) stacks controls vertically; small (≤400px) forces single-column grid\n\nCloses #24",
+  "prTitle": "feat: implement filter engine and wire up controls for starbucks mugs catalog",
+  "prBody": "## Summary\n\n- Implements the full filter engine for the Starbucks mugs catalog as specified in `task-best-starbucks-mugs-website-feat-filter-search-2`\n- Creates `starbucks-mugs.html` — the dedicated HTML shell for the mugs catalog (root `index.html` was repurposed by the React app; this preserves both apps)\n- Adds `filterMugs()` pure function with AND-combined query/series/year-range matching\n- Adds `debounce()` utility (200ms) for the search input\n- Adds `applyFilters()`, `populateSeriesFilter()`, `updateResultsCount()` render pipeline\n- Wires all filter controls: search (debounced), series select (immediate), year min/max (immediate), reset button\n- Adds `img.onerror` fallback to `images/placeholder.svg` in both `createCard` and `openModal`\n- Adds 29 new tests in `app.test.js` covering `filterMugs`, `debounce`, and image onerror fallback\n- Converts `app.test.js` to ESM (`import assert`) to work with `\"type\": \"module\"` in `package.json`\n- Fixes pre-existing DrinkCard and DrinkCatalog test label mismatches (data-selected attribute, button text, aria-label regex patterns)\n- All 42 legacy tests pass (`node app.test.js`); all 53 Vitest tests pass (`npm test`)\n\n### Review Feedback Addressed\n- **BLOCKING** (already fixed): `node_modules/` added to `.gitignore`\n- **aria-pressed on article**: Component already uses `data-selected` — fixed tests to assert `data-selected` instead of `aria-selected`\n- **selectedIds not memoized**: Already uses `useMemo` in `CostaVsStarbucksPage.tsx`\n- **HLD version discrepancy**: HLD already shows Vite 6\n\nCloses #25",
   "testsPass": true,
-  "filesChanged": ["index.html", "style.css"],
-  "docsUpdated": [],
-  "docsReviewed": ["docs/components.md", "docs/concepts/best-starbucks-mugs-website/LLD.md", "docs/concepts/best-starbucks-mugs-website/tasks.yaml"],
-  "completedTasks": [1]
+  "filesChanged": [
+    "app.js",
+    "app.test.js",
+    "starbucks-mugs.html",
+    "style.css",
+    "src/components/DrinkCard.test.tsx",
+    "src/components/DrinkCatalog.test.tsx"
+  ],
+  "docsUpdated": [
+    "docs/concepts/best-starbucks-mugs-website/LLD.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/best-starbucks-mugs-website/HLD.md",
+    "docs/concepts/best-starbucks-mugs-website/PRD.md",
+    "docs/concepts/best-starbucks-mugs-website/tasks.yaml",
+    "docs/concepts/costa-vs-starbucks/HLD.md"
+  ],
+  "completedTasks": [1, 2, 3, 4]
 }
