@@ -1,0 +1,74 @@
+## Code Review - Changes Requested
+
+## ❌ BLOCKING ISSUES FOUND
+
+### PR: feat: expand mugs.json to versioned envelope schema with 52 entries
+
+---
+
+### Summary
+
+The `mugs.json` data changes are well-structured and the documentation updates (HLD.md, ROAM.md) are accurate. However, **`app.js` was not updated to match the new schema**, making this a breaking change that will render the website completely non-functional.
+
+---
+
+## 1. Bugs and Logic Errors — BLOCKING
+
+### Breaking Bug 1: `renderCards` receives an object, not an array
+
+`mugs.json` now returns `{ "version": "1.0", "mugs": [...] }` but `app.js:129-131` passes the entire response directly to `renderCards`:
+
+```js
+// app.js:129-134
+loadMugs()
+  .then(renderCards)   // ← receives { version, mugs[] }, not an array
+```
+
+`renderCards` (`app.js:81-86`) immediately calls `.forEach` on this value:
+
+```js
+function renderCards(mugs) {
+  grid.innerHTML = '';
+  mugs.forEach(...)  // TypeError: mugs.forEach is not a function
+}
+```
+
+This throws at runtime and hits the `.catch` handler, displaying the error banner instead of any mugs. The entire catalog is broken.
+
+### Breaking Bug 2: `mug.price` is `undefined` in the new schema
+
+All 52 entries in `mugs.json` use `price_usd`, but `app.js` references `mug.price` in three places:
+
+- `app.js:42` — `aria-label`: `$${mug.price.toFixed(2)}`
+- `app.js:59` — card body price text: `$${mug.price.toFixed(2)}`
+- `app.js:98` — modal price text: `$${mug.price.toFixed(2)}`
+
+`mug.price` is `undefined` on every entry, so `.toFixed(2)` throws `TypeError: Cannot read properties of undefined`. Even if bug 1 were fixed, every card render and modal open would throw.
+
+---
+
+## 2. Test Coverage — Non-Blocking
+
+The 19 tests all pass, but they do **not** test the new schema at all. The test fixtures in `app.test.js:133-140` still use the old shape (`price`, bare array). The integration test's mocked fetch (`app.test.js:280`) returns the old `MUGS` fixture, not the envelope format. Tests give a false green for a broken deployment.
+
+---
+
+## 3. Documentation Completeness — Acceptable
+
+Both `docs/concepts/website-starbucks-mugs/HLD.md` and `ROAM.md` were updated to reflect the versioned envelope schema and `price_usd` rename. This is correct.
+
+---
+
+## Required Changes Before Merge
+
+1. **`app.js` — `loadMugs`**: Return `data.mugs` instead of the raw response, e.g.:
+   ```js
+   return response.json().then(data => data.mugs);
+   ```
+2. **`app.js` — all `mug.price` references**: Replace with `mug.price_usd` (lines 42, 59, 98).
+3. **`app.test.js` — fixtures and integration mock**: Update the `MUGS` fixture to use `price_usd` and update the integration test mock to return the envelope format so tests actually validate the real data contract.
+
+**Action Required**: Please address the blocking issues above before merging.
+
+---
+*Reviewed by code-reviewer agent*
