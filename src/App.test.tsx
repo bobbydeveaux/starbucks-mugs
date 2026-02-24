@@ -94,8 +94,8 @@ describe('App — handleSelect', () => {
     const selectBtn = screen.getAllByRole('button', { name: /select to compare/i })[0];
     await user.click(selectBtn);
 
-    // The "Current selection" section must be present and contain the selected name
-    const summary = screen.getByRole('region', { name: /current selection/i });
+    // The comparison panel section must be present and contain the selected name
+    const summary = screen.getByRole('region', { name: /drink comparison panel/i });
     expect(within(summary).getByText('Caffè Latte')).toBeInTheDocument();
   });
 
@@ -144,8 +144,8 @@ describe('App — handleSelect', () => {
     await user.click(buttons[0]);
     await user.click(buttons[buttons.length - 1]);
 
-    // Verify names appear in the "Current selection" summary panel specifically
-    const summary = screen.getByRole('region', { name: /current selection/i });
+    // Verify names appear in the comparison panel specifically
+    const summary = screen.getByRole('region', { name: /drink comparison panel/i });
     expect(within(summary).getByText('Caffè Latte')).toBeInTheDocument();
     expect(within(summary).getByText('Caffè Latte (Costa)')).toBeInTheDocument();
   });
@@ -163,8 +163,8 @@ describe('App — handleSelect', () => {
 
     // No "Selected ✓" buttons should remain
     expect(screen.queryByRole('button', { name: /selected/i })).not.toBeInTheDocument();
-    // Selection summary section should be gone
-    expect(screen.queryByText(/your selection/i)).not.toBeInTheDocument();
+    // Comparison panel section should be gone
+    expect(screen.queryByText(/side-by-side comparison/i)).not.toBeInTheDocument();
   });
 
   it('shows an error message when fetch fails', async () => {

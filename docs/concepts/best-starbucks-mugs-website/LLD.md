@@ -14,10 +14,10 @@ Extend the existing static site (no rewrite) with: (1) an expanded `mugs.json` d
 ## 2. File Structure
 
 ```
-index.html      MODIFY — add #filter-bar section above #grid
-style.css       MODIFY — add filter bar, empty-state, placeholder styles
-app.js          MODIFY — add filterMugs(), debounce(), image fallback; wire filter events
-mugs.json       MODIFY — expand schema; add 44+ entries to reach 50 total
+starbucks-mugs.html  NEW — dedicated HTML shell for the mugs catalog (filter bar, grid, modal)
+style.css            MODIFY — add filter bar, empty-state, placeholder styles
+app.js               MODIFY — add filterMugs(), debounce(), image fallback; wire filter events
+mugs.json            MODIFY — expand schema; add 44+ entries to reach 50 total
 images/         EXISTING — add mug JPGs; placeholder SVG at images/placeholder.svg
 app.test.js     MODIFY — add tests for filterMugs() and image fallback
 ```

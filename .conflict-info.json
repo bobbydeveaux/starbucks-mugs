@@ -1,9 +1,10 @@
 {
-  "prNumber": 77,
+  "prNumber": 97,
   "baseBranch": "main",
-  "headBranch": "feature/69-ferrari-vs-lambo-website-sprint-1-issue-69",
+  "headBranch": "feature/61-costa-vs-starbucks-sprint-2-issue-61",
   "conflictedFiles": [
-    "package-lock.json"
+    "docs/components.md",
+    "src/utils/filterDrinks.ts"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }

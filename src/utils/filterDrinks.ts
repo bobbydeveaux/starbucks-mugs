@@ -37,3 +37,23 @@ export function filterDrinks(
 
   return result;
 }
+
+/** All valid category values, including the synthetic "all" option. */
+export const CATEGORIES: Array<Category | 'all'> = [
+  'all',
+  'hot',
+  'iced',
+  'blended',
+  'tea',
+  'other',
+];
+
+/** Human-readable label for each category value. */
+export const CATEGORY_LABELS: Record<Category | 'all', string> = {
+  all: 'All',
+  hot: 'Hot',
+  iced: 'Iced',
+  blended: 'Blended',
+  tea: 'Tea',
+  other: 'Other',
+};
