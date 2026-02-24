@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 3 conflict markers in package-lock.json by keeping the HEAD (feature branch) version, which adds react-router-dom@6.30.3 and its transitive dependencies (@remix-run/router, react-router). The main branch did not have these entries.",
-  "strategyUsed": "chose ours (HEAD) for all conflicts - the feature branch added react-router-dom v6 for routing (per commit af7d281), and main simply did not have this dependency; preserving our additions was the correct choice to maintain routing functionality"
+  "filesResolved": 5,
+  "summary": "Resolved conflicts in 5 files: adopted origin/main's external-filter API for useCarCatalog (CatalogFilters parameter, ferrariCars/lamboCars return properties), adopted origin/main's data-driven rival-suggestion function for eraMatchSuggestion (selected: CarModel, rivalCatalog: CarModel[]), updated corresponding test files to match, and combined documentation sections from both branches in docs/components.md.",
+  "strategyUsed": "For code files (useCarCatalog.ts, eraMatchSuggestion.ts) and their tests: chose origin/main's versions as they align with the CatalogFilters type already defined in types.ts, use imageUrl directly matching the actual JSON data files, and have cleaner external-filter APIs. For docs/components.md: preserved both branches' documentation by including all sections (useCarCatalog hook, FilterBar, eraMatchSuggestion utility, SearchBox, ComparisonPanel, NutritionRow utility, NutritionBar), updating the useCarCatalog and eraMatchSuggestion API docs to reflect origin/main's signatures."
 }
