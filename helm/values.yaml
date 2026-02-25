@@ -1,0 +1,127 @@
+# Default values for fileguard.
+# Override these values with --set or a custom values file.
+
+replicaCount: 2
+
+image:
+  repository: fileguard/api
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 2000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: fileguard.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Non-sensitive application configuration
+config:
+  logLevel: "INFO"
+  maxFileSizeMb: "50"
+  workerConcurrency: "4"
+  allowedMimeTypes: "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,application/json,text/plain,application/zip"
+
+# Sensitive values — REQUIRED overrides before deploying.
+# These are stored in a Kubernetes Secret (base64-encoded at rest).
+# Do NOT commit real values here. Override via --set or a sealed-secrets / Vault integration.
+secrets:
+  # PostgreSQL connection string
+  # Example: postgresql+asyncpg://user:password@postgres-host:5432/fileguard
+  databaseUrl: ""
+  # Redis connection string
+  # Example: redis://redis-host:6379/0
+  redisUrl: ""
+  # Application secret key used for HMAC-SHA256 audit log signing.
+  # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+  secretKey: ""
+
+# Extra volumes mounted into the API container.
+# Default includes a tmpfs mount for ephemeral scan files (security requirement).
+extraVolumes:
+  - name: scan-tmp
+    emptyDir:
+      medium: Memory
+      sizeLimit: 500Mi
+
+extraVolumeMounts:
+  - name: scan-tmp
+    mountPath: /tmp/scans
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

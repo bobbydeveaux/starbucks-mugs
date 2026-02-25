@@ -30,3 +30,9 @@ dist/
 .worktrees/
 .codex/
 AGENTS.md
+
+# Claude Code working files
+.claude-plan.json
+.claude-review.json
+.claude-resolution.json
+.conflict-info.json

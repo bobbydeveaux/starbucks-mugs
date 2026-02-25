@@ -1,14 +1,12 @@
 {
-  "prNumber": 110,
+  "prNumber": 153,
   "baseBranch": "main",
-  "headBranch": "feature/76-ferrari-vs-lambo-website-sprint-2-issue-76",
+  "headBranch": "feature/134-fileguard-sprint-1-issue-134",
   "conflictedFiles": [
-    "docs/components.md",
-    "src/components/DrinkCatalog.test.tsx",
-    "src/hooks/useComparison.test.ts",
-    "src/hooks/useComparison.ts",
-    "src/utils/eraMatchSuggestion.test.ts",
-    "src/utils/eraMatchSuggestion.ts"
+    "alembic.ini",
+    "fileguard/__init__.py",
+    "migrations/env.py",
+    "requirements.txt"
   ],
-  "conflictCount": 6
+  "conflictCount": 4
 }
