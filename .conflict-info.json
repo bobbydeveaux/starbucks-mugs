@@ -3,8 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/161-tripwire-cybersecurity-tool-sprint-2-issue-161",
   "conflictedFiles": [
-    ".claude-output.json",
-    "docs/concepts/tripwire-cybersecurity-tool/file-watcher.md"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
   "conflictCount": 2
 }
