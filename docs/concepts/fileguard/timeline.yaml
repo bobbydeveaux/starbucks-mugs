@@ -1,0 +1,92 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-25T20:52:19Z
+  totalSprints: 6
+  totalDuration: 47 days
+
+sprints:
+  - number: 1
+    startDate: 2026-02-25
+    endDate: 2026-03-04
+    duration: 7 days
+    features:
+      - id: fileguard-feat-project-setup
+        name: Project Scaffolding & Database Schema
+        type: enabler
+      - id: fileguard-feat-auth-gateway
+        name: Authentication & Rate Limiting Middleware
+        type: enabler
+  - number: 2
+    startDate: 2026-03-05
+    endDate: 2026-03-12
+    duration: 7 days
+    features:
+      - id: fileguard-feat-document-extractor
+        name: Document Text Extractor
+        type: feature
+      - id: fileguard-feat-av-engine
+        name: Antivirus Engine Adapter
+        type: feature
+      - id: fileguard-feat-audit-service
+        name: Tamper-Evident Audit Logging
+        type: feature
+  - number: 3
+    startDate: 2026-03-13
+    endDate: 2026-03-20
+    duration: 7 days
+    features:
+      - id: fileguard-feat-pii-detector
+        name: PII Detection Engine
+        type: feature
+      - id: fileguard-feat-siem-forwarding
+        name: SIEM Event Forwarding
+        type: feature
+      - id: fileguard-feat-compliance-reports
+        name: Scheduled Compliance Report Generation
+        type: feature
+  - number: 4
+    startDate: 2026-03-21
+    endDate: 2026-03-28
+    duration: 7 days
+    features:
+      - id: fileguard-feat-redaction
+        name: PII Redaction Engine
+        type: feature
+      - id: fileguard-feat-disposition
+        name: Disposition Engine
+        type: feature
+      - id: fileguard-feat-pipeline-orchestrator
+        name: Scan Pipeline Orchestrator
+        type: feature
+  - number: 5
+    startDate: 2026-03-29
+    endDate: 2026-04-05
+    duration: 7 days
+    features:
+      - id: fileguard-feat-realtime-scan
+        name: Real-Time Scan Endpoint
+        type: feature
+      - id: fileguard-feat-batch-processor
+        name: Cloud Bucket Batch Job Processor
+        type: feature
+  - number: 6
+    startDate: 2026-04-06
+    endDate: 2026-04-13
+    duration: 7 days
+    features:
+      - id: fileguard-feat-signed-url
+        name: Signed URL Upload for Large Files
+        type: feature
+      - id: fileguard-feat-webhook-cli
+        name: Webhook Dispatcher & CLI Tool
+        type: feature
+
+criticalPath:
+  - fileguard-feat-project-setup
+  - fileguard-feat-document-extractor
+  - fileguard-feat-pii-detector
+  - fileguard-feat-redaction
+  - fileguard-feat-pipeline-orchestrator
+  - fileguard-feat-realtime-scan
+  - fileguard-feat-webhook-cli
