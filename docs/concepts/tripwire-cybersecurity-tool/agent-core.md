@@ -13,11 +13,15 @@ that:
 
 1. Loads a YAML configuration file (`internal/config`).
 2. Instantiates and starts the agent orchestrator (`internal/agent`).
-3. Wires watcher, queue, and transport components together via the agent's
+3. Creates one `FileWatcher` per `FILE`-type rule (`internal/watcher`) and
+   registers them with the orchestrator via `agent.WithWatchers`.
+4. Wires watcher, queue, and transport components together via the agent's
    goroutine lifecycle.
-4. Serves a `/healthz` HTTP endpoint on a loopback address so health-check
+5. Serves a `/healthz` HTTP endpoint on a loopback address so health-check
    tooling can probe the agent without opening external inbound ports.
-5. Handles `SIGTERM`/`SIGINT` for graceful shutdown.
+6. Handles `SIGTERM`/`SIGINT` for graceful shutdown.
+
+For file watcher details see [`file-watcher.md`](file-watcher.md).
 
 ---
 
@@ -314,11 +318,23 @@ A structured JSON `slog.Logger` is initialised from `Config.LogLevel` and
 set as the default logger. All agent packages use the default logger or accept
 a `*slog.Logger` argument.
 
+### Watcher registration
+
+`cmd/agent/main.go` calls `buildFileWatchers(cfg, logger)` which iterates
+over all configured rules and creates one `watcher.FileWatcher` per `FILE`-type
+rule. The resulting slice is passed to `agent.WithWatchers(...)` so the
+orchestrator manages their lifecycle.
+
+```go
+func buildFileWatchers(cfg *config.Config, logger *slog.Logger) []agent.Watcher
+```
+
 ### Signal handling
 
 `SIGTERM` and `SIGINT` trigger graceful shutdown:
 
-1. `Agent.Stop()` is called — watchers, transport, and queue are closed.
+1. `Agent.Stop()` is called — watchers (including all `FileWatcher` instances),
+   transport, and queue are closed.
 2. The `/healthz` HTTP server is shut down with a 10-second timeout.
 3. The process exits 0.
 

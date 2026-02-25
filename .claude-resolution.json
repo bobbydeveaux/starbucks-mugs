@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by keeping the HEAD version, which contains the branch-specific metadata for feature/172-fileguard-sprint-2-issue-172 (fileguard AuditService with HMAC-SHA256 signing). The origin/main version contained output from a different already-merged PR (TripWire audit logger, issue #169), which is not relevant to this branch.",
-  "strategyUsed": "chose ours (HEAD) — the conflicted file is a branch-specific Claude output metadata file; HEAD contains the correct data for this PR (issue #172, fileguard sprint 2), while origin/main contained stale output from a different merged PR (issue #169)"
+  "filesResolved": 2,
+  "summary": "Resolved 2 conflicts for PR #203. In cmd/agent/main.go, HEAD added a NetworkWatcher for NETWORK-type rules (Protocol/Direction feature) while origin/main added FileWatchers for FILE-type rules via buildFileWatchers(). Both watchers handle different rule types and were preserved together. The .claude-output.json file was deleted by origin/main and that deletion was accepted.",
+  "strategyUsed": "Preserved both changes: kept the NetworkWatcher instantiation from HEAD and added the FileWatcher registration from origin/main, using the shared agentOpts slice so both watcher types are registered with the agent. Accepted origin/main's deletion of .claude-output.json as it is a generated artifact not needed in the repo."
 }
