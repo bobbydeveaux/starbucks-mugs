@@ -1,0 +1,65 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: tripwire-cybersecurity-tool-feat-mtls-pki
+        name: mTLS PKI & Certificate Management
+        type: enabler
+        files: [deployments/certs/generate_ca.sh deployments/certs/generate_agent_cert.sh deployments/certs/README.md package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-agent-core
+        name: Agent Core & Configuration
+        type: enabler
+        files: [cmd/agent/main.go internal/agent/agent.go internal/config/config.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-db-schema
+        name: PostgreSQL Schema & Storage Layer
+        type: enabler
+        files: [db/migrations/001_hosts.sql db/migrations/002_alerts.sql db/migrations/003_rules.sql db/migrations/004_audit.sql internal/server/storage/postgres.go internal/server/storage/models.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+  - number: 2
+    features:
+      - id: tripwire-cybersecurity-tool-feat-file-watcher
+        name: File Tripwire Watcher
+        type: feature
+        files: [internal/watcher/watcher.go internal/watcher/file_watcher.go internal/watcher/file_watcher_linux.go internal/watcher/file_watcher_darwin.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-network-watcher
+        name: Network Tripwire Watcher
+        type: feature
+        files: [internal/watcher/network_watcher.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-agent-queue-audit
+        name: Local Alert Queue & Audit Logger
+        type: enabler
+        files: [internal/queue/sqlite_queue.go internal/queue/schema.sql internal/audit/audit_logger.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+  - number: 3
+    features:
+      - id: tripwire-cybersecurity-tool-feat-process-watcher
+        name: Process Tripwire Watcher
+        type: feature
+        files: [internal/watcher/process_watcher.go internal/watcher/ebpf/process.go internal/watcher/ebpf/process.bpf.c package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-grpc-server
+        name: gRPC Alert Ingestion Service
+        type: feature
+        files: [cmd/server/main.go internal/server/grpc/alert_service.go internal/server/grpc/server.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-rest-api
+        name: REST API
+        type: feature
+        files: [internal/server/rest/router.go internal/server/rest/handlers.go internal/server/rest/middleware.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+  - number: 4
+    features:
+      - id: tripwire-cybersecurity-tool-feat-agent-transport
+        name: gRPC mTLS Transport Client
+        type: enabler
+        files: [internal/transport/grpc_client.go proto/alert.proto proto/alert.pb.go proto/alert_grpc.pb.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-websocket
+        name: WebSocket Real-Time Broadcaster
+        type: feature
+        files: [internal/server/websocket/broadcaster.go internal/server/websocket/handler.go package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+      - id: tripwire-cybersecurity-tool-feat-deployment
+        name: Deployment & CI/CD
+        type: enabler
+        files: [deployments/docker-compose.yml deployments/Dockerfile.server deployments/systemd/tripwire.service deployments/launchd/com.tripwire.agent.plist .github/workflows/build.yml package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]
+  - number: 5
+    features:
+      - id: tripwire-cybersecurity-tool-feat-dashboard-ui
+        name: Real-Time Security Dashboard
+        type: feature
+        files: [dashboard-ui/src/App.tsx dashboard-ui/src/hooks/useAlerts.ts dashboard-ui/src/hooks/useWebSocket.ts dashboard-ui/src/components/AlertFeed.tsx dashboard-ui/src/components/HostList.tsx dashboard-ui/src/components/AlertFilters.tsx dashboard-ui/src/components/TrendChart.tsx dashboard-ui/src/api/client.ts dashboard-ui/vite.config.ts package.json package-lock.json tsconfig.json README.md .gitignore Dockerfile docker-compose.yml go.mod go.sum]

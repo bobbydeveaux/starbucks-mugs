@@ -1,178 +1,230 @@
-"""Authentication middleware for FileGuard API.
+"""Authentication middleware for the FileGuard API.
 
-Validates Bearer tokens on every incoming request and attaches a ``TenantConfig``
-object to ``request.state.tenant`` for downstream use.
+Two bearer-token authentication paths are supported:
 
-Two authentication paths are supported:
-  - **API key** — the raw key is bcrypt-checked against the stored hash.
-  - **OAuth 2.0 client credentials** — a signed JWT is verified against the
-    tenant's JWKS endpoint.
+1. **API key** – the token is a raw (non-JWT) string.  The middleware hashes
+   the presented value with bcrypt and compares it to the stored
+   ``api_key_hash`` on the matching TenantConfig row.
 
-Responses:
-  - ``401 Unauthorized`` — no token, malformed token, or bad signature.
-  - ``403 Forbidden`` — token is valid but the tenant is not recognised.
+2. **OAuth 2.0 JWT** – the token is a compact JWT (three Base64URL-encoded
+   segments separated by dots).  The middleware verifies the signature against
+   the public keys fetched from the tenant's ``jwks_url`` and checks that the
+   ``aud`` claim matches ``client_id``.
+
+On success the validated :class:`~fileguard.schemas.tenant.TenantConfig` is
+attached to ``request.state.tenant`` for downstream handlers and middleware
+to consume.
+
+HTTP responses on failure:
+
+* ``401 Unauthorized`` – no ``Authorization`` header, malformed/invalid token.
+* ``403 Forbidden`` – valid token format but no matching tenant record.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Callable
+import time
+from typing import Any
 
 import bcrypt
 import httpx
-import jwt
-from fastapi import Request, Response
-from fastapi.responses import JSONResponse
+from jose import JWTError, jwk, jwt
+from sqlalchemy import select
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
+from fileguard.db.session import AsyncSessionLocal
+from fileguard.models.tenant_config import TenantConfig as TenantConfigModel
 from fileguard.schemas.tenant import TenantConfig
 
 logger = logging.getLogger(__name__)
 
-# Paths that bypass authentication entirely
-_PUBLIC_PATHS: frozenset[str] = frozenset({"/healthz", "/v1/openapi.json", "/v1/docs"})
+# Paths that bypass authentication (health / readiness endpoints)
+_UNAUTHENTICATED_PATHS: frozenset[str] = frozenset({"/healthz", "/v1/docs", "/v1/openapi.json"})
 
-# Simple in-process JWKS cache: {jwks_url: {kid: public_key}}
-_JWKS_CACHE: dict[str, dict[str, object]] = {}
+# Simple in-process JWKS cache: maps jwks_url -> (keys_list, expiry_timestamp)
+_jwks_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
+_JWKS_CACHE_TTL_SECONDS: float = 300.0  # 5 minutes
 
 
-async def _fetch_jwks(jwks_url: str) -> dict[str, object]:
-    """Fetch and cache a JWKS endpoint, returning a kid→key mapping."""
-    if jwks_url in _JWKS_CACHE:
-        return _JWKS_CACHE[jwks_url]
+def _is_jwt(token: str) -> bool:
+    """Return True if *token* looks like a compact JWT (three dot-separated parts)."""
+    parts = token.split(".")
+    return len(parts) == 3
+
+
+async def _fetch_jwks(jwks_url: str) -> list[dict[str, Any]]:
+    """Fetch and cache the JWKS for *jwks_url*.
+
+    Uses a simple in-process TTL cache to avoid hitting the JWKS endpoint on
+    every request.  The cache is intentionally not shared across processes; a
+    short TTL is sufficient because key rotations are infrequent.
+    """
+    now = time.monotonic()
+    cached = _jwks_cache.get(jwks_url)
+    if cached is not None:
+        keys, expiry = cached
+        if now < expiry:
+            return keys
 
     async with httpx.AsyncClient(timeout=5.0) as client:
         response = await client.get(jwks_url)
         response.raise_for_status()
         data = response.json()
 
-    keys: dict[str, object] = {}
-    for jwk in data.get("keys", []):
-        kid = jwk.get("kid", "default")
-        keys[kid] = jwt.algorithms.RSAAlgorithm.from_jwk(jwk)  # type: ignore[attr-defined]
-
-    _JWKS_CACHE[jwks_url] = keys
+    keys: list[dict[str, Any]] = data.get("keys", [])
+    _jwks_cache[jwks_url] = (keys, now + _JWKS_CACHE_TTL_SECONDS)
     return keys
 
 
-async def _load_tenant_by_api_key(raw_key: str) -> TenantConfig | None:
-    """Look up a tenant whose api_key_hash matches *raw_key*.
+async def _verify_jwt(token: str, tenant_row: TenantConfigModel) -> bool:
+    """Verify an OAuth 2.0 JWT against the tenant's JWKS.
 
-    In a full implementation this queries the database. This stub is replaced
-    once the database session and ORM models are available (task-fileguard-feat-project-setup).
+    Returns ``True`` if the signature is valid and the ``aud`` claim matches
+    ``tenant_row.client_id``; ``False`` otherwise.
     """
-    # TODO(task-fileguard-feat-project-setup): Replace with database lookup
-    # e.g.: session.execute(select(TenantConfigModel))
-    raise NotImplementedError(
-        "_load_tenant_by_api_key requires database integration (task-fileguard-feat-project-setup)"
-    )
+    if not tenant_row.jwks_url or not tenant_row.client_id:
+        return False
+
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+        kid = unverified_header.get("kid")
+
+        keys = await _fetch_jwks(str(tenant_row.jwks_url))
+
+        # Select the matching key by ``kid`` if present, otherwise try all keys
+        matching_keys = [k for k in keys if kid is None or k.get("kid") == kid]
+        if not matching_keys:
+            logger.warning("No matching JWK found for kid=%s", kid)
+            return False
+
+        for key_data in matching_keys:
+            try:
+                public_key = jwk.construct(key_data)
+                jwt.decode(
+                    token,
+                    public_key,
+                    algorithms=[key_data.get("alg", "RS256")],
+                    audience=tenant_row.client_id,
+                )
+                return True
+            except JWTError:
+                continue
+
+        return False
+
+    except (JWTError, httpx.HTTPError, ValueError) as exc:
+        logger.warning("JWT verification failed: %s", exc)
+        return False
 
 
-async def _load_tenant_by_client_id(client_id: str) -> TenantConfig | None:
-    """Look up a tenant by OAuth client ID.
+def _verify_api_key(token: str, api_key_hash: str) -> bool:
+    """Return ``True`` if *token* matches *api_key_hash* via bcrypt."""
+    try:
+        return bcrypt.checkpw(token.encode(), api_key_hash.encode())
+    except Exception as exc:
+        logger.warning("bcrypt comparison failed: %s", exc)
+        return False
 
-    In a full implementation this queries the database. This stub is replaced
-    once the database session and ORM models are available (task-fileguard-feat-project-setup).
+
+async def _load_tenant_for_jwt(token: str) -> TenantConfigModel | None:
+    """Look up the tenant whose ``client_id`` matches the JWT ``aud`` claim.
+
+    Returns ``None`` if the ``aud`` claim is missing or no matching tenant
+    exists.
     """
-    # TODO(task-fileguard-feat-project-setup): Replace with database lookup
-    raise NotImplementedError(
-        "_load_tenant_by_client_id requires database integration (task-fileguard-feat-project-setup)"
-    )
-
-
-def _check_api_key(raw_key: str, hashed: str) -> bool:
-    """Return True if *raw_key* matches the bcrypt *hashed* value."""
-    return bcrypt.checkpw(raw_key.encode(), hashed.encode())
-
-
-async def _verify_api_key(raw_key: str) -> TenantConfig | None:
-    tenant = await _load_tenant_by_api_key(raw_key)
-    if tenant is None:
-        return None
-    if not tenant.has_api_key_auth():
-        return None
-    assert tenant.api_key_hash is not None  # guaranteed by has_api_key_auth()
-    if not _check_api_key(raw_key, tenant.api_key_hash):
-        return None
-    return tenant
-
-
-async def _verify_jwt(token: str) -> TenantConfig | None:
-    """Decode and verify a JWT; return the matching tenant or None."""
     try:
-        # Decode header only to extract kid and determine issuer
-        unverified = jwt.decode(token, options={"verify_signature": False})
-        client_id: str = unverified.get("sub") or unverified.get("client_id", "")
-    except jwt.DecodeError:
+        claims = jwt.get_unverified_claims(token)
+        aud = claims.get("aud")
+        if not aud:
+            return None
+        # ``aud`` may be a list; normalise to string for comparison
+        if isinstance(aud, list):
+            aud = aud[0] if aud else None
+        if not aud:
+            return None
+    except JWTError:
         return None
 
-    tenant = await _load_tenant_by_client_id(client_id)
-    if tenant is None or not tenant.has_oauth_auth():
-        return None
-
-    assert tenant.jwks_url is not None  # guaranteed by has_oauth_auth()
-    try:
-        keys = await _fetch_jwks(str(tenant.jwks_url))
-    except Exception:
-        logger.exception("Failed to fetch JWKS from %s", tenant.jwks_url)
-        return None
-
-    header = jwt.get_unverified_header(token)
-    kid = header.get("kid", "default")
-    public_key = keys.get(kid)
-    if public_key is None:
-        return None
-
-    try:
-        jwt.decode(
-            token,
-            public_key,
-            algorithms=["RS256"],
-            audience=tenant.audience,
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(TenantConfigModel).where(TenantConfigModel.client_id == aud)
         )
-    except jwt.PyJWTError:
-        return None
+        return result.scalar_one_or_none()
 
-    return tenant
+
+async def _load_tenant_for_api_key(token: str) -> TenantConfigModel | None:
+    """Return the *first* tenant whose ``api_key_hash`` matches *token* via bcrypt.
+
+    Because bcrypt comparison is O(n) in the number of tenants, this approach
+    is only practical for small tenant counts.  Production deployments should
+    store a fast lookup index (e.g., a prefix of the hash) alongside the full
+    hash to narrow candidates before the bcrypt check.
+    """
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(TenantConfigModel).where(TenantConfigModel.api_key_hash.is_not(None))
+        )
+        rows = result.scalars().all()
+
+    for row in rows:
+        if _verify_api_key(token, row.api_key_hash):  # type: ignore[arg-type]
+            return row
+    return None
+
+
+def _json_401(detail: str) -> JSONResponse:
+    return JSONResponse({"detail": detail}, status_code=401)
+
+
+def _json_403(detail: str) -> JSONResponse:
+    return JSONResponse({"detail": detail}, status_code=403)
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    """FastAPI middleware that authenticates every request via Bearer token.
+    """Starlette middleware that enforces bearer-token authentication.
 
-    On success, ``request.state.tenant`` is set to the resolved ``TenantConfig``.
-    On failure, the request is short-circuited with a 401 or 403 response.
+    Attaches a validated :class:`~fileguard.schemas.tenant.TenantConfig`
+    to ``request.state.tenant`` on success.  Paths listed in
+    :data:`_UNAUTHENTICATED_PATHS` bypass authentication entirely.
     """
 
-    def __init__(self, app: ASGIApp, public_paths: frozenset[str] = _PUBLIC_PATHS) -> None:
-        super().__init__(app)
-        self._public_paths = public_paths
-
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        if request.url.path in self._public_paths:
+    async def dispatch(self, request: Request, call_next: Any) -> Response:  # type: ignore[override]
+        if request.url.path in _UNAUTHENTICATED_PATHS:
             return await call_next(request)
 
         auth_header = request.headers.get("Authorization", "")
-        if not auth_header.lower().startswith("bearer "):
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Missing or invalid Authorization header"},
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        if not auth_header.startswith("Bearer "):
+            return _json_401("Missing or invalid Authorization header")
 
-        raw_token = auth_header[7:]  # strip "Bearer "
+        token = auth_header[len("Bearer "):]
+        if not token:
+            return _json_401("Empty bearer token")
 
-        tenant: TenantConfig | None = None
-        # Determine token type: JWTs contain two dots; API keys do not
-        if raw_token.count(".") == 2:
-            tenant = await _verify_jwt(raw_token)
+        tenant_row: TenantConfigModel | None = None
+        authenticated = False
+
+        if _is_jwt(token):
+            # OAuth 2.0 path: look up tenant by aud claim, then verify signature
+            tenant_row = await _load_tenant_for_jwt(token)
+            if tenant_row is None:
+                return _json_403("Unrecognised tenant")
+            authenticated = await _verify_jwt(token, tenant_row)
+            if not authenticated:
+                return _json_401("Invalid or expired JWT")
         else:
-            tenant = await _verify_api_key(raw_token)
+            # API key path: scan tenants for bcrypt match
+            tenant_row = await _load_tenant_for_api_key(token)
+            if tenant_row is None:
+                return _json_403("Unrecognised tenant")
+            authenticated = True  # match found by _load_tenant_for_api_key
 
-        if tenant is None:
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "Tenant not found or credentials invalid"},
-            )
-
-        request.state.tenant = tenant
+        request.state.tenant = TenantConfig.model_validate(tenant_row)
+        logger.info(
+            "Authenticated tenant=%s path=%s",
+            request.state.tenant.id,
+            request.url.path,
+        )
         return await call_next(request)

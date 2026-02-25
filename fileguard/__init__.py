@@ -1,1 +1,1 @@
-# FileGuard - Security-focused file processing gateway
+# FileGuard — Security-focused file processing gateway

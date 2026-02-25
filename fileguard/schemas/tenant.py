@@ -1,96 +1,60 @@
-"""Pydantic schemas for tenant configuration."""
+"""Pydantic schemas for tenant configuration.
+
+TenantConfig is the canonical in-memory representation of a tenant record.
+The auth middleware populates ``request.state.tenant`` with a validated
+TenantConfig instance after a successful authentication check.
+"""
+
 from __future__ import annotations
 
 import uuid
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
-
-
-class DispositionRule(BaseModel):
-    """Per file-type disposition rule."""
-
-    action: str = Field(
-        ...,
-        pattern="^(block|quarantine|pass-with-flags)$",
-        description="Disposition action: block, quarantine, or pass-with-flags",
-    )
-    mime_types: list[str] = Field(
-        default_factory=list,
-        description="MIME types this rule applies to; empty means all types",
-    )
-
-
-class SiemConfig(BaseModel):
-    """SIEM integration configuration."""
-
-    type: str = Field(..., description="SIEM type: splunk or watchtower")
-    endpoint: str = Field(..., description="SIEM endpoint URL or HEC URL")
-    credentials_ref: str = Field(
-        ...,
-        description="Reference to credentials secret (e.g. env var name or Vault path)",
-    )
+from pydantic import UUID4, BaseModel, Field, HttpUrl, field_validator
 
 
 class TenantConfig(BaseModel):
-    """Pydantic model representing a tenant's configuration.
+    """Serialisable tenant configuration attached to authenticated requests.
 
-    This schema is populated from the database at request time and attached to
-    ``request.state.tenant`` by the authentication middleware.
+    A tenant may authenticate using either an API key (compared via bcrypt)
+    or an OAuth 2.0 JWT (verified against a JWKS endpoint).  At least one
+    of (``api_key_hash``, ``jwks_url`` + ``client_id``) must be populated for
+    authentication to succeed.
+
+    Attributes:
+        id: Unique tenant identifier (UUID).
+        api_key_hash: bcrypt hash of the tenant's raw API key.  ``None`` when
+            the tenant authenticates exclusively via OAuth 2.0.
+        jwks_url: URL of the tenant's JWKS endpoint used to verify JWT
+            signatures.  ``None`` when API-key-only authentication is used.
+        client_id: OAuth 2.0 ``client_id`` / ``aud`` claim expected in JWTs.
+            ``None`` when API-key-only authentication is used.
+        rate_limit_rpm: Per-tenant request rate limit in requests per minute.
+            Defaults to 100.
+        disposition_rules: Optional per-file-type disposition overrides
+            (block | quarantine | pass-with-flags).
+        custom_patterns: Optional user-defined regex patterns for PII detection.
+        webhook_url: Optional URL to deliver async scan result callbacks.
+        siem_config: Optional SIEM integration configuration.
     """
 
-    id: uuid.UUID = Field(..., description="Tenant unique identifier")
-    api_key_hash: str | None = Field(
-        None,
-        description="bcrypt-hashed API key; present when API key auth is configured",
-    )
+    model_config = {"from_attributes": True}
 
-    # OAuth 2.0 client credentials configuration
-    jwks_url: HttpUrl | None = Field(
-        None,
-        description="JWKS endpoint URL for JWT signature verification (OAuth 2.0)",
-    )
-    client_id: str | None = Field(
-        None,
-        description="OAuth 2.0 client ID; validated against the JWT 'sub' or 'client_id' claim",
-    )
-    audience: str | None = Field(
-        None,
-        description="Expected JWT audience claim value",
-    )
+    id: UUID4
+    api_key_hash: str | None = None
+    jwks_url: HttpUrl | None = None
+    client_id: str | None = None
+    rate_limit_rpm: int = Field(default=100, ge=0)
+    disposition_rules: dict[str, Any] | None = None
+    custom_patterns: dict[str, Any] | None = None
+    webhook_url: str | None = None
+    siem_config: dict[str, Any] | None = None
 
-    # Rate limiting
-    rate_limit_rpm: int = Field(
-        default=100,
-        ge=1,
-        le=100_000,
-        description="Maximum requests per minute for this tenant; defaults to 100",
-    )
-
-    # Disposition and detection configuration
-    disposition_rules: list[DispositionRule] = Field(
-        default_factory=list,
-        description="Per file-type disposition rules; evaluated in order",
-    )
-    custom_patterns: list[dict[str, Any]] = Field(
-        default_factory=list,
-        description="Custom regex PII pattern definitions loaded at startup",
-    )
-
-    # Webhook and SIEM
-    webhook_url: str | None = Field(
-        None,
-        description="Tenant-configured webhook URL for scan completion callbacks",
-    )
-    siem_config: SiemConfig | None = Field(
-        None,
-        description="SIEM forwarding configuration; None disables forwarding for this tenant",
-    )
-
-    @field_validator("api_key_hash", "jwks_url", "client_id", mode="before")
+    @field_validator("rate_limit_rpm")
     @classmethod
-    def at_least_one_auth_method(cls, v: Any, info: Any) -> Any:
-        # Individual field validation; cross-field check is done at model level
+    def rate_limit_must_be_non_negative(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("rate_limit_rpm must be >= 0")
         return v
 
     def has_api_key_auth(self) -> bool:
@@ -100,5 +64,3 @@ class TenantConfig(BaseModel):
     def has_oauth_auth(self) -> bool:
         """Return True if OAuth 2.0 authentication is configured."""
         return self.jwks_url is not None and self.client_id is not None
-
-    model_config = {"frozen": True}
