@@ -1,0 +1,295 @@
+GeneratedAt: "2026-02-25T19:59:06Z"
+Plan: tripwire-cybersecurity-tool-plan
+Sprints:
+- Features:
+  - FeatureID: tripwire-cybersecurity-tool-feat-agent-core
+    FeatureTitle: Agent Core & Configuration
+    Tasks:
+    - AcceptanceCriteria:
+      - LoadConfig parses a valid YAML file into a fully populated Config struct with
+        no errors
+      - LoadConfig returns a descriptive error when required fields (DashboardAddr,
+        CertPath, KeyPath) are absent
+      - TripwireRule entries are unmarshalled correctly including path globs and severity
+        levels
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Define the Config struct and all sub-structs (TripwireRule, TLSConfig,
+        etc.) in internal/config/config.go. Implement LoadConfig to read and validate
+        the YAML file, returning typed errors for missing required fields such as
+        dashboard address and cert paths.
+      EstimatedEffort: S
+      Files:
+      - internal/config/config.go
+      ID: task-tripwire-cybersecurity-tool-feat-agent-core-1
+      Title: Implement YAML config parsing and validation
+    - AcceptanceCriteria:
+      - Binary starts, loads config, and logs a structured startup message without
+        panicking
+      - GET /healthz returns HTTP 200 with a JSON body while the agent is running
+      - 'SIGTERM/SIGINT triggers clean shutdown: agent Stop is called and the process
+        exits 0'
+      - Agent Start returns a non-nil error when a dependency (watcher, transport)
+        fails to initialise
+      AgentType: backend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-agent-core-1
+      Description: Implement the Agent struct in internal/agent/agent.go with Start/Stop
+        lifecycle methods that wire together the watcher, queue, and transport components
+        using goroutines and a shared context. Add a structured slog logger initialised
+        from config verbosity. Wire everything in cmd/agent/main.go including CLI
+        flag for config path, signal handling for graceful shutdown, and an HTTP server
+        exposing GET /healthz.
+      EstimatedEffort: M
+      Files:
+      - cmd/agent/main.go
+      - internal/agent/agent.go
+      ID: task-tripwire-cybersecurity-tool-feat-agent-core-2
+      Title: Implement agent orchestrator, structured logging, and /healthz endpoint
+  - FeatureID: tripwire-cybersecurity-tool-feat-db-schema
+    FeatureTitle: PostgreSQL Schema & Storage Layer
+    Tasks:
+    - AcceptanceCriteria:
+      - All four migration files apply cleanly via golang-migrate up/down without
+        errors
+      - Alerts table uses declarative monthly partitioning on received_at with at
+        least one example child partition
+      - Indexes exist on alerts(host_id), alerts(severity, received_at), and audit_entries(entity_id,
+        created_at)
+      - Foreign key constraints correctly reference hosts from alerts and rules tables
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: 'Create all four golang-migrate SQL migration files: hosts table,
+        alerts table with monthly partitioning on received_at, tripwire_rules table,
+        and audit_entries table with jsonb event_detail column. Include indexes covering
+        primary query patterns (host_id, severity, received_at ranges).'
+      EstimatedEffort: M
+      Files:
+      - db/migrations/001_hosts.sql
+      - db/migrations/002_alerts.sql
+      - db/migrations/003_rules.sql
+      - db/migrations/004_audit.sql
+      ID: task-tripwire-cybersecurity-tool-feat-db-schema-1
+      Title: Write database migration files
+    - AcceptanceCriteria:
+      - BatchInsertAlerts accumulates rows and flushes via pgx.SendBatch when batch
+        size or flush interval is reached
+      - QueryAlerts accepts time-range and optional severity filter, returns paginated
+        results using partition pruning
+      - Storage layer integrates with pgxpool and all queries pass against a real
+        Postgres instance in an integration test (testcontainers-go or docker-compose)
+      - models.go structs round-trip correctly to/from the DB schema without data
+        loss on jsonb event_detail
+      AgentType: backend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-db-schema-1
+      Description: Define Go model structs in models.go mapping to all four tables,
+        including a jsonb-compatible EventDetail field using pgtype or encoding/json.
+        Implement the pgx connection-pool-based storage layer in postgres.go with
+        a batched alert insert (flush on size or interval), time-range/severity query
+        for alerts, and CRUD helpers for hosts, rules, and audit entries.
+      EstimatedEffort: L
+      Files:
+      - internal/server/storage/models.go
+      - internal/server/storage/postgres.go
+      ID: task-tripwire-cybersecurity-tool-feat-db-schema-2
+      Title: Implement pgx storage layer with batch insert and query support
+  - FeatureID: tripwire-cybersecurity-tool-feat-mtls-pki
+    FeatureTitle: mTLS PKI & Certificate Management
+    Tasks:
+    - AcceptanceCriteria:
+      - generate_ca.sh produces a valid CA cert and key, idempotent on re-run
+      - generate_agent_cert.sh accepts hostname as argument, outputs signed cert with
+        CN=hostname, and sets file permissions to 0600
+      - Agent cert chain validates fully against the generated CA (openssl verify
+        passes)
+      - Scripts exit non-zero and print usage on missing arguments or filesystem errors
+      AgentType: devops-engineer
+      Dependencies: []
+      Description: Write the generate_ca.sh script to create a self-signed CA with
+        appropriate key length and validity period. Write the generate_agent_cert.sh
+        script to generate per-agent key pairs, create CSRs with CN=hostname, and
+        sign them against the CA. Both scripts must place output at /etc/tripwire/agent.{crt,key}
+        with mode 0600.
+      EstimatedEffort: M
+      Files:
+      - deployments/certs/generate_ca.sh
+      - deployments/certs/generate_agent_cert.sh
+      ID: task-tripwire-cybersecurity-tool-feat-mtls-pki-1
+      Title: Implement CA and agent certificate generation scripts
+    - AcceptanceCriteria:
+      - README includes a working quickstart showing CA generation followed by agent
+        cert signing
+      - All file paths, permissions, and script arguments are documented accurately
+      - gRPC mTLS validation behaviour (CN extraction, chain verification) is explained
+        for operators
+      AgentType: devops-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-mtls-pki-1
+      Description: 'Write the deployments/certs/README.md covering: prerequisites
+        (openssl version), step-by-step operator workflow to generate the CA and per-agent
+        certs, expected file paths (/etc/tripwire/agent.crt and agent.key), required
+        permissions (mode 0600), and how the dashboard validates the full chain on
+        every gRPC connection.'
+      EstimatedEffort: S
+      Files:
+      - deployments/certs/README.md
+      ID: task-tripwire-cybersecurity-tool-feat-mtls-pki-2
+      Title: Document PKI setup and cert placement
+  Sprint: 1
+- Features:
+  - FeatureID: tripwire-cybersecurity-tool-feat-file-watcher
+    FeatureTitle: File Tripwire Watcher
+    Tasks:
+    - AcceptanceCriteria:
+      - Watcher interface is defined with Start, Stop, and Events() methods
+      - FileEvent struct captures file path, PID, username, and timestamp fields
+      - FileWatcher struct compiles and manages configured watch paths
+      - Unit tests validate event struct serialization and channel behavior
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Define the Watcher interface, FileEvent struct (path, PID, user,
+        timestamp), and the common FileWatcher struct with path configuration and
+        event channel management. This establishes the contract that platform-specific
+        implementations must satisfy.
+      EstimatedEffort: S
+      Files:
+      - internal/watcher/watcher.go
+      - internal/watcher/file_watcher.go
+      ID: task-tripwire-cybersecurity-tool-feat-file-watcher-1
+      Title: Define Watcher interface and common file watcher abstractions
+    - AcceptanceCriteria:
+      - Linux build uses inotify via syscall and correctly fires on file read/write
+      - macOS build uses FSEvents C API and correctly fires on file read/write
+      - PID and username are resolved and populated on each emitted event
+      - Build tags (//go:build linux / darwin) ensure only the correct file compiles
+        per platform
+      AgentType: backend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-file-watcher-1
+      Description: Implement the Watcher interface using inotify on Linux and FSEvents
+        on macOS. Each implementation must subscribe to read/write events on configured
+        paths, resolve PID and username from the OS, and emit FileEvents onto the
+        shared channel.
+      EstimatedEffort: L
+      Files:
+      - internal/watcher/file_watcher_linux.go
+      - internal/watcher/file_watcher_darwin.go
+      ID: task-tripwire-cybersecurity-tool-feat-file-watcher-2
+      Title: Implement platform-specific filesystem watchers
+    - AcceptanceCriteria:
+      - Integration test creates a watched file, writes to it, and receives a FileEvent
+        within 5 seconds
+      - Emitted event contains correct file path, non-zero PID, and non-empty username
+      - Watcher cleanly shuts down on Stop() with no goroutine leaks (verified via
+        goleak)
+      AgentType: qa-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-file-watcher-2
+      Description: Wire the FileWatcher into the agent core pipeline and write integration
+        tests that trigger real filesystem events and assert that alert events arrive
+        on the output channel within 5 seconds with all required fields populated.
+      EstimatedEffort: M
+      Files:
+      - internal/watcher/file_watcher.go
+      - internal/watcher/file_watcher_linux.go
+      - internal/watcher/file_watcher_darwin.go
+      ID: task-tripwire-cybersecurity-tool-feat-file-watcher-3
+      Title: Validate end-to-end alert emission within 5-second SLA
+  - FeatureID: tripwire-cybersecurity-tool-feat-network-watcher
+    FeatureTitle: Network Tripwire Watcher
+    Tasks:
+    - AcceptanceCriteria:
+      - NetworkWatcher implements the Watcher interface defined by the agent core
+      - Start/Stop methods correctly manage goroutine lifecycle with no leaks
+      - Events() returns a read-only channel typed to the alert event struct
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Define the NetworkWatcher struct with port configuration (TCP/UDP
+        sets), implement the Watcher interface (Start, Stop, Events channel), and
+        handle lifecycle management with context cancellation. This establishes the
+        scaffolding for the monitoring logic.
+      EstimatedEffort: S
+      Files:
+      - internal/watcher/network_watcher.go
+      ID: task-tripwire-cybersecurity-tool-feat-network-watcher-1
+      Title: Implement NetworkWatcher core structure and Watcher interface
+    - AcceptanceCriteria:
+      - Inbound TCP connections on watched ports trigger alert events with correct
+        source IP and destination port
+      - Inbound UDP datagrams on watched ports trigger alert events with protocol
+        field set to UDP
+      - Netlink listener is used when available; raw socket fallback activates gracefully
+        on unsupported kernels
+      - No alerts emitted for ports not in the watch configuration
+      AgentType: backend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-network-watcher-1
+      Description: Implement inbound connection detection for configured ports using
+        netlink (preferred) with a raw socket fallback. On detection, populate and
+        emit alert events containing source IP, destination port, and protocol. Handle
+        both TCP and UDP protocols.
+      EstimatedEffort: L
+      Files:
+      - internal/watcher/network_watcher.go
+      ID: task-tripwire-cybersecurity-tool-feat-network-watcher-2
+      Title: Implement TCP/UDP port monitoring and alert emission
+    - AcceptanceCriteria:
+      - Tests cover TCP and UDP alert event field population (source IP, destination
+        port, protocol)
+      - Tests verify no events are emitted for unconfigured ports
+      - Start/Stop lifecycle test confirms goroutine cleanup with no data races (run
+        with -race)
+      AgentType: qa-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-network-watcher-2
+      Description: Write unit tests covering port matching, alert event field correctness,
+        and lifecycle behaviour (start/stop/restart). Use mock or loopback connections
+        to avoid raw socket privileges in CI.
+      EstimatedEffort: M
+      Files:
+      - internal/watcher/network_watcher_test.go
+      ID: task-tripwire-cybersecurity-tool-feat-network-watcher-3
+      Title: Unit tests for NetworkWatcher
+  - FeatureID: tripwire-cybersecurity-tool-feat-agent-queue-audit
+    FeatureTitle: Local Alert Queue & Audit Logger
+    Tasks:
+    - AcceptanceCriteria:
+      - WAL mode is enabled on database open and verified via PRAGMA journal_mode
+      - Enqueue persists an alert row and Dequeue returns it in FIFO order with a
+        lease/processing state
+      - Acknowledged alerts are removed; unacknowledged alerts re-surface after a
+        configurable timeout
+      - Unit tests cover enqueue, dequeue, ack, and re-delivery on simulated crash
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Create the SQLite schema and queue implementation using modernc.org/sqlite
+        with WAL mode enabled. The queue must support at-least-once delivery semantics
+        with enqueue, dequeue, and acknowledgement operations so alerts are buffered
+        durably when the dashboard is unreachable.
+      EstimatedEffort: M
+      Files:
+      - internal/queue/schema.sql
+      - internal/queue/sqlite_queue.go
+      ID: task-tripwire-cybersecurity-tool-feat-agent-queue-audit-1
+      Title: Implement WAL-mode SQLite alert queue
+    - AcceptanceCriteria:
+      - Each log entry contains timestamp, payload, previous-hash, and current-hash
+        fields serialised consistently
+      - O_APPEND is used on file open so concurrent writers cannot corrupt entry boundaries
+      - Verify walks all entries and returns an error identifying the first broken
+        chain link
+      - Unit tests confirm chain integrity after sequential appends and detect a tampered
+        middle entry
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Build the audit logger that writes entries to a file opened with
+        O_APPEND, where each entry includes the SHA-256 hash of the previous entry
+        to form a tamper-evident chain. Provide Append and Verify functions so callers
+        can write forensic records and validate chain integrity.
+      EstimatedEffort: S
+      Files:
+      - internal/audit/audit_logger.go
+      ID: task-tripwire-cybersecurity-tool-feat-agent-queue-audit-2
+      Title: Implement SHA-256 chained append-only audit logger
+  Sprint: 2
