@@ -1,10 +1,9 @@
 {
-  "prNumber": 149,
+  "prNumber": 190,
   "baseBranch": "main",
-  "headBranch": "feature/138-fileguard-sprint-1-issue-138",
+  "headBranch": "feature/172-fileguard-sprint-2-issue-172",
   "conflictedFiles": [
-    ".claude-resolution.json",
-    ".conflict-info.json"
+    ".claude-output.json"
   ],
-  "conflictCount": 2
+  "conflictCount": 1
 }
