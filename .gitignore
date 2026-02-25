@@ -22,6 +22,27 @@ dist/
 .env.local
 .env.*.local
 
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+*.egg
+.eggs/
+build/
+develop-eggs/
+*.so
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+*.spec
+
 # Claude Code workspace files
 .claude/
 .coo/
