@@ -1,20 +1,19 @@
 {
-  "prTitle": "feat: implement SHA-256 chained append-only audit logger",
-  "prBody": "## Summary\n\nImplements the tamper-evident, append-only audit logger for the TripWire agent (`internal/audit`).\n\n- **Hash chain**: Each entry's `event_hash` = `SHA-256(JSON({seq, ts, payload, prev_hash}))`, with the genesis entry using a `prev_hash` of 64 ASCII zeros (`audit.GenesisHash`)\n- **Append semantics**: Log file opened with `O_APPEND|O_CREATE|O_WRONLY` (mode `0600`); each write is a single atomic newline-delimited JSON line\n- **Chain resumption**: `Open()` reads and verifies any existing entries, restoring `seq` and `prevHash` for seamless continuation\n- **Tamper detection**: `Verify()` re-reads the file and detects modification, deletion, or insertion of any entry\n- **Thread safety**: `sync.Mutex` serialises all `Append` calls\n\n### Files changed\n\n- `internal/audit/audit_logger.go` — Logger, Entry, Open, Append, Close, Verify, hashContent\n- `internal/audit/audit_logger_test.go` — 13 unit tests covering chain correctness, hash verification, persistence, tamper detection, and concurrent safety\n- `docs/concepts/tripwire-cybersecurity-tool/audit-logger.md` — API reference, wire format, security considerations\n\nCloses #169",
+  "prTitle": "feat: implement AuditService with HMAC-SHA256 signing and append-only PostgreSQL persistence",
+  "prBody": "## Summary\n\n- Add `fileguard/services/audit.py` with `AuditService` class implementing tamper-evident audit logging\n- HMAC-SHA256 signature computed over canonical fields `(id, file_hash, status, action_taken, created_at)` before each INSERT\n- Append-only enforcement: service only calls `session.add()` + `session.flush()` — no UPDATE or DELETE code paths exist\n- Structured JSON log entries emitted on every audit call with `correlation_id`, `tenant_id`, and `scan_id`\n- `AuditError` raised (never silently swallowed) on database write failure, chaining the original exception\n- `verify_hmac()` helper uses `hmac.compare_digest` for timing-safe signature verification\n- 28 unit tests covering HMAC determinism, tamper detection (all signed fields), append-only enforcement, structured log output, and error propagation\n- Add `docs/concepts/fileguard/audit.md` documenting the service, signed fields, log format, and usage examples\n\nCloses #172",
   "testsPass": true,
   "filesChanged": [
-    "internal/audit/audit_logger.go",
-    "internal/audit/audit_logger_test.go"
+    "fileguard/services/__init__.py",
+    "fileguard/services/audit.py",
+    "tests/unit/test_audit_service.py"
   ],
   "docsUpdated": [
-    "docs/concepts/tripwire-cybersecurity-tool/audit-logger.md"
+    "docs/concepts/fileguard/audit.md"
   ],
   "docsReviewed": [
-    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md",
-    "docs/concepts/tripwire-cybersecurity-tool/agent-configuration.md",
-    "docs/concepts/tripwire-cybersecurity-tool/storage.md",
-    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
-    "docs/concepts/tripwire-cybersecurity-tool/LLD.md"
+    "docs/concepts/fileguard/LLD.md",
+    "docs/concepts/fileguard/middleware.md",
+    "docs/concepts/fileguard/tasks.yaml"
   ],
-  "completedTasks": [1, 2, 3, 4]
+  "completedTasks": [1]
 }

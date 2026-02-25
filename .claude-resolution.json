@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in the two metadata files (.claude-resolution.json and .conflict-info.json). HEAD contained resolution metadata from a prior merge attempt on this branch describing 6 fileguard source-file conflicts (auth middleware, tenant schema, config, dependencies); origin/main contained resolution metadata from a different branch's merge describing 2 metadata-file conflicts for PR #154 (feature/129-tripwire-cybersecurity-tool-sprint-1-issue-129). Wrote fresh metadata reflecting the actual current merge state for PR #149: only the 2 metadata files were conflicted, all other changes (new DB migrations, storage models, postgres implementation, docs) were already staged cleanly.",
-  "strategyUsed": "wrote fresh metadata capturing the actual current merge state; preserved PR #149 and branch identity (feature/138-fileguard-sprint-1-issue-138) as correct for this merge; discarded both sides' stale resolution summaries which described different branches' conflicts"
+  "filesResolved": 1,
+  "summary": "Resolved conflict in .claude-output.json by keeping the HEAD version, which contains the branch-specific metadata for feature/172-fileguard-sprint-2-issue-172 (fileguard AuditService with HMAC-SHA256 signing). The origin/main version contained output from a different already-merged PR (TripWire audit logger, issue #169), which is not relevant to this branch.",
+  "strategyUsed": "chose ours (HEAD) — the conflicted file is a branch-specific Claude output metadata file; HEAD contains the correct data for this PR (issue #172, fileguard sprint 2), while origin/main contained stale output from a different merged PR (issue #169)"
 }
