@@ -116,7 +116,11 @@ fileguard/              Python package (FastAPI application)
 ├── config.py           Pydantic Settings configuration
 ├── api/
 │   └── middleware/
-│       └── auth.py     Bearer-token authentication middleware
+│       ├── auth.py     Bearer-token authentication middleware
+│       └── rate_limit.py Redis-backed sliding-window rate limiter
+├── core/
+│   ├── av_engine.py    Abstract AVEngineAdapter interface + ScanResult/Finding types
+│   └── clamav_adapter.py ClamAV clamd TCP socket adapter (fail-secure)
 ├── models/
 │   └── tenant_config.py SQLAlchemy ORM model for tenant_config table
 ├── schemas/
@@ -135,10 +139,56 @@ migrations/             Alembic migration environment
 
 tests/
 └── unit/
-    └── test_auth_middleware.py  Unit tests for auth middleware & schemas
+    ├── test_auth_middleware.py    Unit tests for auth middleware & schemas
+    ├── test_rate_limit.py         Unit tests for rate limiting middleware
+    └── test_clamav_adapter.py     Unit tests for ClamAV clamd adapter
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
 alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
 ```
+
+## AV Engine Adapter
+
+FileGuard uses a plugin-based AV engine interface defined in `fileguard/core/av_engine.py`.
+The default implementation is `ClamAVAdapter` (`fileguard/core/clamav_adapter.py`), which
+communicates with a running `clamd` daemon over a TCP socket.
+
+### Fail-Secure Behavior
+
+Per ADR-06, the adapter implements **fail-secure** semantics: if the clamd daemon is
+unreachable, times out, or returns an error, the scan result is `status: "rejected"` —
+the file is **blocked**, not passed through.  This ensures a crashed or unavailable
+AV engine cannot become a silent bypass.
+
+### Usage
+
+```python
+from fileguard.core.clamav_adapter import ClamAVAdapter
+from fileguard.config import settings
+
+adapter = ClamAVAdapter(
+    host=settings.CLAMAV_HOST,  # default: "clamav"
+    port=settings.CLAMAV_PORT,  # default: 3310
+)
+
+# Scan a file on disk (requires shared filesystem between app and clamd)
+result = await adapter.scan("/tmp/upload.pdf")
+
+# Scan raw bytes (no shared filesystem required — preferred for containers)
+result = await adapter.scan_bytes(file_bytes)
+
+# Health check
+is_available = await adapter.ping()
+
+print(result.status)    # "clean" | "flagged" | "rejected"
+print(result.findings)  # tuple of Finding(type, category, severity, match)
+```
+
+### Extending with Commercial Engines
+
+To integrate a commercial AV engine (Sophos, CrowdStrike, etc.), subclass
+`AVEngineAdapter` from `fileguard.core.av_engine` and implement the three abstract
+methods (`scan`, `scan_bytes`, `ping`).  The fail-secure contract must be preserved:
+all error paths must return `ScanResult(status="rejected", ...)` rather than raising.
