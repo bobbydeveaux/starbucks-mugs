@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved a 'deleted by them' conflict on .claude-output.json by accepting the deletion from main, as this file is a transient CI/CD workflow artifact that was appropriately cleaned up on the main branch.",
-  "strategyUsed": "accepted deletion from main (theirs) for .claude-output.json — the file is a workflow metadata artifact generated during a previous AI-assisted PR task and has no place in the persistent repository history"
+  "filesResolved": 4,
+  "summary": "Resolved 4 'both added' conflicts: alembic.ini (merged richer main config with HEAD header/prepend_sys_path/black-hint), fileguard/__init__.py (merged comment style — em-dash from main, capitalisation from HEAD), migrations/env.py (kept HEAD's complete autogenerate setup with Base.metadata and compare_type/compare_server_default, adopted main's docstring for run_async_migrations), requirements.txt (merged all packages from both sides — HEAD's higher version pins, main's categorised layout, added missing auth/cloud/observability packages).",
+  "strategyUsed": "preserved both changes — took the more complete/correct version from each side and merged additive differences; HEAD's functional choices were preferred for env.py (ORM autogenerate); main's richer config options were kept for alembic.ini; requirements.txt combined all unique packages from both branches using HEAD's higher minimum version constraints"
 }

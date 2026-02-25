@@ -1,9 +1,12 @@
 {
-  "prNumber": 145,
+  "prNumber": 153,
   "baseBranch": "main",
-  "headBranch": "feature/126-tripwire-cybersecurity-tool-sprint-1-issue-126",
+  "headBranch": "feature/134-fileguard-sprint-1-issue-134",
   "conflictedFiles": [
-    ".claude-output.json"
+    "alembic.ini",
+    "fileguard/__init__.py",
+    "migrations/env.py",
+    "requirements.txt"
   ],
-  "conflictCount": 1
+  "conflictCount": 4
 }
