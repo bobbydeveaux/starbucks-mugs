@@ -17,6 +17,7 @@ import (
 
 	"github.com/tripwire/agent/internal/agent"
 	"github.com/tripwire/agent/internal/config"
+	"github.com/tripwire/agent/internal/watcher"
 )
 
 func main() {
@@ -41,11 +42,17 @@ func main() {
 		slog.String("health_addr", cfg.HealthAddr),
 	)
 
-	// Create agent orchestrator.
-	// Real watcher/queue/transport implementations are registered here as
-	// they are developed in subsequent sprints. For now the agent runs
-	// without watchers (no-op mode) which is valid for the healthz check.
-	ag := agent.New(cfg, logger)
+	// Build the list of watchers from configured rules.
+	fileWatchers := buildFileWatchers(cfg, logger)
+
+	// Create agent orchestrator and register file watchers.
+	// Queue and transport implementations are registered here as they are
+	// developed in subsequent sprints.
+	opts := []agent.Option{}
+	if len(fileWatchers) > 0 {
+		opts = append(opts, agent.WithWatchers(fileWatchers...))
+	}
+	ag := agent.New(cfg, logger, opts...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -92,6 +99,25 @@ func main() {
 	}
 
 	logger.Info("tripwire agent exited cleanly")
+}
+
+// buildFileWatchers creates a FileWatcher for every FILE-type rule in the
+// configuration. If no FILE rules are configured, an empty slice is returned.
+func buildFileWatchers(cfg *config.Config, logger *slog.Logger) []agent.Watcher {
+	var watchers []agent.Watcher
+	for _, rule := range cfg.Rules {
+		if rule.Type != "FILE" {
+			continue
+		}
+		fw := watcher.NewFileWatcher(rule, logger)
+		watchers = append(watchers, fw)
+		logger.Info("registered file watcher",
+			slog.String("rule", rule.Name),
+			slog.String("target", rule.Target),
+			slog.String("severity", rule.Severity),
+		)
+	}
+	return watchers
 }
 
 // newLogger constructs a *slog.Logger that writes JSON-structured log records
