@@ -1,0 +1,99 @@
+services:
+
+  # -------------------------------------------------------
+  # FileGuard API — FastAPI application
+  # -------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: fileguard-api:local
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://fileguard:fileguard@postgres:5432/fileguard
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-change-in-production
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: "3310"
+      LOG_LEVEL: INFO
+      ENVIRONMENT: development
+      # Set to "true" to run `alembic upgrade head` before starting
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # -------------------------------------------------------
+  # PostgreSQL 16 — audit log and tenant configuration store
+  # -------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: fileguard
+      POSTGRES_PASSWORD: fileguard
+      POSTGRES_DB: fileguard
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fileguard -d fileguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # -------------------------------------------------------
+  # Redis 7 — Celery broker, rate-limit counters, job cache
+  # -------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # -------------------------------------------------------
+  # ClamAV — antivirus engine daemon
+  # Exposes clamd on TCP port 3310 for the API to connect to.
+  # Note: freshclam runs on first start to download signatures
+  #       (~200 MB); subsequent starts use the cached database.
+  # -------------------------------------------------------
+  clamav:
+    image: clamav/clamav:stable
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_db:/var/lib/clamav
+    environment:
+      # Disable freshclam's scheduled updates inside the container;
+      # the database is updated when the volume is fresh.
+      CLAMAV_NO_FRESHCLAMD: "false"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  clamav_db:
+    driver: local
