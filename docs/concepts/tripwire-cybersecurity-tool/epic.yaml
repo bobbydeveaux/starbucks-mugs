@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: 'Bootstrap the statically-compiled Go agent binary: YAML config parsing
       (tripwire rules, dashboard address, cert paths), /healthz HTTP endpoint, structured
       logging, and top-level orchestrator that wires watchers, queue, and transport
@@ -14,7 +15,8 @@ Epics:
     name: Agent Core & Configuration
     project: agent
     type: enabler
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - tripwire-cybersecurity-tool-feat-agent-core
     description: Implement filesystem event monitoring using inotify (Linux), FSEvents
       (macOS), or ReadDirectoryChangesW (Windows) for configured paths. Emit alert
@@ -29,7 +31,8 @@ Epics:
     name: File Tripwire Watcher
     project: agent
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - tripwire-cybersecurity-tool-feat-agent-core
     description: Monitor configured TCP/UDP ports for inbound connections using raw
       sockets or netlink. Emit alert events with source IP, destination port, and
@@ -41,7 +44,8 @@ Epics:
     name: Network Tripwire Watcher
     project: agent
     type: feature
-  - dependencies:
+  - Sprint: 3
+    dependencies:
     - tripwire-cybersecurity-tool-feat-agent-core
     description: Detect execve events for configured process names using eBPF (Linux
       ≥5.8) with ptrace/kqueue fallback. Emit alert events with PID, parent PID, executing
@@ -55,7 +59,8 @@ Epics:
     name: Process Tripwire Watcher
     project: agent
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - tripwire-cybersecurity-tool-feat-agent-core
     description: Embed a WAL-mode SQLite database (modernc.org/sqlite) as an at-least-once
       delivery buffer when the dashboard is unreachable. Implement a SHA-256 chained
@@ -70,7 +75,8 @@ Epics:
     name: Local Alert Queue & Audit Logger
     project: agent
     type: enabler
-  - dependencies:
+  - Sprint: 4
+    dependencies:
     - tripwire-cybersecurity-tool-feat-agent-core
     - tripwire-cybersecurity-tool-feat-agent-queue-audit
     - tripwire-cybersecurity-tool-feat-mtls-pki
@@ -88,10 +94,11 @@ Epics:
     name: gRPC mTLS Transport Client
     project: agent
     type: enabler
-  id: tripwire-cybersecurity-tool-epic-agent
-  name: TripWire Agent Binary
-- features:
-  - dependencies: []
+  ID: tripwire-cybersecurity-tool-epic-agent
+  Name: TripWire Agent Binary
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Define golang-migrate migration files for hosts, alerts (monthly
       partitioned by received_at), tripwire_rules, and audit_entries tables with jsonb
       event_detail. Implement the pgx-based storage layer with batch-insert flush
@@ -108,7 +115,8 @@ Epics:
     name: PostgreSQL Schema & Storage Layer
     project: server
     type: enabler
-  - dependencies:
+  - Sprint: 3
+    dependencies:
     - tripwire-cybersecurity-tool-feat-db-schema
     - tripwire-cybersecurity-tool-feat-mtls-pki
     description: Implement the AlertService gRPC server (StreamAlerts, RegisterAgent)
@@ -123,7 +131,8 @@ Epics:
     name: gRPC Alert Ingestion Service
     project: server
     type: feature
-  - dependencies:
+  - Sprint: 3
+    dependencies:
     - tripwire-cybersecurity-tool-feat-db-schema
     description: 'Implement chi-based HTTP endpoints: GET /api/v1/alerts (filterable
       by host, type, severity, time range), GET /api/v1/hosts, GET /api/v1/audit,
@@ -138,7 +147,8 @@ Epics:
     name: REST API
     project: server
     type: feature
-  - dependencies:
+  - Sprint: 4
+    dependencies:
     - tripwire-cybersecurity-tool-feat-db-schema
     description: Implement the ws://dashboard/ws/alerts endpoint that upgrades HTTP
       connections and fans out new alert JSON messages to all connected browser clients
@@ -152,10 +162,11 @@ Epics:
     name: WebSocket Real-Time Broadcaster
     project: server
     type: feature
-  id: tripwire-cybersecurity-tool-epic-dashboard-server
-  name: Dashboard Server
-- features:
-  - dependencies:
+  ID: tripwire-cybersecurity-tool-epic-dashboard-server
+  Name: Dashboard Server
+- Features:
+  - Sprint: 5
+    dependencies:
     - tripwire-cybersecurity-tool-feat-rest-api
     - tripwire-cybersecurity-tool-feat-websocket
     description: 'Build the React 18 + TypeScript SPA: live alert feed via WebSocket
@@ -177,10 +188,11 @@ Epics:
     name: Real-Time Security Dashboard
     project: dashboard-ui
     type: feature
-  id: tripwire-cybersecurity-tool-epic-dashboard-ui
-  name: React Dashboard UI
-- features:
-  - dependencies: []
+  ID: tripwire-cybersecurity-tool-epic-dashboard-ui
+  Name: React Dashboard UI
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Provide operator scripts to generate a CA, sign per-agent client
       certificates (CN=hostname), and configure the dashboard to validate the full
       chain on every gRPC connection. Document cert placement at /etc/tripwire/agent.{crt,key}
@@ -194,7 +206,8 @@ Epics:
     name: mTLS PKI & Certificate Management
     project: infrastructure
     type: enabler
-  - dependencies:
+  - Sprint: 4
+    dependencies:
     - tripwire-cybersecurity-tool-feat-agent-core
     - tripwire-cybersecurity-tool-feat-grpc-server
     description: Ship Docker Compose file for the dashboard (server + PostgreSQL),
@@ -212,6 +225,6 @@ Epics:
     name: Deployment & CI/CD
     project: infrastructure
     type: enabler
-  id: tripwire-cybersecurity-tool-epic-infrastructure
-  name: Infrastructure & Security
+  ID: tripwire-cybersecurity-tool-epic-infrastructure
+  Name: Infrastructure & Security
 Version: v1alpha1
