@@ -4,9 +4,8 @@
   "headBranch": "feature/123-tripwire-cybersecurity-tool-sprint-2-issue-123",
   "conflictedFiles": [
     ".claude-output.json",
-    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md",
-    "internal/agent/network_watcher.go",
-    "internal/agent/network_watcher_test.go"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 4
+  "conflictCount": 3
 }
