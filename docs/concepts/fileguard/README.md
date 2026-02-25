@@ -117,6 +117,8 @@ fileguard/              Python package (FastAPI application)
 ├── api/
 │   └── middleware/
 │       └── auth.py     Bearer-token authentication middleware
+├── core/
+│   └── document_extractor.py  Multi-format text extractor with byte-offset mapping
 ├── models/
 │   └── tenant_config.py SQLAlchemy ORM model for tenant_config table
 ├── schemas/
@@ -135,10 +137,74 @@ migrations/             Alembic migration environment
 
 tests/
 └── unit/
-    └── test_auth_middleware.py  Unit tests for auth middleware & schemas
+    ├── test_auth_middleware.py  Unit tests for auth middleware & schemas
+    └── test_document_extractor.py  Unit tests for DocumentExtractor
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
 alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
 ```
+
+## DocumentExtractor
+
+`fileguard/core/document_extractor.py` provides text extraction from six document formats with a byte-offset map for PII span localisation.
+
+### Supported formats
+
+| Format | MIME type | Library |
+|---|---|---|
+| PDF | `application/pdf` | pdfminer.six |
+| DOCX | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | python-docx |
+| CSV | `text/csv` | stdlib `csv` |
+| JSON | `application/json` | stdlib `json` |
+| TXT | `text/plain` | built-in decode |
+| ZIP | `application/zip` | stdlib `zipfile` (recursive) |
+
+### Usage
+
+```python
+from fileguard.core.document_extractor import DocumentExtractor
+
+with DocumentExtractor(thread_pool_workers=4) as extractor:
+    result = extractor.extract(pdf_bytes, "report.pdf")
+    print(result.text)
+    for offset in result.offsets:
+        # offset.char_start / offset.char_end index into result.text
+        # offset.byte_start / offset.byte_end reference the original file bytes
+        span = result.text[offset.char_start:offset.char_end]
+```
+
+### ExtractionResult
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | `str` | Normalised Unicode text concatenated across all content |
+| `offsets` | `list[ByteOffset]` | Ordered list mapping text character spans to original byte ranges |
+
+### ByteOffset
+
+| Field | Type | Description |
+|---|---|---|
+| `char_start` | `int` | Inclusive start character index in `ExtractionResult.text` |
+| `char_end` | `int` | Exclusive end character index in `ExtractionResult.text` |
+| `byte_start` | `int` | Inclusive start byte offset in the original file data |
+| `byte_end` | `int` | Exclusive end byte offset in the original file data |
+
+### Exceptions
+
+| Exception | When raised |
+|---|---|
+| `UnsupportedMIMETypeError` | File MIME type is not in the supported list |
+| `CorruptFileError` | File cannot be parsed (malformed PDF, invalid ZIP, non-JSON bytes, etc.) |
+
+Both exceptions extend `DocumentExtractorError`.
+
+### ZIP safety limits
+
+| Parameter | Default | Description |
+|---|---|---|
+| `max_zip_depth` | 2 | Maximum recursive nesting depth |
+| `max_zip_files` | 1 000 | Maximum files processed per archive |
+
+Entries that exceed the depth limit or whose MIME type is unsupported are silently skipped; the archive as a whole still yields results from valid entries.
