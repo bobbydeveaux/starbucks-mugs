@@ -1,12 +1,9 @@
 {
-  "prNumber": 153,
+  "prNumber": 156,
   "baseBranch": "main",
-  "headBranch": "feature/134-fileguard-sprint-1-issue-134",
+  "headBranch": "feature/133-fileguard-sprint-1-issue-133",
   "conflictedFiles": [
-    "alembic.ini",
-    "fileguard/__init__.py",
-    "migrations/env.py",
-    "requirements.txt"
+    "fileguard/db/__init__.py"
   ],
-  "conflictCount": 4
+  "conflictCount": 1
 }

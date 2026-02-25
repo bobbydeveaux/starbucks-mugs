@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 4,
-  "summary": "Resolved 4 'both added' conflicts: alembic.ini (merged richer main config with HEAD header/prepend_sys_path/black-hint), fileguard/__init__.py (merged comment style — em-dash from main, capitalisation from HEAD), migrations/env.py (kept HEAD's complete autogenerate setup with Base.metadata and compare_type/compare_server_default, adopted main's docstring for run_async_migrations), requirements.txt (merged all packages from both sides — HEAD's higher version pins, main's categorised layout, added missing auth/cloud/observability packages).",
-  "strategyUsed": "preserved both changes — took the more complete/correct version from each side and merged additive differences; HEAD's functional choices were preferred for env.py (ORM autogenerate); main's richer config options were kept for alembic.ini; requirements.txt combined all unique packages from both branches using HEAD's higher minimum version constraints"
+  "filesResolved": 1,
+  "summary": "Resolved conflict in fileguard/db/__init__.py by keeping the HEAD version which contains functional database session imports, discarding the origin/main placeholder comment.",
+  "strategyUsed": "chose ours (HEAD) for fileguard/db/__init__.py - HEAD has real imports from fileguard.db.session (AsyncSessionLocal, Base, engine, get_db) with __all__ defined, while origin/main only had a stub comment '# Database package'; the session.py implementation exists to back these imports"
 }
