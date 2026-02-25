@@ -1,0 +1,45 @@
+GeneratedAt: "2026-02-25T19:59:58Z"
+Issues:
+- IssueNumber: 118
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/118
+  TaskID: task-tripwire-cybersecurity-tool-feat-file-watcher-1
+- IssueNumber: 119
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/119
+  TaskID: task-tripwire-cybersecurity-tool-feat-file-watcher-2
+- IssueNumber: 120
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/120
+  TaskID: task-tripwire-cybersecurity-tool-feat-file-watcher-3
+- IssueNumber: 121
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/121
+  TaskID: task-tripwire-cybersecurity-tool-feat-network-watcher-1
+- IssueNumber: 122
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/122
+  TaskID: task-tripwire-cybersecurity-tool-feat-network-watcher-2
+- IssueNumber: 123
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/123
+  TaskID: task-tripwire-cybersecurity-tool-feat-network-watcher-3
+- IssueNumber: 124
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/124
+  TaskID: task-tripwire-cybersecurity-tool-feat-agent-queue-audit-1
+- IssueNumber: 125
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/125
+  TaskID: task-tripwire-cybersecurity-tool-feat-agent-queue-audit-2
+- IssueNumber: 126
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/126
+  TaskID: task-tripwire-cybersecurity-tool-feat-agent-core-1
+- IssueNumber: 127
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/127
+  TaskID: task-tripwire-cybersecurity-tool-feat-agent-core-2
+- IssueNumber: 128
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/128
+  TaskID: task-tripwire-cybersecurity-tool-feat-db-schema-1
+- IssueNumber: 129
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/129
+  TaskID: task-tripwire-cybersecurity-tool-feat-db-schema-2
+- IssueNumber: 130
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/130
+  TaskID: task-tripwire-cybersecurity-tool-feat-mtls-pki-1
+- IssueNumber: 131
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/131
+  TaskID: task-tripwire-cybersecurity-tool-feat-mtls-pki-2
+Plan: tripwire-cybersecurity-tool-plan
