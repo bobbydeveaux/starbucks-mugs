@@ -3,12 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/138-fileguard-sprint-1-issue-138",
   "conflictedFiles": [
-    "fileguard/__init__.py",
-    "fileguard/api/middleware/auth.py",
-    "fileguard/config.py",
-    "fileguard/schemas/tenant.py",
-    "pyproject.toml",
-    "requirements.txt"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 6
+  "conflictCount": 2
 }
