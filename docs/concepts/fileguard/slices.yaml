@@ -1,0 +1,75 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: fileguard-feat-project-setup
+        name: Project Scaffolding & Database Schema
+        type: enabler
+        files: [fileguard/config.py fileguard/db/session.py fileguard/models/scan_event.py fileguard/models/tenant_config.py fileguard/models/batch_job.py fileguard/models/compliance_report.py migrations/ docker/Dockerfile docker-compose.yml helm/ requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile]
+      - id: fileguard-feat-auth-gateway
+        name: Authentication & Rate Limiting Middleware
+        type: enabler
+        files: [fileguard/api/middleware/auth.py fileguard/api/middleware/rate_limit.py fileguard/schemas/tenant.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+  - number: 2
+    features:
+      - id: fileguard-feat-document-extractor
+        name: Document Text Extractor
+        type: feature
+        files: [fileguard/core/document_extractor.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-av-engine
+        name: Antivirus Engine Adapter
+        type: feature
+        files: [fileguard/core/av_adapter.py fileguard/core/adapters/clamav_adapter.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-audit-service
+        name: Tamper-Evident Audit Logging
+        type: feature
+        files: [fileguard/services/audit.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+  - number: 3
+    features:
+      - id: fileguard-feat-pii-detector
+        name: PII Detection Engine
+        type: feature
+        files: [fileguard/core/pii_detector.py fileguard/core/patterns/uk_patterns.py fileguard/core/adapters/dlp_adapter.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-siem-forwarding
+        name: SIEM Event Forwarding
+        type: feature
+        files: [fileguard/services/siem.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-compliance-reports
+        name: Scheduled Compliance Report Generation
+        type: feature
+        files: [fileguard/services/reports.py fileguard/api/handlers/reports.py fileguard/schemas/report.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+  - number: 4
+    features:
+      - id: fileguard-feat-redaction
+        name: PII Redaction Engine
+        type: feature
+        files: [fileguard/core/redaction.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-disposition
+        name: Disposition Engine
+        type: feature
+        files: [fileguard/core/disposition.py fileguard/services/quarantine.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-pipeline-orchestrator
+        name: Scan Pipeline Orchestrator
+        type: feature
+        files: [fileguard/core/pipeline.py fileguard/core/context.py fileguard/workers/scan_worker.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+  - number: 5
+    features:
+      - id: fileguard-feat-realtime-scan
+        name: Real-Time Scan Endpoint
+        type: feature
+        files: [fileguard/api/handlers/scan.py fileguard/schemas/scan.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-batch-processor
+        name: Cloud Bucket Batch Job Processor
+        type: feature
+        files: [fileguard/batch/s3_connector.py fileguard/batch/gcs_connector.py fileguard/batch/job_processor.py fileguard/api/handlers/batch.py fileguard/schemas/batch.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+  - number: 6
+    features:
+      - id: fileguard-feat-signed-url
+        name: Signed URL Upload for Large Files
+        type: feature
+        files: [fileguard/api/handlers/signed_url.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
+      - id: fileguard-feat-webhook-cli
+        name: Webhook Dispatcher & CLI Tool
+        type: feature
+        files: [fileguard/workers/webhook_worker.py cli/fileguard_cli.py requirements.txt pyproject.toml setup.py setup.cfg .gitignore README.md Dockerfile docker-compose.yml]
