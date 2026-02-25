@@ -116,7 +116,10 @@ fileguard/              Python package (FastAPI application)
 ├── config.py           Pydantic Settings configuration
 ├── api/
 │   └── middleware/
-│       └── auth.py     Bearer-token authentication middleware
+│       ├── auth.py     Bearer-token authentication middleware
+│       └── rate_limit.py  Redis-backed sliding window rate limiter
+├── core/
+│   └── document_extractor.py  Multi-format text extractor (PDF/DOCX/CSV/JSON/TXT/ZIP)
 ├── models/
 │   └── tenant_config.py SQLAlchemy ORM model for tenant_config table
 ├── schemas/
@@ -135,7 +138,9 @@ migrations/             Alembic migration environment
 
 tests/
 └── unit/
-    └── test_auth_middleware.py  Unit tests for auth middleware & schemas
+    ├── test_auth_middleware.py    Unit tests for auth middleware & schemas
+    ├── test_rate_limit.py         Unit tests for rate-limiting middleware
+    └── test_document_extractor.py Unit tests for DocumentExtractor (all six formats)
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
