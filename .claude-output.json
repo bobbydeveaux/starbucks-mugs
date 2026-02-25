@@ -1,0 +1,17 @@
+{
+  "prTitle": "feat: add structured JSON request logging with correlation and tenant context",
+  "prBody": "## Summary\n\n- Add `RequestLoggingMiddleware` (`fileguard/api/middleware/logging.py`) that emits a structured JSON log entry at `INFO` level after every HTTP request, enriched with a correlation ID and authenticated tenant context\n- Correlation ID is extracted from `X-Correlation-ID` or `X-Request-ID` request headers (first match wins), or auto-generated as UUID v4 when neither header is present\n- Correlation ID is stored on `request.state.correlation_id` so downstream handlers (including `AuditService.log_scan_event`) can use it without re-parsing headers\n- Correlation ID is echoed back in the `X-Correlation-ID` response header for end-to-end client tracing\n- `tenant_id` is read from `request.state.tenant` (set by `AuthMiddleware`), serialised as a UUID string, or `null` for unauthenticated / public paths\n- Middleware registered as the outermost layer in `main.py` so it wraps the full request/response cycle (including auth) and captures accurate duration and tenant context\n- 25 unit tests added in `tests/unit/test_logging_middleware.py` covering all extraction paths, state population, log field completeness, tenant context, and response header propagation\n- `docs/concepts/fileguard/middleware.md` updated with new middleware section, updated stack diagram, and registration guidance\n\n### Log entry example\n\n```json\n{\n  \"event\": \"http_request\",\n  \"correlation_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"tenant_id\": \"d290f1ee-6c54-4b01-90e6-d701748f0851\",\n  \"method\": \"POST\",\n  \"path\": \"/v1/scan\",\n  \"status_code\": 200,\n  \"duration_ms\": 42.7\n}\n```\n\nCloses #144",
+  "testsPass": true,
+  "filesChanged": [
+    "fileguard/api/middleware/logging.py",
+    "fileguard/api/middleware/__init__.py",
+    "fileguard/main.py",
+    "tests/unit/test_logging_middleware.py"
+  ],
+  "docsUpdated": [
+    "docs/concepts/fileguard/middleware.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/fileguard/audit.md"
+  ]
+}
