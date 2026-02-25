@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 6,
-  "summary": "Resolved 6 conflicted files across docs, test files, and source files. Kept all new features from both branches by merging documentation sections, choosing the more robust algorithm implementations, and using comprehensive test suites while maintaining API compatibility with existing consumers.",
-  "strategyUsed": "docs/components.md: merged all sections from both branches (ComparisonView from HEAD, plus filterDrinks/FilterBar/SearchBox/ComparisonPanel/NutritionBar/CarCard/CatalogPage/useCarCatalog from origin/main); DrinkCatalog.test.tsx: used origin/main's more relaxed regex patterns for aria-label matching; useComparison.ts: used origin/main's cleaner two-useState implementation with winnerFor helper, but kept 'winners' property name to match existing ComparePage.tsx consumer; useComparison.test.ts: used origin/main's comprehensive test suite (17 tests covering initial state, selection, empty winners, winner logic, ties, reactivity) adapted to use 'winners' property name; eraMatchSuggestion.ts: used origin/main's superior algorithm that exports yearToDecade helper and falls back to nearest-year when no eraRivals match; eraMatchSuggestion.test.ts: used origin/main's comprehensive test suite covering yearToDecade, curated eraRivals precedence, nearest-year fallback, and edge cases"
+  "filesResolved": 1,
+  "summary": "Resolved a 'deleted by them' conflict on .claude-output.json by accepting the deletion from main, as this file is a transient CI/CD workflow artifact that was appropriately cleaned up on the main branch.",
+  "strategyUsed": "accepted deletion from main (theirs) for .claude-output.json — the file is a workflow metadata artifact generated during a previous AI-assisted PR task and has no place in the persistent repository history"
 }
