@@ -6,22 +6,95 @@ Documentation for the ASGI middleware stack used by the FileGuard API gateway.
 
 ## Overview
 
-The FileGuard API applies two middleware layers in sequence on every incoming request:
+The FileGuard API applies three middleware layers in sequence on every incoming request:
 
 ```
 Request
   │
   ▼
-AuthMiddleware          — validates Bearer token; attaches TenantConfig to request.state
+RequestLoggingMiddleware — extracts/generates correlation ID; logs structured JSON after response
   │
   ▼
-RateLimitMiddleware     — enforces per-tenant sliding window rate limit via Redis
+AuthMiddleware           — validates Bearer token; attaches TenantConfig to request.state
   │
   ▼
-Route handler           — scan endpoint, batch endpoint, etc.
+RateLimitMiddleware      — enforces per-tenant sliding window rate limit via Redis
+  │
+  ▼
+Route handler            — scan endpoint, batch endpoint, etc.
 ```
 
-Both middleware modules live in `fileguard/api/middleware/`.
+All middleware modules live in `fileguard/api/middleware/`.
+
+---
+
+## RequestLoggingMiddleware
+
+**File:** `fileguard/api/middleware/logging.py`
+
+Logs every HTTP request as a structured JSON record at `INFO` level, enriched with
+a correlation ID and tenant context.
+
+### Correlation ID
+
+The middleware inspects the following request headers in priority order:
+
+1. `X-Correlation-ID`
+2. `X-Request-ID`
+
+If neither header is present, a UUID v4 is generated for the request.
+
+The resolved correlation ID is:
+
+* Written to `request.state.correlation_id` so that downstream handlers
+  (including `AuditService.log_scan_event`) can include it without re-parsing headers.
+* Echoed back to the caller in the `X-Correlation-ID` response header.
+
+### Log entry format
+
+One JSON record is emitted at `INFO` level per request after the response has been produced:
+
+```json
+{
+  "event": "http_request",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenant_id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+  "method": "POST",
+  "path": "/v1/scan",
+  "status_code": 200,
+  "duration_ms": 42.7
+}
+```
+
+| Field | Description |
+|---|---|
+| `event` | Always `"http_request"` |
+| `correlation_id` | Propagated or generated identifier for end-to-end tracing |
+| `tenant_id` | UUID of the authenticated tenant; `null` for public/unauthenticated paths |
+| `method` | HTTP method (`GET`, `POST`, etc.) |
+| `path` | URL path (without query string) |
+| `status_code` | HTTP response status code |
+| `duration_ms` | Wall-clock request duration in milliseconds (float, rounded to 2 dp) |
+
+### Registration
+
+`RequestLoggingMiddleware` must be the **outermost** middleware so it wraps the
+full request–response cycle and can read `request.state.tenant` after
+`AuthMiddleware` has populated it.
+
+In Starlette, `add_middleware` calls are processed in **reverse** order, so the
+last call becomes the outermost layer:
+
+```python
+from fileguard.api.middleware.auth import AuthMiddleware
+from fileguard.api.middleware.logging import RequestLoggingMiddleware
+from fileguard.api.middleware.rate_limit import RateLimitMiddleware
+
+# Registration order (reverse = execution order):
+app.add_middleware(RateLimitMiddleware, redis_client=redis_client)  # innermost
+app.add_middleware(AuthMiddleware)
+app.add_middleware(RequestLoggingMiddleware)                         # outermost — runs first
+```
 
 ---
 
@@ -146,19 +219,11 @@ remain fail-secure (worker crashes result in `rejected` verdicts, not pass-throu
 
 ### Registering the middleware
 
+See the `RequestLoggingMiddleware` registration example above for the full
+three-layer stack. For the rate-limiter alone:
+
 ```python
-from redis.asyncio import Redis
-from fileguard.api.middleware.auth import AuthMiddleware
-from fileguard.api.middleware.rate_limit import RateLimitMiddleware
-
-redis_client = Redis.from_url(str(settings.redis_url))
-
-# Registration order: RateLimitMiddleware first, AuthMiddleware second.
-# Starlette processes middleware in reverse registration order, so AuthMiddleware
-# runs first (setting request.state.tenant) and RateLimitMiddleware runs second
-# (reading request.state.tenant).
 app.add_middleware(RateLimitMiddleware, redis_client=redis_client)
-app.add_middleware(AuthMiddleware)
 ```
 
 ---
@@ -187,12 +252,25 @@ Pydantic model representing a tenant's configuration as loaded from the database
 ## Running tests
 
 ```bash
-pip install -e ".[test]"
-pytest tests/unit/test_rate_limit.py -v
+pip install -e ".[dev]"
+pytest tests/unit/ -v
 ```
 
-Tests use `unittest.mock` to simulate Redis responses without requiring a live Redis
-instance. The test suite covers:
+All tests are fully offline — no database, Redis, or external services required.
+
+**`test_logging_middleware.py`** covers:
+
+- Correlation ID extracted from `X-Correlation-ID` header
+- Correlation ID extracted from `X-Request-ID` header (fallback)
+- UUID v4 generated when no correlation header is present
+- `X-Correlation-ID` takes priority over `X-Request-ID`
+- Correlation ID stored on `request.state.correlation_id`
+- Correlation ID echoed in `X-Correlation-ID` response header
+- Structured JSON log emitted once per request with all required fields
+- `tenant_id` populated from `request.state.tenant` when set
+- `tenant_id` is `null` for unauthenticated / public paths
+
+**`test_rate_limit.py`** covers:
 
 - Within-limit requests (200 with rate limit headers)
 - Rate limit exceeded (429 with Retry-After)
