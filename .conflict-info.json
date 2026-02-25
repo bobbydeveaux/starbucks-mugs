@@ -3,7 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/129-tripwire-cybersecurity-tool-sprint-1-issue-129",
   "conflictedFiles": [
-    "go.mod"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }
