@@ -39,7 +39,7 @@ export function CarCard({ car, isSelected, onSelect }: CarCardProps) {
       {/* Car image */}
       <div className="aspect-video w-full overflow-hidden rounded-t-lg bg-gray-100">
         <img
-          src={car.imageUrl}
+          src={car.image}
           alt={`${car.model} ${car.year}`}
           className="h-full w-full object-cover"
           loading="lazy"

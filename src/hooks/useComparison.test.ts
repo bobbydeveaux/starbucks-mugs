@@ -13,7 +13,7 @@ const ferrari: CarModel = {
   model: 'Testarossa',
   year: 1984,
   decade: 1980,
-  imageUrl: '/images/ferrari/testarossa.jpg',
+  image: '/images/ferrari/testarossa.jpg',
   price: 87000,
   specs: {
     hp: 390,
@@ -31,7 +31,7 @@ const lambo: CarModel = {
   model: 'Countach LP500S',
   year: 1982,
   decade: 1980,
-  imageUrl: '/images/lambo/countach-lp500s.jpg',
+  image: '/images/lambo/countach-lp500s.jpg',
   price: 100000,
   specs: {
     hp: 375,

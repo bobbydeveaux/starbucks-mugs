@@ -13,7 +13,7 @@ function makeCar(overrides: Partial<CarModel> & { id: string; year: number }): C
     model: overrides.model ?? overrides.id,
     year: overrides.year,
     decade: Math.floor(overrides.year / 10) * 10,
-    imageUrl: '/images/placeholder.jpg',
+    image: '/images/placeholder.jpg',
     specs: {
       hp: 400,
       torqueLbFt: 300,
