@@ -19,6 +19,9 @@ import (
 	"github.com/tripwire/agent/internal/config"
 )
 
+// networkPollInterval is how frequently the NetworkWatcher polls /proc/net/*.
+const networkPollInterval = time.Second
+
 func main() {
 	configPath := flag.String("config", "/etc/tripwire/config.yaml", "path to the TripWire agent YAML configuration file")
 	flag.Parse()
@@ -41,11 +44,19 @@ func main() {
 		slog.String("health_addr", cfg.HealthAddr),
 	)
 
-	// Create agent orchestrator.
-	// Real watcher/queue/transport implementations are registered here as
-	// they are developed in subsequent sprints. For now the agent runs
-	// without watchers (no-op mode) which is valid for the healthz check.
-	ag := agent.New(cfg, logger)
+	// Create agent orchestrator with all registered watchers.
+	var agentOpts []agent.Option
+
+	// Instantiate a NetworkWatcher for all NETWORK-type rules.  The watcher
+	// silently filters non-NETWORK rules, so it is always safe to create.
+	netWatcher, err := agent.NewNetworkWatcher(cfg.Rules, logger, networkPollInterval)
+	if err != nil {
+		logger.Error("failed to create network watcher", slog.Any("error", err))
+		os.Exit(1)
+	}
+	agentOpts = append(agentOpts, agent.WithWatchers(netWatcher))
+
+	ag := agent.New(cfg, logger, agentOpts...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
