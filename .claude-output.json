@@ -17,7 +17,10 @@
   "docsReviewed": [
     "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
     "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
-    "docs/concepts/tripwire-cybersecurity-tool/PRD.md"
+    "docs/concepts/tripwire-cybersecurity-tool/PRD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/ROAM.md",
+    "docs/concepts/tripwire-cybersecurity-tool/agent-configuration.md",
+    "docs/concepts/tripwire-cybersecurity-tool/storage.md"
   ],
   "completedTasks": [1, 2, 3]
 }

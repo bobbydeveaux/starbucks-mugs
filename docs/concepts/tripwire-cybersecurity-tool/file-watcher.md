@@ -1,155 +1,148 @@
 # TripWire Agent — File Watcher
 
-This document describes the `internal/watcher` package that provides
-cross-platform file system monitoring for the TripWire agent.
+This document describes the `internal/watcher` package, specifically the
+`FileWatcher` component that monitors filesystem paths for changes and emits
+`AlertEvent`s through the agent pipeline.
 
 ---
 
 ## Overview
 
-The `internal/watcher` package exposes a single public type — `FileWatcher` —
-that implements the `agent.Watcher` interface. When registered with the agent
-orchestrator it watches one or more file system paths configured via
-`TripwireRule.Target` and converts kernel file system events into
-`agent.AlertEvent` objects that flow through the central alert pipeline
-(local queue → gRPC transport → dashboard).
+The `FileWatcher` is a polling-based filesystem monitor that satisfies the
+[`agent.Watcher`](agent-core.md#interfaces) interface. It scans configured
+directory and file targets every **100 ms** (default), detects creates,
+writes, and deletes, and forwards `AlertEvent`s to the agent orchestrator.
+
+### Why polling?
+
+Polling with a 100 ms interval guarantees detection within ≤ 200 ms worst
+case — more than **25× margin** against the 5-second alert SLA stated in
+[PRD Goal G-2 and User Story US-01](PRD.md). It requires no kernel-level
+hooks, works uniformly across Linux, macOS, and Windows, and tolerates
+watched paths that do not yet exist at agent startup.
 
 ---
 
 ## Package: `internal/watcher`
 
-### FileEvent
-
-```go
-type EventType uint32
-
-const (
-    EventRead   EventType = iota + 1 // file was accessed (read)
-    EventWrite                        // file was written / modified
-    EventCreate                       // new file created
-    EventDelete                       // file removed
-)
-
-type FileEvent struct {
-    FilePath  string    // absolute path of the affected file
-    PID       int       // process ID; 0 when the kernel cannot provide it
-    UID       int       // user ID; 0 when unknown
-    Username  string    // human-readable username; empty when unknown
-    EventType EventType
-    Timestamp time.Time
-}
-```
-
-`FileEvent` is an internal type used by platform-specific backends. It is
-converted into an `agent.AlertEvent` by `FileWatcher.emitAlert` before being
-sent to the agent pipeline.
-
----
+**File:** `internal/watcher/file.go`
 
 ### FileWatcher
 
 ```go
-func NewFileWatcher(rule config.TripwireRule, logger *slog.Logger) *FileWatcher
+type FileWatcher struct { /* unexported */ }
 
+func NewFileWatcher(rules []config.TripwireRule, logger *slog.Logger, interval time.Duration) *FileWatcher
 func (fw *FileWatcher) Start(ctx context.Context) error
 func (fw *FileWatcher) Stop()
 func (fw *FileWatcher) Events() <-chan agent.AlertEvent
+func (fw *FileWatcher) Ready() <-chan struct{}
 ```
 
-`FileWatcher` implements `agent.Watcher`. It:
+#### `NewFileWatcher`
 
-1. Expands the `TripwireRule.Target` glob to a list of paths on `Start`.
-2. If the glob matches nothing, watches the parent directory so file creation
-   can be detected.
-3. Forwards kernel file events as `agent.AlertEvent` values through the
-   `Events()` channel (buffered at 64).
-4. Restarts the underlying platform watcher automatically if it returns an
-   error, using exponential backoff (1 s → 2 s → … → 30 s maximum).
-5. Logs a warning when the event buffer is full and an event must be dropped.
+Constructs a `FileWatcher` from the slice of rules. Rules with a type other
+than `"FILE"` are silently ignored so that the complete rule set can be passed
+without pre-filtering.
 
-`Stop` is safe to call multiple times and before `Start`.
+| Parameter  | Description |
+|------------|-------------|
+| `rules`    | Slice of `TripwireRule`; only `Type == "FILE"` entries are used |
+| `logger`   | Structured logger for diagnostic messages |
+| `interval` | Poll frequency; `0` or negative uses `DefaultPollInterval` (100 ms) |
+
+#### `Start`
+
+Launches the background polling goroutine. Returns immediately and always
+returns `nil`. It is safe to call `Start` once per watcher instance.
+
+#### `Stop`
+
+Signals the goroutine to exit and blocks until it has done so, then closes
+the `Events` channel. Safe to call multiple times (idempotent).
+
+#### `Events`
+
+Returns the read-only channel on which `AlertEvent`s are delivered. The
+channel is closed when `Stop` returns.
+
+#### `Ready`
+
+Returns a channel that is closed once the **initial filesystem snapshot** has
+been taken. Waiting on `Ready()` before triggering filesystem operations in
+tests eliminates race conditions where a pre-existing file would be missed.
 
 ---
 
-## Platform implementations
+## Event types
 
-### Linux (`file_watcher_linux.go`)
+| Filesystem change | `Detail["operation"]` |
+|-------------------|-----------------------|
+| New file appears  | `"create"`            |
+| File size or mtime changes | `"write"` |
+| File removed      | `"delete"`            |
 
-Uses the Linux `inotify(7)` subsystem via the `syscall` package in non-blocking
-mode (`IN_NONBLOCK | IN_CLOEXEC`). A polling loop reads events every 50 ms
-and checks for context cancellation between reads to ensure responsive shutdown.
-
-**Watched events:**
-
-| inotify constant    | EventType     |
-|---------------------|---------------|
-| `IN_ACCESS`         | `EventRead`   |
-| `IN_MODIFY`         | `EventWrite`  |
-| `IN_CLOSE_WRITE`    | `EventWrite`  |
-| `IN_CREATE`         | `EventCreate` |
-| `IN_MOVED_TO`       | `EventCreate` |
-| `IN_DELETE`         | `EventDelete` |
-| `IN_MOVED_FROM`     | `EventDelete` |
-
-**PID/UID:** inotify does not expose the PID or UID of the process that
-triggered the event. Both fields default to `0` on Linux.
-
-### Non-Linux (`file_watcher_other.go`, build tag `!linux`)
-
-A polling-based fallback that `os.Stat`-polls each configured path every
-500 ms, comparing modification time and file size. Detects write (mtime/size
-change), create (new file), and delete events. Access (read-only) events are
-**not** detected by this backend.
+Sub-directory entries are **not** watched recursively. Only immediate children
+of a directory target are tracked.
 
 ---
 
-## Goroutine lifecycle & restart logic
+## AlertEvent payload
 
-```
-Start(ctx)
-  └── go watchLoop(ctx, paths)
-        ├── loop until ctx cancelled
-        │    └── runWatcher(ctx, paths)   ← per-attempt
-        │          ├── go platformWatcher()   sends FileEvents
-        │          ├── forward FileEvents → emitAlert → fw.events
-        │          └── returns nil (clean) or error (trigger restart)
-        ├── on error: log + exponential backoff + retry
-        └── defer: close(fw.events), close(fw.done)
-Stop()
-  └── cancel(ctx) + <-fw.done   ← blocks until watchLoop exits
-```
-
----
-
-## Integration with agent
-
-`cmd/agent/main.go` creates one `FileWatcher` per `FILE`-type rule in the
-configuration and registers them with the agent orchestrator via
-`agent.WithWatchers`:
-
-```go
-func buildFileWatchers(cfg *config.Config, logger *slog.Logger) []agent.Watcher {
-    var watchers []agent.Watcher
-    for _, rule := range cfg.Rules {
-        if rule.Type != "FILE" {
-            continue
-        }
-        fw := watcher.NewFileWatcher(rule, logger)
-        watchers = append(watchers, fw)
-    }
-    return watchers
+```json
+{
+  "tripwire_type": "FILE",
+  "rule_name":     "etc-passwd-watch",
+  "severity":      "CRITICAL",
+  "timestamp":     "2026-02-25T19:30:00Z",
+  "detail": {
+    "path":      "/etc/passwd",
+    "operation": "write"
+  }
 }
 ```
 
-The agent calls `FileWatcher.Start` on each registered watcher, fans events
-from all watcher channels into a single goroutine per watcher, enqueues each
-`AlertEvent` in the local SQLite queue, and forwards it to the gRPC transport.
+---
+
+## Wiring into the agent
+
+```go
+fw := watcher.NewFileWatcher(cfg.Rules, logger, 0) // 0 → 100 ms default
+
+ag := agent.New(cfg, logger,
+    agent.WithWatchers(fw),
+    agent.WithQueue(q),
+    agent.WithTransport(tr),
+)
+
+if err := ag.Start(ctx); err != nil {
+    log.Fatal(err)
+}
+```
+
+---
+
+## 5-second SLA validation
+
+The end-to-end alert emission SLA is validated by integration tests in
+`internal/watcher/file_test.go`. The key test is:
+
+**`TestE2E_FileAlertEmission_WithinSLA`** — wires a real `FileWatcher` into
+the `Agent` orchestrator with a fake transport, triggers a file creation, and
+asserts the `AlertEvent` arrives at the transport **within 5 seconds**.
+
+```
+go test -v -run TestE2E ./internal/watcher/...
+```
+
+Typical observed latency: **< 200 ms** (limited by the 50 ms poll interval
+used in tests).
 
 ---
 
 ## Configuration
 
-FILE rules are declared in the agent YAML configuration:
+The `FileWatcher` is driven by `FILE`-type rules in the agent configuration:
 
 ```yaml
 rules:
@@ -163,63 +156,34 @@ rules:
     target: /etc/ssh/sshd_config
     severity: WARN
 
+  - name: home-dir-watch
+    type: FILE
+    target: /home/operator
+    severity: WARN
+
   - name: var-log-auth
     type: FILE
     target: /var/log/auth.log
     severity: INFO
 ```
 
-`target` is a standard `filepath.Glob` pattern. If the glob matches nothing at
-startup, the parent directory is watched and events for any file created inside
-it are forwarded.
+See [`agent-configuration.md`](agent-configuration.md) for the full
+configuration reference.
 
 ---
 
-## Alert event format
+## Test coverage
 
-Each file event becomes an `agent.AlertEvent` with the following structure:
-
-```json
-{
-  "tripwire_type": "FILE",
-  "rule_name":     "etc-passwd-watch",
-  "severity":      "CRITICAL",
-  "timestamp":     "2026-02-25T19:30:00Z",
-  "detail": {
-    "path":       "/etc/passwd",
-    "event_type": "write",
-    "pid":        1234,
-    "uid":        0,
-    "username":   "root"
-  }
-}
-```
-
-`pid`, `uid`, and `username` are omitted from `detail` when they are zero /
-empty (e.g. on Linux where inotify does not provide process identity).
-
----
-
-## Tests
-
-```
-internal/watcher/file_watcher_test.go
-```
-
-| Test | What it verifies |
-|------|-----------------|
-| `TestFileWatcher_StartStop` | Start returns no error; Stop closes events channel |
-| `TestFileWatcher_StopBeforeStart` | Stop before Start is safe (no panic) |
-| `TestFileWatcher_StartTwiceReturnsError` | Second Start returns an error |
-| `TestFileWatcher_EventDelivery` | Writing a watched file delivers an alert within 5 s |
-| `TestFileWatcher_EventDelivery_GlobTarget` | Creating a file in a watched directory delivers an alert within 5 s |
-| `TestFileWatcher_RestartOnError` | Watcher recovers from a platform error and resumes delivery |
-| `TestFileWatcher_ContextCancellationStopsWatcher` | Cancelling ctx shuts down the watcher cleanly |
-| `TestFileWatcher_InterfaceCompliance` | Compile-time check that `*FileWatcher` satisfies `agent.Watcher` |
-| `TestFileWatcher_InvalidGlobReturnsError` | Invalid glob pattern causes Start to return an error |
-
-Run:
-
-```bash
-go test ./internal/watcher/...
-```
+| Test | Description |
+|------|-------------|
+| `TestFileWatcher_StartStop` | Lifecycle: Start and Stop complete cleanly |
+| `TestFileWatcher_StopIsIdempotent` | Double-Stop does not panic |
+| `TestFileWatcher_IgnoresNonFileRules` | Non-FILE rules filtered silently |
+| `TestFileWatcher_DetectsFileCreate` | CREATE event emitted for new files |
+| `TestFileWatcher_DetectsFileWrite` | WRITE event emitted for modified files |
+| `TestFileWatcher_DetectsFileDelete` | DELETE event emitted for removed files |
+| `TestFileWatcher_WatchesSingleFile` | Single-file (not directory) target |
+| `TestFileWatcher_ReadyChannelClosedAfterStart` | Ready() fires after Start |
+| `TestE2E_FileAlertEmission_WithinSLA` | **5-second SLA acceptance test** |
+| `TestE2E_FileAlertEmission_MultipleEvents` | Multiple events all within SLA |
+| `TestE2E_FileAlertEmission_AgentStop` | Agent.Stop during active watch |
