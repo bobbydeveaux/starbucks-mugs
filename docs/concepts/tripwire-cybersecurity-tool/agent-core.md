@@ -169,85 +169,104 @@ type HealthStatus struct {
 
 **File:** `internal/agent/network_watcher.go`
 
-`NetworkWatcher` implements the `Watcher` interface and monitors
-`/proc/net/tcp` for new inbound TCP connections on configured ports.  It
-requires no elevated OS capabilities (`CAP_NET_RAW` or `CAP_NET_ADMIN`) and
-works by polling the proc filesystem at a configurable interval (default 1 s).
+`NetworkWatcher` implements the `Watcher` interface for NETWORK-type tripwire
+rules.  It polls `/proc/net/tcp` and `/proc/net/tcp6` on a configurable
+interval, compares each snapshot against the previous one, and emits an
+`AlertEvent` whenever a new TCP ESTABLISHED connection is detected on a
+monitored local port.
 
-### ConnEntry
+### Key types
 
 ```go
+// ConnKey uniquely identifies an active network connection.
+type ConnKey struct {
+    LocalAddr  string // "ip:port"
+    RemoteAddr string // "ip:port"
+    Protocol   string // "tcp" or "tcp6"
+}
+
+// ProcReader returns the current set of established connections.
+// The default implementation reads /proc/net/tcp*; inject a stub in tests.
+type ProcReader func() (map[ConnKey]struct{}, error)
+
+// ConnEntry is returned by ParseProcNetFile.
 type ConnEntry struct {
-    LocalAddr  string // IP in dotted-decimal form
-    LocalPort  int
-    RemoteAddr string // IP in dotted-decimal form
-    RemotePort int
-    State      int    // 1 = ESTABLISHED, 10 = LISTEN, etc.
+    LocalAddr  string
+    RemoteAddr string
+    Protocol   string
 }
 ```
 
-### ProcNetReader interface
+### Constructors
 
 ```go
-type ProcNetReader interface {
-    ReadTCP() ([]ConnEntry, error)
-    ReadUDP() ([]ConnEntry, error)
-}
-```
-
-The default implementation reads from `/proc/net/tcp`.  An alternative reader
-can be injected via `WithProcNetReader` for unit testing.
-
-### Constructor
-
-```go
+// NewNetworkWatcher uses the real /proc/net/tcp* reader.
 func NewNetworkWatcher(
-    rules  []config.TripwireRule,
-    logger *slog.Logger,
-    opts   ...NetworkWatcherOption,
-) *NetworkWatcher
+    rules        []config.TripwireRule,
+    logger       *slog.Logger,
+    pollInterval time.Duration,
+) (*NetworkWatcher, error)
+
+// NewNetworkWatcherWithReader accepts an injectable ProcReader for testing.
+func NewNetworkWatcherWithReader(
+    rules        []config.TripwireRule,
+    logger       *slog.Logger,
+    pollInterval time.Duration,
+    reader       ProcReader,
+) (*NetworkWatcher, error)
 ```
 
-Only rules with `Type == "NETWORK"` are processed.  The `Target` field must be
-a decimal port number in `1–65535`; invalid values are logged and skipped.
-
-#### Functional options
-
-| Option | Description |
-|--------|-------------|
-| `WithPollInterval(d time.Duration)` | Override the default 1-second poll interval |
-| `WithProcNetReader(r ProcNetReader)` | Replace the real reader (for testing) |
+- Only `TripwireRule` entries with `Type == "NETWORK"` are compiled; other
+  types are silently skipped.
+- `Target` must be a valid port number in `[1, 65535]`; an error is returned
+  if it is not.
+- `pollInterval <= 0` defaults to 1 second.
 
 ### AlertEvent detail fields
 
-When a new inbound connection is detected, an `AlertEvent` is emitted with the
-following `Detail` keys (satisfying PRD US-04):
-
 | Key | Type | Description |
 |-----|------|-------------|
-| `source_ip` | `string` | Remote IP address of the connecting client |
-| `source_port` | `int` | Remote ephemeral port |
-| `dest_port` | `int` | Local monitored port |
-| `protocol` | `string` | Always `"tcp"` in the current implementation |
-| `direction` | `string` | Always `"inbound"` in the current implementation |
+| `local_addr` | `string` | Local "ip:port" of the connection |
+| `remote_addr` | `string` | Remote "ip:port" of the connection |
+| `protocol` | `string` | `"tcp"` or `"tcp6"` |
 
-### De-duplication and reconnection behaviour
-
-- A connection that persists across multiple polls generates **exactly one** alert.
-- When a connection closes (disappears from `/proc/net/tcp`) and a new
-  connection later appears on the same port from the same source, a **fresh**
-  alert is generated.
-
-### ParseProcNet
+### Low-level helpers (exported for testing)
 
 ```go
-func ParseProcNet(r io.Reader) ([]ConnEntry, error)
+// ParseProcNetFile parses a /proc/net/tcp or /proc/net/tcp6 file.
+// Returns only ESTABLISHED connections (socket state 0x01).
+func ParseProcNetFile(path, proto string) ([]ConnEntry, error)
+
+// HexToAddr decodes a /proc/net hex address ("XXXXXXXX:PPPP" or
+// "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:PPPP") into a "host:port" string.
+func HexToAddr(hexAddr string) (string, error)
 ```
 
-Exported parser for `/proc/net/tcp`-format content.  Reads the header line
-(skips it) then parses each subsequent data row.  IPv4 addresses are stored
-little-endian in the proc file and are reversed before being returned in
-dotted-decimal form.
+### How polling works
+
+1. Every `pollInterval` the watcher calls `ProcReader` to obtain the current
+   set of ESTABLISHED connections (`map[ConnKey]struct{}`).
+2. Entries in the current set that were **absent** from the previous snapshot
+   are classified as new connections.
+3. Each new connection is checked against every compiled rule.  A match on
+   local port fires an `AlertEvent` into the buffered events channel.
+4. The previous snapshot is replaced by the current one, so persistent
+   connections never re-fire.
+5. If the reader returns an error the poll is skipped and the previous snapshot
+   is retained; monitoring resumes on the next tick.
+
+### Lifecycle
+
+```
+NewNetworkWatcher → Start(ctx) → polling goroutine begins
+                 → Stop()      → goroutine exits, Events() channel closed
+```
+
+`Stop()` is idempotent and safe to call multiple times.  Monitoring also stops
+when the context passed to `Start` is cancelled.
+
+If no NETWORK rules are configured the goroutine exits immediately after
+`Start`, closing the events channel with no polls performed.
 
 ---
 
@@ -290,6 +309,18 @@ The agent does **not** bind to external interfaces for this endpoint.
 ```
 
 `last_alert_at` is omitted when no alert has been processed since agent start.
+
+---
+
+## Package: `internal/watcher`
+
+The `FileWatcher` in `internal/watcher/file.go` implements the `Watcher`
+interface by polling the filesystem every 100 ms (configurable). It detects
+file creates, writes, and deletes on the paths defined by `FILE`-type
+tripwire rules.
+
+See [`file-watcher.md`](file-watcher.md) for the full FileWatcher reference
+and end-to-end SLA test documentation.
 
 ---
 
