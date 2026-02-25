@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 2,
-  "summary": "Resolved 2 metadata-only conflicts in .claude-resolution.json and .conflict-info.json for PR #207. The actual source code changes (fileguard/core/__init__.py, fileguard/core/document_extractor.py, tests/unit/test_document_extractor.py, docs/concepts/fileguard/README.md) were already staged without conflicts. HEAD contained stale file-watcher resolution metadata from a prior run on this branch; origin/main contained stale DocumentExtractor metadata from PR #201 on a different branch.",
-  "strategyUsed": "For .claude-resolution.json: authored a fresh accurate summary since both sides contained stale descriptions from earlier resolutions on different branches/PRs. For .conflict-info.json: accepted HEAD version since it correctly reflects PR #207 on feature/119-tripwire-cybersecurity-tool-sprint-2-issue-119, whereas origin/main contained info about PR #201 on a different branch."
+  "summary": "Resolved 2 conflicts for PR #203. In cmd/agent/main.go, HEAD added a NetworkWatcher for NETWORK-type rules (Protocol/Direction feature) while origin/main added FileWatchers for FILE-type rules via buildFileWatchers(). Both watchers handle different rule types and were preserved together. The .claude-output.json file was deleted by origin/main and that deletion was accepted.",
+  "strategyUsed": "Preserved both changes: kept the NetworkWatcher instantiation from HEAD and added the FileWatcher registration from origin/main, using the shared agentOpts slice so both watcher types are registered with the agent. Accepted origin/main's deletion of .claude-output.json as it is a generated artifact not needed in the repo."
 }
