@@ -118,15 +118,17 @@ fileguard/              Python package (FastAPI application)
 │   └── middleware/
 │       ├── auth.py     Bearer-token authentication middleware
 │       └── rate_limit.py  Redis sliding-window rate limiting middleware
+├── core/
+│   └── document_extractor.py  Multi-format text extractor with thread-pool execution
 ├── models/
 │   ├── tenant_config.py  SQLAlchemy ORM model for tenant_config table
 │   ├── scan_event.py     SQLAlchemy ORM model for scan_event table (append-only)
 │   ├── batch_job.py      SQLAlchemy ORM model for batch_job table
 │   └── compliance_report.py  SQLAlchemy ORM model for compliance_report table
 ├── schemas/
-│   └── tenant.py       Pydantic TenantConfig schema (request.state.tenant)
+│   └── tenant.py         Pydantic TenantConfig schema (request.state.tenant)
 ├── services/
-│   └── audit.py        AuditService: HMAC-signed scan event persistence + SIEM forwarding
+│   └── audit.py          AuditService: HMAC-signed scan event persistence + SIEM forwarding
 └── db/
     ├── base.py         Declarative base shared by all ORM models
     └── session.py      SQLAlchemy async session factory
@@ -144,9 +146,10 @@ tests/
 ├── conftest.py         Shared fixtures (env vars, DB session)
 ├── test_smoke.py       Smoke tests for FastAPI skeleton, config, Redis, DB session
 ├── unit/
-│   ├── test_auth_middleware.py  Unit tests for auth middleware & schemas
-│   ├── test_rate_limit.py       Unit tests for Redis rate limiting middleware
-│   └── test_audit_service.py    Unit tests for AuditService (HMAC, SIEM, DB mock)
+│   ├── test_auth_middleware.py       Unit tests for auth middleware & schemas
+│   ├── test_rate_limit.py            Unit tests for Redis rate limiting middleware
+│   ├── test_audit_service.py         Unit tests for AuditService (HMAC, SIEM, DB mock)
+│   └── test_document_extractor.py    Unit tests for DocumentExtractor
 └── integration/
     └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
 
@@ -155,6 +158,49 @@ requirements.txt        Python dependencies
 alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
 ```
+
+## Document Extraction
+
+`fileguard/core/document_extractor.py` provides the `DocumentExtractor` class
+for multi-format text extraction used during the file scan pipeline.
+
+### Supported formats
+
+| Format        | MIME type                                                                    |
+|---------------|------------------------------------------------------------------------------|
+| PDF           | `application/pdf`                                                            |
+| DOCX          | `application/vnd.openxmlformats-officedocument.wordprocessingml.document`    |
+| CSV           | `text/csv`                                                                   |
+| JSON          | `application/json`                                                           |
+| Plain text    | `text/plain`                                                                 |
+| ZIP (recursive) | `application/zip`                                                          |
+
+### Thread-pool execution
+
+All CPU-bound extraction is dispatched to a `ThreadPoolExecutor` via
+`asyncio.get_running_loop().run_in_executor()`, keeping the asyncio event loop
+unblocked.  The pool size is controlled by `THREAD_POOL_WORKERS` (default: 4).
+
+### Usage
+
+```python
+from fileguard.core.document_extractor import DocumentExtractor
+
+extractor = DocumentExtractor()          # uses settings.THREAD_POOL_WORKERS
+
+result = await extractor.extract(file_bytes, "application/pdf")
+print(result.text)                       # normalised text
+
+for entry in result.offsets:
+    span = result.text[entry.text_start:entry.text_end]
+    print(f"bytes {entry.byte_start}–{entry.byte_end}: {span!r}")
+```
+
+### Error handling
+
+`ExtractionError` is raised for unsupported MIME types or corrupt/malformed
+files.  ZIP members that fail extraction are skipped with a warning log — one
+corrupt member does not abort the whole archive.
 
 ## AuditService
 

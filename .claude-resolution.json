@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved 2 metadata-only conflicts in .claude-resolution.json and .conflict-info.json for PR #197. Both files contained stale AI-assisted merge metadata from prior resolutions on different branches. No source code conflicts were present; the other staged files (docs, audit.py, pyproject.toml, integration tests) were already merged without conflicts.",
-  "strategyUsed": "Wrote fresh resolution metadata reflecting the current merge state (PR #197, 2 conflicted metadata files). HEAD described resolving file-watcher doc conflicts; origin/main described resolving PR #193 metadata conflicts. Since both were stale descriptions of earlier resolutions, a new accurate summary was authored. For .conflict-info.json, the HEAD version (prNumber: 197, headBranch: feature/161-tripwire-cybersecurity-tool-sprint-2-issue-161) was used as it correctly identifies this PR."
+  "filesResolved": 3,
+  "summary": "Resolved 3 metadata-only conflicts in .claude-output.json, .claude-resolution.json, and .conflict-info.json for PR #201. The actual source code changes (internal/watcher package, cmd/agent/main.go, docs) were already merged without conflicts. HEAD contained stale FileGuard DocumentExtractor metadata from a prior branch; origin/main contained the correct file-watcher integration metadata matching the staged files.",
+  "strategyUsed": "For .claude-output.json: chose origin/main version — it correctly describes the file watcher integration changes (internal/watcher package, cmd/agent/main.go, docs) that are staged on this branch, whereas HEAD contained unrelated DocumentExtractor metadata. For .claude-resolution.json: authored a fresh accurate summary since both sides contained stale descriptions from earlier resolutions on different branches. For .conflict-info.json: staged as-is since it already contained no conflict markers and correctly reflected PR #201."
 }

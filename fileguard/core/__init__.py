@@ -1,0 +1,1 @@
+# fileguard.core — pipeline components
