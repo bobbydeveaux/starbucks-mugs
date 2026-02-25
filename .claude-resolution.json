@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by keeping the HEAD version, which contains the branch-specific metadata for feature/172-fileguard-sprint-2-issue-172 (fileguard AuditService with HMAC-SHA256 signing). The origin/main version contained output from a different already-merged PR (TripWire audit logger, issue #169), which is not relevant to this branch.",
-  "strategyUsed": "chose ours (HEAD) — the conflicted file is a branch-specific Claude output metadata file; HEAD contains the correct data for this PR (issue #172, fileguard sprint 2), while origin/main contained stale output from a different merged PR (issue #169)"
+  "filesResolved": 3,
+  "summary": "Resolved 3 metadata-only conflicts resulting from a merge of origin/main (which included the fileguard AuditService PR #190) into feature/123-tripwire-cybersecurity-tool-sprint-2-issue-123. All conflicts were in AI-generated metadata files (.claude-output.json, .claude-resolution.json, .conflict-info.json), not in source code. The fileguard AuditService files (fileguard/services/audit.py, fileguard/services/__init__.py, tests/unit/test_audit_service.py, docs/concepts/fileguard/audit.md) merged cleanly as new files.",
+  "strategyUsed": "For .claude-output.json: kept HEAD (NetworkWatcher PR #188 metadata) since this is the feature/123 branch and HEAD correctly describes the work done in this PR. For .claude-resolution.json: wrote fresh metadata reflecting the current resolution. For .conflict-info.json: the working tree already contained the correctly auto-merged content (PR #188, 3 conflicted metadata files) — staged as-is."
 }
