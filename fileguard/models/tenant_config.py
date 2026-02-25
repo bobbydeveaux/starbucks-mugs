@@ -1,10 +1,11 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from fileguard.db.session import Base
+from fileguard.db.base import Base
 
 
 class TenantConfig(Base):
@@ -23,6 +24,7 @@ class TenantConfig(Base):
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
+        server_default=func.gen_random_uuid(),
     )
 
     # API key authentication: bcrypt hash of the raw API key
@@ -40,3 +42,24 @@ class TenantConfig(Base):
     custom_patterns: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     webhook_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     siem_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    # Relationships
+    scan_events: Mapped[list["ScanEvent"]] = relationship(  # noqa: F821
+        "ScanEvent", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    batch_jobs: Mapped[list["BatchJob"]] = relationship(  # noqa: F821
+        "BatchJob", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    compliance_reports: Mapped[list["ComplianceReport"]] = relationship(  # noqa: F821
+        "ComplianceReport", back_populates="tenant", cascade="all, delete-orphan"
+    )
