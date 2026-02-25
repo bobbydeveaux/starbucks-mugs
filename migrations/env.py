@@ -2,45 +2,59 @@ import asyncio
 import os
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
+# Import Base and all models so Alembic autogenerate can detect them
+from fileguard.db.base import Base
+import fileguard.models  # noqa: F401 – registers all ORM models on Base.metadata
 
-# Alembic Config object, provides access to values within alembic.ini
+# Alembic Config object providing access to values in alembic.ini
 config = context.config
 
-# Interpret the config file for Python logging
+# Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url from environment variable if present
-database_url = os.getenv("DATABASE_URL")
-if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+# Target metadata for autogenerate support
+target_metadata = Base.metadata
 
-# Import models metadata for autogenerate support
-# from fileguard.db.session import Base
-# target_metadata = Base.metadata
-target_metadata = None
+# Override sqlalchemy.url from environment if available (12-factor app)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
+    """Run migrations in 'offline' mode.
+
+    This configures the context with just a URL and not an Engine;
+    calls to context.execute() emit the given string to the script output.
+    """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
+
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
+    )
+
     with context.begin_transaction():
         context.run_migrations()
 
@@ -52,8 +66,10 @@ async def run_async_migrations() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+
     await connectable.dispose()
 
 

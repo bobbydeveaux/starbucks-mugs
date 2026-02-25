@@ -1,0 +1,147 @@
+# TripWire Agent Configuration
+# Copy this file to /etc/tripwire/config.yaml and edit for your environment.
+# Start the agent with: tripwire start --config /etc/tripwire/config.yaml
+# Validate config without starting: tripwire validate --config /etc/tripwire/config.yaml
+
+# ── Agent identity ───────────────────────────────────────────────────────────
+# hostname: web-01          # defaults to the system hostname when omitted
+# agent_version: "1.0.0"   # set at build time; override only for testing
+
+# ── Dashboard connection ─────────────────────────────────────────────────────
+dashboard:
+  # gRPC server address (host:port).
+  endpoint: "dashboard.example.com:9443"
+
+  # mTLS credentials — all three files are required.
+  tls:
+    # Operator CA certificate that signed both the dashboard server cert
+    # and this agent's client certificate.
+    ca_cert: /etc/tripwire/certs/ca.crt
+
+    # This agent's client certificate (PEM).  The CN must equal the hostname
+    # used to identify this agent on the dashboard.
+    agent_cert: /etc/tripwire/certs/agent.crt
+
+    # This agent's private key (PEM, mode 0600).
+    agent_key: /etc/tripwire/certs/agent.key
+
+  # Exponential backoff for dashboard reconnection.
+  reconnect_delay: 5s       # initial delay (doubles on each failure)
+  reconnect_max_delay: 5m   # upper bound for backoff
+  dial_timeout: 30s         # per-attempt timeout
+
+# ── Local alert queue (SQLite) ───────────────────────────────────────────────
+# Alerts are buffered here when the dashboard is unreachable and flushed
+# automatically on reconnection (at-least-once delivery guarantee).
+queue:
+  path: /var/lib/tripwire/queue.db
+  max_depth: 10000    # 0 = unlimited; INFO events are shed first when full
+  flush_interval: 5s  # how often to attempt to drain queued alerts
+
+# ── Audit log (SHA-256 chained) ──────────────────────────────────────────────
+# Append-only file where every entry stores SHA-256(prev_hash ‖ payload).
+# Tamper detection runs on read.  The file is never automatically truncated.
+audit:
+  path: /var/log/tripwire/audit.log
+  max_size_bytes: 0  # 0 = unlimited; agent emits WARN when this is exceeded
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+logging:
+  level: info          # debug | info | warn | error
+  format: json         # json | console
+  # file_path: /var/log/tripwire/agent.log   # optional; logs also go to stdout
+
+# ── Health endpoint ───────────────────────────────────────────────────────────
+# GET /healthz → {"status":"ok","uptime_s":N,"queue_depth":N,"last_alert_at":"<rfc3339>"}
+health:
+  enabled: true
+  address: "127.0.0.1:9090"  # loopback-only by default
+
+# ── Tripwire rules ────────────────────────────────────────────────────────────
+# At least one rule (files, networks, or processes) must be defined.
+# Rule names must be unique within each rule type.
+# Severity: INFO | WARN | CRITICAL  (default: WARN when omitted)
+
+rules:
+  # ── Filesystem tripwires ──────────────────────────────────────────────────
+  # Monitors files and directories for access or modification events.
+  # Supported events: read, write, create, delete, rename, chmod
+  # Default events when omitted: [write, create, delete]
+  files:
+    - name: etc-passwd-watch
+      path: /etc/passwd
+      events: [read, write]
+      severity: CRITICAL
+
+    - name: etc-shadow-watch
+      path: /etc/shadow
+      events: [read, write]
+      severity: CRITICAL
+
+    - name: ssh-authorized-keys
+      path: /root/.ssh/authorized_keys
+      events: [write, create, delete, rename]
+      severity: CRITICAL
+
+    - name: var-www-watch
+      path: /var/www/html
+      recursive: true          # monitor all files within the directory tree
+      events: [write, create, delete]
+      severity: WARN
+
+    - name: cron-watch
+      path: /etc/cron.d
+      recursive: true
+      events: [write, create, delete, rename]
+      severity: WARN
+
+  # ── Network tripwires ─────────────────────────────────────────────────────
+  # Detects inbound or outbound connections on specified ports.
+  # Supported protocols: tcp | udp | both
+  # Supported directions: inbound | outbound | both  (default: inbound)
+  networks:
+    - name: ssh-honeypot
+      port: 2222
+      protocol: tcp
+      direction: inbound
+      severity: CRITICAL
+
+    - name: telnet-watch
+      port: 23
+      protocol: tcp
+      direction: inbound
+      severity: CRITICAL
+
+    - name: unexpected-outbound-dns
+      port: 53
+      protocol: udp
+      direction: outbound
+      severity: WARN
+
+  # ── Process tripwires ─────────────────────────────────────────────────────
+  # Fires when the named executable is launched.
+  # match_args optionally restricts the tripwire to processes whose
+  # command-line arguments contain the given substring.
+  processes:
+    - name: netcat-watch
+      process_name: nc
+      severity: CRITICAL
+
+    - name: ncat-watch
+      process_name: ncat
+      severity: CRITICAL
+
+    - name: wget-shell
+      process_name: wget
+      match_args: "-O -"        # only fire when used in pipe-to-shell pattern
+      severity: WARN
+
+    - name: curl-shell
+      process_name: curl
+      match_args: "| bash"
+      severity: CRITICAL
+
+    - name: python-reverse-shell
+      process_name: python3
+      match_args: "socket"
+      severity: WARN

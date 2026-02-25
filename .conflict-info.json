@@ -1,9 +1,9 @@
 {
-  "prNumber": 148,
+  "prNumber": 156,
   "baseBranch": "main",
-  "headBranch": "feature/127-tripwire-cybersecurity-tool-sprint-1-issue-127",
+  "headBranch": "feature/133-fileguard-sprint-1-issue-133",
   "conflictedFiles": [
-    ".claude-output.json"
+    "fileguard/db/__init__.py"
   ],
   "conflictCount": 1
 }
