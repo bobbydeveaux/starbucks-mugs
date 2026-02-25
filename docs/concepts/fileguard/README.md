@@ -116,12 +116,19 @@ fileguard/              Python package (FastAPI application)
 ├── config.py           Pydantic Settings configuration
 ├── api/
 │   └── middleware/
-│       └── auth.py     Bearer-token authentication middleware
+│       ├── auth.py     Bearer-token authentication middleware
+│       └── rate_limit.py  Redis sliding-window rate limiting middleware
 ├── models/
-│   └── tenant_config.py SQLAlchemy ORM model for tenant_config table
+│   ├── tenant_config.py  SQLAlchemy ORM model for tenant_config table
+│   ├── scan_event.py     SQLAlchemy ORM model for scan_event table (append-only)
+│   ├── batch_job.py      SQLAlchemy ORM model for batch_job table
+│   └── compliance_report.py  SQLAlchemy ORM model for compliance_report table
 ├── schemas/
 │   └── tenant.py       Pydantic TenantConfig schema (request.state.tenant)
+├── services/
+│   └── audit.py        AuditService: HMAC-signed scan event persistence + SIEM forwarding
 └── db/
+    ├── base.py         Declarative base shared by all ORM models
     └── session.py      SQLAlchemy async session factory
 
 docker/
@@ -134,11 +141,46 @@ migrations/             Alembic migration environment
 └── versions/           Migration scripts
 
 tests/
-└── unit/
-    └── test_auth_middleware.py  Unit tests for auth middleware & schemas
+├── conftest.py         Shared fixtures (env vars, DB session)
+├── test_smoke.py       Smoke tests for FastAPI skeleton, config, Redis, DB session
+├── unit/
+│   ├── test_auth_middleware.py  Unit tests for auth middleware & schemas
+│   ├── test_rate_limit.py       Unit tests for Redis rate limiting middleware
+│   └── test_audit_service.py    Unit tests for AuditService (HMAC, SIEM, DB mock)
+└── integration/
+    └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
 alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
+```
+
+## AuditService
+
+`fileguard/services/audit.py` implements tamper-evident scan event logging:
+
+- **HMAC-SHA256 signing** over canonical fields `(id, file_hash, status, action_taken, created_at)` using `SECRET_KEY`
+- **Append-only persistence** — the `ScanEvent` model enforces no-UPDATE / no-DELETE at the application layer via SQLAlchemy event hooks
+- **Best-effort SIEM forwarding** to Splunk (HEC) or RiverSafe WatchTower; delivery failures are logged and suppressed so they never block the scan pipeline
+
+```python
+from fileguard.services.audit import AuditService
+
+service = AuditService(signing_key=settings.SECRET_KEY)
+event = await service.log_scan_event(
+    session=db_session,
+    tenant_id=tenant.id,
+    file_hash="abc123...",
+    file_name="report.pdf",
+    file_size_bytes=102400,
+    mime_type="application/pdf",
+    status="flagged",
+    action_taken="quarantine",
+    findings=[{"type": "pii", "category": "NHS_NUMBER", "severity": "high"}],
+    scan_duration_ms=1240,
+    siem_config=tenant.siem_config,  # optional
+)
+# Verify integrity later
+assert service.verify_hmac(event)
 ```
