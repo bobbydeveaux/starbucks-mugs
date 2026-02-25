@@ -1,9 +1,10 @@
 {
-  "prNumber": 190,
+  "prNumber": 207,
   "baseBranch": "main",
-  "headBranch": "feature/172-fileguard-sprint-2-issue-172",
+  "headBranch": "feature/119-tripwire-cybersecurity-tool-sprint-2-issue-119",
   "conflictedFiles": [
-    ".claude-output.json"
+    ".claude-output.json",
+    "internal/watcher/file_watcher_linux.go"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }

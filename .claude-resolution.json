@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by keeping the HEAD version, which contains the branch-specific metadata for feature/172-fileguard-sprint-2-issue-172 (fileguard AuditService with HMAC-SHA256 signing). The origin/main version contained output from a different already-merged PR (TripWire audit logger, issue #169), which is not relevant to this branch.",
-  "strategyUsed": "chose ours (HEAD) — the conflicted file is a branch-specific Claude output metadata file; HEAD contains the correct data for this PR (issue #172, fileguard sprint 2), while origin/main contained stale output from a different merged PR (issue #169)"
+  "filesResolved": 2,
+  "summary": "Resolved 2 conflicts for PR #207: (1) internal/watcher/file_watcher_linux.go — both branches added different inotify implementations; chose origin/main's startPlatformWatcher function which is architecturally consistent with the FileWatcher/platformWatcherFunc pattern used in file_watcher.go and file_watcher_other.go. (2) .claude-output.json — deleted by our branch, present in origin/main; accepted our deletion as it is a transient CI artifact.",
+  "strategyUsed": "For file_watcher_linux.go: our branch implemented an InotifyWatcher struct (incompatible with the platformWatcherFunc interface expected by FileWatcher), while origin/main implemented the matching startPlatformWatcher function. Chose theirs to maintain architectural consistency. For .claude-output.json: accepted our deletion since it is a generated metadata artifact not required by the codebase."
 }

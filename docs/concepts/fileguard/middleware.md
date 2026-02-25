@@ -187,8 +187,8 @@ Pydantic model representing a tenant's configuration as loaded from the database
 ## Running tests
 
 ```bash
-pip install -e ".[test]"
-pytest tests/unit/test_rate_limit.py -v
+pip install -e ".[dev]"
+pytest tests/ -v
 ```
 
 Tests use `unittest.mock` to simulate Redis responses without requiring a live Redis
@@ -202,3 +202,6 @@ instance. The test suite covers:
 - Public paths bypass rate limiting
 - Per-tenant Redis key namespacing
 - Retry-After computed from oldest window entry
+
+Integration tests for `AuditService` (`tests/integration/`) use an in-memory SQLite
+database via `aiosqlite` + `StaticPool` — no external PostgreSQL or Redis required.
