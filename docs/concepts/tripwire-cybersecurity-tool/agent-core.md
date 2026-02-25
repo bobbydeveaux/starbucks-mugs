@@ -44,10 +44,12 @@ type TLSConfig struct {
 }
 
 type TripwireRule struct {
-    Name     string // Required. Human-readable rule identifier.
-    Type     string // Required. FILE | NETWORK | PROCESS.
-    Target   string // Required. Path glob, port number, or process name.
-    Severity string // Required. INFO | WARN | CRITICAL.
+    Name      string // Required. Human-readable rule identifier.
+    Type      string // Required. FILE | NETWORK | PROCESS.
+    Target    string // Required. Path glob, port number, or process name.
+    Severity  string // Required. INFO | WARN | CRITICAL.
+    Protocol  string // NETWORK rules only. tcp | udp | both. Default: "tcp".
+    Direction string // NETWORK rules only. inbound | outbound | both. Default: "inbound".
 }
 ```
 
@@ -57,13 +59,20 @@ type TripwireRule struct {
 func LoadConfig(path string) (*Config, error)
 ```
 
-Reads the YAML file at `path`, unmarshals it into `Config`, applies defaults
-(`log_level: "info"`, `health_addr: "127.0.0.1:9000"`), and validates all
-required fields. Returns a descriptive error for any missing required field or
-invalid enumerated value.
+Reads the YAML file at `path`, unmarshals it into `Config`, applies defaults,
+and validates all required fields. Returns a descriptive error for any missing
+required field or invalid enumerated value.
+
+**Defaults applied:**
+- `log_level`: `"info"`
+- `health_addr`: `"127.0.0.1:9000"`
+- NETWORK rules: `protocol` → `"tcp"`, `direction` → `"inbound"`
 
 **Required fields:** `dashboard_addr`, `tls.cert_path`, `tls.key_path`,
 `tls.ca_path`.
+
+**NETWORK rule validation:** `protocol` must be one of `tcp`, `udp`, `both`;
+`direction` must be one of `inbound`, `outbound`, `both`.
 
 ---
 
@@ -277,6 +286,16 @@ If no NETWORK rules are configured the goroutine exits immediately after
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-config` | `/etc/tripwire/config.yaml` | Path to the YAML configuration file |
+
+### Startup sequence
+
+1. Load and validate configuration via `config.LoadConfig`.
+2. Initialise the structured logger from `Config.LogLevel`.
+3. If any `NETWORK`-type rules are configured, instantiate a `NetworkWatcher`
+   with a 1-second poll interval and register it with the agent via
+   `WithWatchers`.
+4. Start the agent orchestrator.
+5. Serve `/healthz` on `Config.HealthAddr`.
 
 ### Logging
 

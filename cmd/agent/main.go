@@ -41,11 +41,28 @@ func main() {
 		slog.String("health_addr", cfg.HealthAddr),
 	)
 
-	// Create agent orchestrator.
-	// Real watcher/queue/transport implementations are registered here as
-	// they are developed in subsequent sprints. For now the agent runs
-	// without watchers (no-op mode) which is valid for the healthz check.
-	ag := agent.New(cfg, logger)
+	// Create agent orchestrator and register components.
+	var agentOpts []agent.Option
+
+	// Instantiate a NetworkWatcher for any NETWORK-type rules.
+	hasNetworkRules := false
+	for _, r := range cfg.Rules {
+		if r.Type == "NETWORK" {
+			hasNetworkRules = true
+			break
+		}
+	}
+	if hasNetworkRules {
+		nw, err := agent.NewNetworkWatcher(cfg.Rules, logger, time.Second)
+		if err != nil {
+			logger.Error("failed to create network watcher", slog.Any("error", err))
+			os.Exit(1)
+		}
+		agentOpts = append(agentOpts, agent.WithWatchers(nw))
+		logger.Info("network watcher registered")
+	}
+
+	ag := agent.New(cfg, logger, agentOpts...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

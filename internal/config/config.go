@@ -67,6 +67,16 @@ type TripwireRule struct {
 
 	// Severity is one of "INFO", "WARN", or "CRITICAL". Required.
 	Severity string `yaml:"severity"`
+
+	// Protocol is the transport protocol for NETWORK rules: "tcp", "udp",
+	// or "both". Defaults to "tcp" when omitted. Ignored for non-NETWORK
+	// rules.
+	Protocol string `yaml:"protocol"`
+
+	// Direction is the connection direction for NETWORK rules: "inbound",
+	// "outbound", or "both". Defaults to "inbound" when omitted. Ignored
+	// for non-NETWORK rules.
+	Direction string `yaml:"direction"`
 }
 
 // validLogLevels is the set of accepted log level strings.
@@ -89,6 +99,20 @@ var validSeverities = map[string]bool{
 	"INFO":     true,
 	"WARN":     true,
 	"CRITICAL": true,
+}
+
+// validNetworkProtocols is the set of accepted protocol values for NETWORK rules.
+var validNetworkProtocols = map[string]bool{
+	"tcp":  true,
+	"udp":  true,
+	"both": true,
+}
+
+// validNetworkDirections is the set of accepted direction values for NETWORK rules.
+var validNetworkDirections = map[string]bool{
+	"inbound":  true,
+	"outbound": true,
+	"both":     true,
 }
 
 // LoadConfig reads the YAML file at path, unmarshals it into Config, applies
@@ -121,6 +145,16 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.HealthAddr == "" {
 		cfg.HealthAddr = "127.0.0.1:9000"
+	}
+	for i := range cfg.Rules {
+		if cfg.Rules[i].Type == "NETWORK" {
+			if cfg.Rules[i].Protocol == "" {
+				cfg.Rules[i].Protocol = "tcp"
+			}
+			if cfg.Rules[i].Direction == "" {
+				cfg.Rules[i].Direction = "inbound"
+			}
+		}
 	}
 }
 
@@ -158,6 +192,14 @@ func validate(cfg *Config) error {
 		}
 		if !validSeverities[r.Severity] {
 			errs = append(errs, fmt.Errorf("%s: severity %q must be one of: INFO, WARN, CRITICAL", prefix, r.Severity))
+		}
+		if r.Type == "NETWORK" {
+			if !validNetworkProtocols[r.Protocol] {
+				errs = append(errs, fmt.Errorf("%s: protocol %q must be one of: tcp, udp, both", prefix, r.Protocol))
+			}
+			if !validNetworkDirections[r.Direction] {
+				errs = append(errs, fmt.Errorf("%s: direction %q must be one of: inbound, outbound, both", prefix, r.Direction))
+			}
 		}
 	}
 
