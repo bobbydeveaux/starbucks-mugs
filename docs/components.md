@@ -384,7 +384,7 @@ interface UseCarCatalogResult {
 ### Notes
 
 - Fetches `/data/ferrari.json` and `/data/lamborghini.json` in parallel via `fetch`
-- Maps the JSON `image` field to `imageUrl` on `CarModel` to match the TypeScript type
+- Maps the JSON `image` field directly on `CarModel` to match the TypeScript type
 - Aborts in-flight requests when the component unmounts
 
 ---
@@ -448,7 +448,7 @@ const { selectedFerrari, selectedLambo, winners } = useComparison();
 |------|-------------|
 | `CarBrand` | `'ferrari' \| 'lamborghini'` |
 | `CarSpecs` | `{ hp, torqueLbFt, zeroToSixtyMs, topSpeedMph, engineConfig }` |
-| `CarModel` | Full car entity: id, brand, model, year, decade, imageUrl, price?, specs, eraRivals |
+| `CarModel` | Full car entity: id, brand, model, year, decade, image, price?, specs, eraRivals |
 | `CarCatalogEnvelope` | Root JSON structure for each brand's car data file |
 | `CatalogFilters` | `{ decade?: number; search?: string }` — used by `useCarCatalog` |
 | `ComparisonStat` | Per-stat winner annotation: `{ label, ferrariValue, lamboValue, winner }` |

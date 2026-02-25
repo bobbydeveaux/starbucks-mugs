@@ -13,7 +13,7 @@ const mockFerrari: CarModel = {
   model: 'Testarossa',
   year: 1984,
   decade: 1980,
-  imageUrl: '/images/ferrari/testarossa.jpg',
+  image: '/images/ferrari/testarossa.jpg',
   price: 87000,
   specs: {
     hp: 390,
@@ -31,7 +31,7 @@ const mockLambo: CarModel = {
   model: 'Countach LP500S',
   year: 1982,
   decade: 1980,
-  imageUrl: '/images/lamborghini/countach-lp500s.jpg',
+  image: '/images/lamborghini/countach-lp500s.jpg',
   specs: {
     hp: 375,
     torqueLbFt: 268,
