@@ -3,8 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/173-fileguard-sprint-2-issue-173",
   "conflictedFiles": [
-    "fileguard/services/audit.py",
-    "tests/unit/test_audit_service.py"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
   "conflictCount": 2
 }
