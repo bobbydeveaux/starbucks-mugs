@@ -21,6 +21,8 @@ HTTP responses on failure:
 * ``403 Forbidden`` – valid token format but no matching tenant record.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from typing import Any

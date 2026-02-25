@@ -5,6 +5,8 @@ The auth middleware populates ``request.state.tenant`` with a validated
 TenantConfig instance after a successful authentication check.
 """
 
+from __future__ import annotations
+
 import uuid
 from typing import Any
 
@@ -54,3 +56,11 @@ class TenantConfig(BaseModel):
         if v < 0:
             raise ValueError("rate_limit_rpm must be >= 0")
         return v
+
+    def has_api_key_auth(self) -> bool:
+        """Return True if API key authentication is configured."""
+        return self.api_key_hash is not None
+
+    def has_oauth_auth(self) -> bool:
+        """Return True if OAuth 2.0 authentication is configured."""
+        return self.jwks_url is not None and self.client_id is not None
