@@ -1,0 +1,20 @@
+{
+  "prTitle": "feat: implement NetworkWatcher with unit tests",
+  "prBody": "## Summary\n\n- Implement `NetworkWatcher` in `internal/agent/network_watcher.go` that polls `/proc/net/tcp` for inbound TCP connections on configured ports\n- Add comprehensive unit tests in `internal/agent/network_watcher_test.go` covering all key behaviours\n- Update `docs/concepts/tripwire-cybersecurity-tool/agent-core.md` to document the new component\n\n## Key design decisions\n\n- **No elevated capabilities required**: Uses `/proc/net/tcp` polling (1-second default interval) per ROAM mitigation — avoids `CAP_NET_RAW` / `CAP_NET_ADMIN`\n- **`ProcNetReader` interface**: Makes the OS-level reader injectable for unit tests — tests run with a `fakeProcNetReader` that injects synthetic `ConnEntry` slices, no actual network activity needed\n- **De-duplication**: Connections that persist across polls fire exactly one alert; when a connection closes and a new one arrives from the same source, a fresh alert fires\n- **Idempotent `Stop()`**: Uses `sync.Once` for both channel close and stop signal — safe to call multiple times\n- **`ParseProcNet` exported**: Allows direct parser unit tests without filesystem access\n\n## Test coverage (27 tests)\n\n| Category | Tests |\n|---|---|\n| Constructor | Valid rules, skip non-NETWORK/invalid-port rules, mixed rule types |\n| Interface compliance | `Watcher` interface assertion, Start/Stop with no rules, idempotent Stop |\n| Event emission | Established connections, LISTEN-only ignored, wrong port, event detail fields (PRD US-04), timestamp validity |\n| De-duplication | Persistent connection → 1 alert; reconnect → fresh alert; concurrent connections; multiple rules same port |\n| Severity propagation | INFO / WARN / CRITICAL |\n| Error recovery | Watcher continues after `ReadTCP` error |\n| `ParseProcNet` | Empty input, header-only, IPv4 established, LISTEN state, multiple entries, malformed line skipping, loopback addresses |\n| Integration | Real `/proc/net/tcp` smoke test (Start/Stop without panic) |\n\nCloses #123",
+  "testsPass": true,
+  "filesChanged": [
+    "internal/agent/network_watcher.go",
+    "internal/agent/network_watcher_test.go"
+  ],
+  "docsUpdated": [
+    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/PRD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/ROAM.md",
+    "docs/concepts/tripwire-cybersecurity-tool/agent-configuration.md",
+    "docs/concepts/tripwire-cybersecurity-tool/storage.md"
+  ]
+}

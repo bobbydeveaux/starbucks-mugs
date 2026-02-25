@@ -165,6 +165,92 @@ type HealthStatus struct {
 
 ---
 
+## Package: `internal/agent` — NetworkWatcher
+
+**File:** `internal/agent/network_watcher.go`
+
+`NetworkWatcher` implements the `Watcher` interface and monitors
+`/proc/net/tcp` for new inbound TCP connections on configured ports.  It
+requires no elevated OS capabilities (`CAP_NET_RAW` or `CAP_NET_ADMIN`) and
+works by polling the proc filesystem at a configurable interval (default 1 s).
+
+### ConnEntry
+
+```go
+type ConnEntry struct {
+    LocalAddr  string // IP in dotted-decimal form
+    LocalPort  int
+    RemoteAddr string // IP in dotted-decimal form
+    RemotePort int
+    State      int    // 1 = ESTABLISHED, 10 = LISTEN, etc.
+}
+```
+
+### ProcNetReader interface
+
+```go
+type ProcNetReader interface {
+    ReadTCP() ([]ConnEntry, error)
+    ReadUDP() ([]ConnEntry, error)
+}
+```
+
+The default implementation reads from `/proc/net/tcp`.  An alternative reader
+can be injected via `WithProcNetReader` for unit testing.
+
+### Constructor
+
+```go
+func NewNetworkWatcher(
+    rules  []config.TripwireRule,
+    logger *slog.Logger,
+    opts   ...NetworkWatcherOption,
+) *NetworkWatcher
+```
+
+Only rules with `Type == "NETWORK"` are processed.  The `Target` field must be
+a decimal port number in `1–65535`; invalid values are logged and skipped.
+
+#### Functional options
+
+| Option | Description |
+|--------|-------------|
+| `WithPollInterval(d time.Duration)` | Override the default 1-second poll interval |
+| `WithProcNetReader(r ProcNetReader)` | Replace the real reader (for testing) |
+
+### AlertEvent detail fields
+
+When a new inbound connection is detected, an `AlertEvent` is emitted with the
+following `Detail` keys (satisfying PRD US-04):
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `source_ip` | `string` | Remote IP address of the connecting client |
+| `source_port` | `int` | Remote ephemeral port |
+| `dest_port` | `int` | Local monitored port |
+| `protocol` | `string` | Always `"tcp"` in the current implementation |
+| `direction` | `string` | Always `"inbound"` in the current implementation |
+
+### De-duplication and reconnection behaviour
+
+- A connection that persists across multiple polls generates **exactly one** alert.
+- When a connection closes (disappears from `/proc/net/tcp`) and a new
+  connection later appears on the same port from the same source, a **fresh**
+  alert is generated.
+
+### ParseProcNet
+
+```go
+func ParseProcNet(r io.Reader) ([]ConnEntry, error)
+```
+
+Exported parser for `/proc/net/tcp`-format content.  Reads the header line
+(skips it) then parses each subsequent data row.  IPv4 addresses are stored
+little-endian in the proc file and are reversed before being returned in
+dotted-decimal form.
+
+---
+
 ## Binary: `cmd/agent/main.go`
 
 ### CLI flags
