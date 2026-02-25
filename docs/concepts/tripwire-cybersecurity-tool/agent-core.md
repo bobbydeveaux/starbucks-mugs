@@ -165,6 +165,111 @@ type HealthStatus struct {
 
 ---
 
+## Package: `internal/agent` — NetworkWatcher
+
+**File:** `internal/agent/network_watcher.go`
+
+`NetworkWatcher` implements the `Watcher` interface for NETWORK-type tripwire
+rules.  It polls `/proc/net/tcp` and `/proc/net/tcp6` on a configurable
+interval, compares each snapshot against the previous one, and emits an
+`AlertEvent` whenever a new TCP ESTABLISHED connection is detected on a
+monitored local port.
+
+### Key types
+
+```go
+// ConnKey uniquely identifies an active network connection.
+type ConnKey struct {
+    LocalAddr  string // "ip:port"
+    RemoteAddr string // "ip:port"
+    Protocol   string // "tcp" or "tcp6"
+}
+
+// ProcReader returns the current set of established connections.
+// The default implementation reads /proc/net/tcp*; inject a stub in tests.
+type ProcReader func() (map[ConnKey]struct{}, error)
+
+// ConnEntry is returned by ParseProcNetFile.
+type ConnEntry struct {
+    LocalAddr  string
+    RemoteAddr string
+    Protocol   string
+}
+```
+
+### Constructors
+
+```go
+// NewNetworkWatcher uses the real /proc/net/tcp* reader.
+func NewNetworkWatcher(
+    rules        []config.TripwireRule,
+    logger       *slog.Logger,
+    pollInterval time.Duration,
+) (*NetworkWatcher, error)
+
+// NewNetworkWatcherWithReader accepts an injectable ProcReader for testing.
+func NewNetworkWatcherWithReader(
+    rules        []config.TripwireRule,
+    logger       *slog.Logger,
+    pollInterval time.Duration,
+    reader       ProcReader,
+) (*NetworkWatcher, error)
+```
+
+- Only `TripwireRule` entries with `Type == "NETWORK"` are compiled; other
+  types are silently skipped.
+- `Target` must be a valid port number in `[1, 65535]`; an error is returned
+  if it is not.
+- `pollInterval <= 0` defaults to 1 second.
+
+### AlertEvent detail fields
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `local_addr` | `string` | Local "ip:port" of the connection |
+| `remote_addr` | `string` | Remote "ip:port" of the connection |
+| `protocol` | `string` | `"tcp"` or `"tcp6"` |
+
+### Low-level helpers (exported for testing)
+
+```go
+// ParseProcNetFile parses a /proc/net/tcp or /proc/net/tcp6 file.
+// Returns only ESTABLISHED connections (socket state 0x01).
+func ParseProcNetFile(path, proto string) ([]ConnEntry, error)
+
+// HexToAddr decodes a /proc/net hex address ("XXXXXXXX:PPPP" or
+// "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:PPPP") into a "host:port" string.
+func HexToAddr(hexAddr string) (string, error)
+```
+
+### How polling works
+
+1. Every `pollInterval` the watcher calls `ProcReader` to obtain the current
+   set of ESTABLISHED connections (`map[ConnKey]struct{}`).
+2. Entries in the current set that were **absent** from the previous snapshot
+   are classified as new connections.
+3. Each new connection is checked against every compiled rule.  A match on
+   local port fires an `AlertEvent` into the buffered events channel.
+4. The previous snapshot is replaced by the current one, so persistent
+   connections never re-fire.
+5. If the reader returns an error the poll is skipped and the previous snapshot
+   is retained; monitoring resumes on the next tick.
+
+### Lifecycle
+
+```
+NewNetworkWatcher → Start(ctx) → polling goroutine begins
+                 → Stop()      → goroutine exits, Events() channel closed
+```
+
+`Stop()` is idempotent and safe to call multiple times.  Monitoring also stops
+when the context passed to `Start` is cancelled.
+
+If no NETWORK rules are configured the goroutine exits immediately after
+`Start`, closing the events channel with no polls performed.
+
+---
+
 ## Binary: `cmd/agent/main.go`
 
 ### CLI flags
