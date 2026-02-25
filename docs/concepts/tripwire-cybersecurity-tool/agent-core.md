@@ -97,6 +97,10 @@ These interfaces are the contracts implemented by the file, network, and
 process watcher packages, the SQLite alert queue, and the gRPC transport
 client respectively.
 
+The concrete `Queue` implementation is `*queue.SQLiteQueue` from the
+`internal/queue` package — see [`agent-queue.md`](agent-queue.md) for full
+details on the WAL-mode SQLite queue.
+
 ### AlertEvent
 
 ```go
