@@ -76,12 +76,51 @@ docker compose down -v
 OpenAPI spec: `http://localhost:8000/v1/openapi.json`
 Swagger UI: `http://localhost:8000/v1/docs`
 
+## Authentication
+
+All API endpoints (except `/healthz`, `/v1/docs`, and `/v1/openapi.json`) require a
+`Bearer` token in the `Authorization` header.  Two authentication paths are supported:
+
+### API Key
+
+Pass a raw API key as the bearer token.  The key is compared to the bcrypt hash
+stored in `tenant_config.api_key_hash` using `bcrypt.checkpw`.
+
+```bash
+curl -H "Authorization: Bearer <api-key>" http://localhost:8000/v1/scan
+```
+
+### OAuth 2.0 JWT
+
+Pass a compact JWT as the bearer token.  The middleware:
+1. Reads the `aud` claim to identify the tenant (`client_id` lookup).
+2. Fetches the tenant's JWKS from `jwks_url` (cached for 5 minutes).
+3. Verifies the JWT signature against the matching public key.
+
+```bash
+curl -H "Authorization: Bearer <jwt>" http://localhost:8000/v1/scan
+```
+
+Error responses:
+- `401 Unauthorized` – missing/invalid/expired token.
+- `403 Forbidden` – valid token format but no matching tenant record.
+
+On success the validated `TenantConfig` object is available as
+`request.state.tenant` in all route handlers.
+
 ## Project Structure
 
 ```
 fileguard/              Python package (FastAPI application)
-├── main.py             Application entry point + health endpoint
+├── main.py             Application entry point + middleware registration
 ├── config.py           Pydantic Settings configuration
+├── api/
+│   └── middleware/
+│       └── auth.py     Bearer-token authentication middleware
+├── models/
+│   └── tenant_config.py SQLAlchemy ORM model for tenant_config table
+├── schemas/
+│   └── tenant.py       Pydantic TenantConfig schema (request.state.tenant)
 └── db/
     └── session.py      SQLAlchemy async session factory
 
@@ -90,9 +129,13 @@ docker/
 └── entrypoint.sh       Container startup script
 
 migrations/             Alembic migration environment
-├── env.py
+├── env.py              Wired to Base.metadata for autogenerate support
 ├── script.py.mako
 └── versions/           Migration scripts
+
+tests/
+└── unit/
+    └── test_auth_middleware.py  Unit tests for auth middleware & schemas
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
