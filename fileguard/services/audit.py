@@ -1,37 +1,36 @@
 """AuditService — tamper-evident scan event logging and SIEM forwarding.
 
-Responsibilities
-----------------
-1. Compute an HMAC-SHA256 signature over the canonical fields of a
-   :class:`~fileguard.models.scan_event.ScanEvent` before it is persisted,
-   so that any post-write tampering can be detected during compliance export.
+:class:`AuditService` persists :class:`~fileguard.models.scan_event.ScanEvent`
+records to PostgreSQL with an HMAC-SHA256 integrity signature computed over the
+canonical immutable fields of each record.  All writes are INSERT-only; the
+service contains no UPDATE or DELETE code paths.
 
-2. Persist a new ``ScanEvent`` row to PostgreSQL using the supplied async
-   SQLAlchemy session.  The model's SQLAlchemy event hooks enforce that no
-   UPDATE or DELETE is ever issued at the application layer.
+Structured JSON log entries carrying ``correlation_id``, ``tenant_id``, and
+``scan_id`` are emitted on every successful audit call.
 
-3. Optionally forward the scan event to a tenant-configured SIEM endpoint
-   (Splunk HEC or RiverSafe WatchTower) as a best-effort fire-and-forget
-   operation.  SIEM delivery failures are *logged but never raised*, so that
-   a degraded SIEM integration never blocks the scan critical path.
+Scan events may also be forwarded to a tenant-configured SIEM endpoint
+(Splunk HEC or RiverSafe WatchTower) as a best-effort fire-and-forget
+operation.  SIEM delivery failures are *logged but never raised*, so that
+a degraded SIEM integration never blocks the scan critical path.
 
-Usage
------
-    service = AuditService(signing_key="shared-secret", http_client=client)
-    event = await service.log_scan_event(
-        session=db_session,
-        tenant_id=tenant.id,
-        file_hash="abc123...",
-        file_name="report.pdf",
-        file_size_bytes=102400,
-        mime_type="application/pdf",
-        status="flagged",
-        action_taken="quarantine",
-        findings=[{"type": "pii", "category": "NHS_NUMBER", "severity": "high"}],
-        scan_duration_ms=1240,
-        siem_config=tenant.siem_config,
-    )
+Usage::
+
+    from fileguard.services.audit import AuditService
+
+    service = AuditService()
+
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            await service.log_scan_event(
+                session,
+                scan_event,
+                correlation_id="req-abc123",
+                tenant_id=tenant.id,
+                scan_id=scan_event.id,
+                siem_config=tenant.siem_config,
+            )
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -45,6 +44,7 @@ from typing import Any
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fileguard.config import settings
 from fileguard.models.scan_event import ScanEvent
 
 logger = logging.getLogger(__name__)
@@ -56,159 +56,95 @@ _SIEM_TYPE_WATCHTOWER = "watchtower"
 # HTTP timeout for SIEM forwarding (seconds) — short so it never blocks scans
 _SIEM_HTTP_TIMEOUT = 5.0
 
+# Fields included in HMAC computation (order matters — never reorder).
+_HMAC_FIELDS = ("id", "file_hash", "status", "action_taken", "created_at")
+
+
+class AuditError(Exception):
+    """Raised when :class:`AuditService` cannot persist a :class:`ScanEvent`.
+
+    Callers must not silently ignore this exception; the scan pipeline should
+    treat an audit write failure as a hard error and surface it to the
+    operator.
+    """
+
 
 class AuditService:
-    """Service for writing tamper-evident audit records and forwarding to SIEM.
+    """Append-only audit log service with HMAC-SHA256 integrity signing and SIEM forwarding.
 
-    Parameters
-    ----------
-    signing_key:
-        The server-side HMAC signing secret.  Must be kept confidential; it is
-        used to produce and verify signatures on every ``ScanEvent`` record.
-    http_client:
-        An optional ``httpx.AsyncClient`` used for SIEM forwarding.  When
-        ``None`` a new transient client is created per forward call.  Injecting
-        a shared client is recommended in production for connection pooling.
+    Each :class:`~fileguard.models.scan_event.ScanEvent` is signed with
+    HMAC-SHA256 over the canonical immutable fields
+    ``(id, file_hash, status, action_taken, created_at)`` before being
+    persisted to PostgreSQL.
+
+    Args:
+        secret_key: Raw HMAC secret.  Defaults to ``settings.SECRET_KEY``.
+            The key must be kept confidential; leaking it allows an attacker
+            to forge signatures.
+        signing_key: Alias for ``secret_key`` (alternate parameter name).
+            When both are supplied, ``signing_key`` takes precedence.
+        http_client: An optional ``httpx.AsyncClient`` used for SIEM forwarding.
+            When ``None`` a new transient client is created per forward call.
+            Injecting a shared client is recommended in production for
+            connection pooling.
     """
 
     def __init__(
         self,
-        signing_key: str,
+        secret_key: str | None = None,
+        signing_key: str | None = None,
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
-        self._signing_key = signing_key.encode()
+        raw = signing_key or secret_key
+        if raw is None:
+            raw = settings.SECRET_KEY
+        self._secret_key: bytes = raw.encode("utf-8")
+        # Alias so that code referencing either attribute works correctly.
+        self._signing_key: bytes = self._secret_key
         self._http_client = http_client
 
     # ------------------------------------------------------------------
-    # Public API
+    # Signature helpers
     # ------------------------------------------------------------------
 
-    async def log_scan_event(
-        self,
-        *,
-        session: AsyncSession,
-        tenant_id: uuid.UUID,
-        file_hash: str,
-        file_name: str,
-        file_size_bytes: int,
-        mime_type: str,
-        status: str,
-        action_taken: str,
-        findings: list[dict[str, Any]],
-        scan_duration_ms: int,
-        siem_config: dict[str, Any] | None = None,
-    ) -> ScanEvent:
-        """Persist a tamper-evident scan event and optionally forward to SIEM.
+    def compute_hmac(self, scan_event: ScanEvent) -> str:
+        """Return the HMAC-SHA256 hex digest for *scan_event*.
 
-        The HMAC signature is computed over the canonical fields
-        ``(id, file_hash, status, action_taken, created_at)`` *after* the event
-        is flushed so that the database-generated values are available.
+        The canonical message is a pipe-separated concatenation of the
+        immutable fields (in the order defined by :data:`_HMAC_FIELDS`):
 
-        Parameters
-        ----------
-        session:
-            An open async SQLAlchemy session.  The caller is responsible for
-            committing or rolling back the transaction.
-        tenant_id:
-            UUID of the tenant that owns this scan.
-        file_hash:
-            SHA-256 hex digest of the scanned file.
-        file_name:
-            Original file name as submitted by the client.
-        file_size_bytes:
-            File size in bytes.
-        mime_type:
-            Detected MIME type of the scanned file.
-        status:
-            Scan verdict: ``"clean"``, ``"flagged"``, or ``"rejected"``.
-        action_taken:
-            Disposition applied: ``"pass"``, ``"quarantine"``, or ``"block"``.
-        findings:
-            List of finding dicts (each with ``type``, ``category``,
-            ``severity``, and optionally ``offset`` / ``match``).
-        scan_duration_ms:
-            Wall-clock duration of the scan pipeline in milliseconds.
-        siem_config:
-            Optional tenant SIEM integration config dict with keys ``type``
-            (``"splunk"`` or ``"watchtower"``), ``endpoint``, and optionally
-            ``token``.  When ``None`` SIEM forwarding is skipped.
+        ``{id}|{file_hash}|{status}|{action_taken}|{created_at}``
 
-        Returns
-        -------
-        ScanEvent
-            The persisted ORM instance (not yet committed).
+        ``created_at`` is serialised as an ISO-8601 string with UTC offset
+        so that the representation is unambiguous across time zones.
+
+        Args:
+            scan_event: The event to sign.  ``created_at`` must be set
+                before calling this method.
+
+        Returns:
+            A 64-character lowercase hex string.
         """
-        event_id = uuid.uuid4()
-        created_at = datetime.now(tz=timezone.utc)
+        created_at = scan_event.created_at
+        if isinstance(created_at, datetime):
+            created_at_str = created_at.isoformat()
+        else:
+            # Fall back to str() for date-only or pre-set string values.
+            created_at_str = str(created_at)
 
-        hmac_signature = self._compute_hmac(
-            event_id=event_id,
-            file_hash=file_hash,
-            status=status,
-            action_taken=action_taken,
-            created_at=created_at,
-        )
+        canonical = "|".join([
+            str(scan_event.id),
+            scan_event.file_hash,
+            scan_event.status,
+            scan_event.action_taken,
+            created_at_str,
+        ])
 
-        event = ScanEvent(
-            id=event_id,
-            tenant_id=tenant_id,
-            file_hash=file_hash,
-            file_name=file_name,
-            file_size_bytes=file_size_bytes,
-            mime_type=mime_type,
-            status=status,
-            action_taken=action_taken,
-            findings=findings,
-            scan_duration_ms=scan_duration_ms,
-            created_at=created_at,
-            hmac_signature=hmac_signature,
-        )
-
-        session.add(event)
-        await session.flush()
-
-        logger.info(
-            "Audit event recorded: scan_id=%s tenant=%s status=%s action=%s",
-            event_id,
-            tenant_id,
-            status,
-            action_taken,
-        )
-
-        if siem_config:
-            await self._forward_to_siem(event, siem_config)
-
-        return event
-
-    def verify_hmac(self, event: ScanEvent) -> bool:
-        """Return ``True`` if the event's HMAC signature is still valid.
-
-        Computes the expected signature over the canonical fields and compares
-        it with the stored ``hmac_signature`` using a constant-time comparison
-        to prevent timing attacks.
-
-        Parameters
-        ----------
-        event:
-            A ``ScanEvent`` ORM instance (retrieved from the database).
-
-        Returns
-        -------
-        bool
-            ``True`` when the signature matches; ``False`` when tampered.
-        """
-        expected = self._compute_hmac(
-            event_id=event.id,
-            file_hash=event.file_hash,
-            status=event.status,
-            action_taken=event.action_taken,
-            created_at=event.created_at,
-        )
-        return hmac.compare_digest(expected, event.hmac_signature)
-
-    # ------------------------------------------------------------------
-    # HMAC helpers
-    # ------------------------------------------------------------------
+        return hmac.new(
+            self._secret_key,
+            canonical.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
 
     def _compute_hmac(
         self,
@@ -219,24 +155,22 @@ class AuditService:
         action_taken: str,
         created_at: datetime,
     ) -> str:
-        """Compute HMAC-SHA256 over canonical event fields.
+        """Compute HMAC-SHA256 over canonical event fields using JSON encoding.
 
         The canonical message is the JSON serialisation of the ordered dict::
 
             {
-                "id": "<uuid-str>",
-                "file_hash": "<sha256-hex>",
-                "status": "<status>",
                 "action_taken": "<action>",
-                "created_at": "<iso8601-utc>"
+                "created_at": "<iso8601-utc>",
+                "file_hash": "<sha256-hex>",
+                "id": "<uuid-str>",
+                "status": "<status>"
             }
 
-        Using JSON with a fixed key order makes the message unambiguous and
+        Using JSON with ``sort_keys=True`` makes the message unambiguous and
         human-inspectable for offline verification.
 
-        Returns
-        -------
-        str
+        Returns:
             Lower-case hex HMAC-SHA256 digest.
         """
         canonical = json.dumps(
@@ -250,12 +184,102 @@ class AuditService:
             separators=(",", ":"),
             sort_keys=True,
         )
-        digest = hmac.new(
+        return hmac.new(
             self._signing_key,
             canonical.encode(),
             hashlib.sha256,
         ).hexdigest()
-        return digest
+
+    def verify_hmac(self, scan_event: ScanEvent) -> bool:
+        """Return ``True`` if *scan_event*'s stored signature is valid.
+
+        Uses :func:`hmac.compare_digest` to prevent timing-attack
+        comparisons.
+
+        Args:
+            scan_event: The event to verify.  ``hmac_signature`` must be
+                populated.
+        """
+        expected = self.compute_hmac(scan_event)
+        return hmac.compare_digest(expected, scan_event.hmac_signature)
+
+    # ------------------------------------------------------------------
+    # Core persistence method
+    # ------------------------------------------------------------------
+
+    async def log_scan_event(
+        self,
+        session: AsyncSession,
+        scan_event: ScanEvent,
+        *,
+        correlation_id: str | uuid.UUID | None = None,
+        tenant_id: str | uuid.UUID | None = None,
+        scan_id: str | uuid.UUID | None = None,
+        siem_config: dict[str, Any] | None = None,
+    ) -> ScanEvent:
+        """Compute an HMAC-SHA256 signature, persist *scan_event*, and optionally forward to SIEM.
+
+        Only an INSERT is issued; this method contains no UPDATE or DELETE
+        code paths.  The caller retains full control of the transaction
+        lifecycle (begin / commit / rollback).
+
+        Args:
+            session: Open :class:`~sqlalchemy.ext.asyncio.AsyncSession`.
+                The session must already be within an active transaction if
+                the caller intends to batch multiple writes atomically.
+            scan_event: The :class:`~fileguard.models.scan_event.ScanEvent`
+                to audit-log.  Its ``hmac_signature`` field will be
+                overwritten with the computed value before the INSERT.
+            correlation_id: Optional request-scoped trace identifier emitted
+                in the structured log entry.
+            tenant_id: Optional tenant identifier for the log entry.  Falls
+                back to ``scan_event.tenant_id`` when omitted.
+            scan_id: Optional scan identifier for the log entry.  Falls back
+                to ``scan_event.id`` when omitted.
+            siem_config: Optional tenant SIEM integration config dict with
+                keys ``type`` (``"splunk"`` or ``"watchtower"``),
+                ``endpoint``, and optionally ``token``.  When ``None`` SIEM
+                forwarding is skipped.
+
+        Returns:
+            The same *scan_event* instance, now attached to *session* and
+            with ``hmac_signature`` populated.
+
+        Raises:
+            AuditError: If the database INSERT fails for any reason.
+        """
+        # Compute and attach the HMAC signature before the INSERT so that
+        # the stored value is always consistent with the persisted fields.
+        scan_event.hmac_signature = self.compute_hmac(scan_event)
+
+        try:
+            session.add(scan_event)
+            # flush() pushes the INSERT to the DB within the current
+            # transaction without committing.  This lets callers batch
+            # multiple inserts and commit once.
+            await session.flush()
+        except Exception as exc:
+            raise AuditError(
+                f"Failed to persist ScanEvent {scan_event.id}: {exc}"
+            ) from exc
+
+        # Emit a structured JSON audit log entry so that log-aggregation
+        # systems (e.g. Splunk, Elasticsearch) can index these fields.
+        log_entry: dict[str, Any] = {
+            "event": "scan_event_audited",
+            "correlation_id": str(correlation_id) if correlation_id is not None else None,
+            "tenant_id": str(tenant_id) if tenant_id is not None else str(scan_event.tenant_id),
+            "scan_id": str(scan_id) if scan_id is not None else str(scan_event.id),
+            "file_hash": scan_event.file_hash,
+            "status": scan_event.status,
+            "action_taken": scan_event.action_taken,
+        }
+        logger.info(json.dumps(log_entry))
+
+        if siem_config:
+            await self._forward_to_siem(scan_event, siem_config)
+
+        return scan_event
 
     # ------------------------------------------------------------------
     # SIEM forwarding
