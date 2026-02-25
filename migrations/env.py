@@ -21,9 +21,10 @@ if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
 # Import models metadata for autogenerate support
-# from fileguard.db.session import Base
-# target_metadata = Base.metadata
-target_metadata = None
+import fileguard.models  # noqa: F401 – registers all ORM models with Base
+from fileguard.db.session import Base
+
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

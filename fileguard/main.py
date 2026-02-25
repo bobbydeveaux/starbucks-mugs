@@ -3,6 +3,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from fileguard.api.middleware.auth import AuthMiddleware
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -13,6 +15,8 @@ app = FastAPI(
     docs_url="/v1/docs",
     openapi_url="/v1/openapi.json",
 )
+
+app.add_middleware(AuthMiddleware)
 
 
 @app.get("/healthz", tags=["health"])
