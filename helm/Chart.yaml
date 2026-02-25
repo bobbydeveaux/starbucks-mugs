@@ -1,0 +1,17 @@
+apiVersion: v2
+name: fileguard
+description: A production-grade Helm chart for FileGuard — a security-focused file processing gateway providing antivirus scanning, PII detection, and automated redaction.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - fileguard
+  - security
+  - file-scanning
+  - antivirus
+  - pii-detection
+  - redaction
+home: https://github.com/riversafe/fileguard
+maintainers:
+  - name: RiverSafe DevOps
+    email: devops@riversafe.co.uk

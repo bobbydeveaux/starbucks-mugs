@@ -1,0 +1,94 @@
+# ============================================================
+# .dockerignore — files excluded from the Docker build context
+# ============================================================
+
+# Version control
+.git/
+.gitignore
+
+# Python byte-compiled / optimised / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Python distribution / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node.js (this repo contains other projects)
+node_modules/
+*.npm
+
+# Tests and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+nosetests.xml
+test-results/
+
+# Type checking / linting
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Environment files — never bake secrets into the image
+.env
+.env.*
+!.env.example
+
+# Helm chart (not needed in app image)
+helm/
+
+# CI/CD config
+.github/
+.circleci/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Other project directories in this monorepo
+costa-vs-starbucks/
+ferrari-vs-lambo-website/
+
+# Temporary / scratch files
+*.tmp
+*.log
+*.pid
+tmp/
+temp/
+
+# Claude/COO tooling state
+.claude/
+.coo/
+.claude-output.json
+.claude-state.json
+.review-feedback.txt

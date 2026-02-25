@@ -1,8 +1,10 @@
-module github.com/tripwire/tripwire-cybersecurity-tool
+module github.com/tripwire/agent
 
 go 1.22.0
 
 require github.com/jackc/pgx/v5 v5.5.5
+
+require gopkg.in/yaml.v3 v3.0.1
 
 require (
 	github.com/testcontainers/testcontainers-go v0.33.0

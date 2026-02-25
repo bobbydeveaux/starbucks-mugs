@@ -22,7 +22,7 @@ import (
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/tripwire/tripwire-cybersecurity-tool/internal/server/storage"
+	"github.com/tripwire/agent/internal/server/storage"
 )
 
 // migrationsDir returns the absolute path to db/migrations relative to this
