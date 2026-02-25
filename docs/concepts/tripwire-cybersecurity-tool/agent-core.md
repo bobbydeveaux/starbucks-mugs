@@ -207,6 +207,18 @@ The agent does **not** bind to external interfaces for this endpoint.
 
 ---
 
+## Package: `internal/watcher`
+
+The `FileWatcher` in `internal/watcher/file.go` implements the `Watcher`
+interface by polling the filesystem every 100 ms (configurable). It detects
+file creates, writes, and deletes on the paths defined by `FILE`-type
+tripwire rules.
+
+See [`file-watcher.md`](file-watcher.md) for the full FileWatcher reference
+and end-to-end SLA test documentation.
+
+---
+
 ## Configuration file
 
 See [`deployments/config/config.example.yaml`](../../../deployments/config/config.example.yaml)
