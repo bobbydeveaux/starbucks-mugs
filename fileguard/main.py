@@ -4,6 +4,7 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from fileguard.api.middleware.auth import AuthMiddleware
 from fileguard.config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -16,6 +17,8 @@ app = FastAPI(
     docs_url="/v1/docs",
     openapi_url="/v1/openapi.json",
 )
+
+app.add_middleware(AuthMiddleware)
 
 # Redis client stored on app state so it can be accessed by routes and tests
 app.state.redis = None

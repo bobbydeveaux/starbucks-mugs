@@ -1,9 +1,12 @@
 {
-  "prNumber": 156,
+  "prNumber": 155,
   "baseBranch": "main",
-  "headBranch": "feature/133-fileguard-sprint-1-issue-133",
+  "headBranch": "feature/137-fileguard-sprint-1-issue-137",
   "conflictedFiles": [
-    "fileguard/db/__init__.py"
+    "fileguard/main.py",
+    "fileguard/models/__init__.py",
+    "fileguard/models/tenant_config.py",
+    "migrations/env.py"
   ],
-  "conflictCount": 1
+  "conflictCount": 4
 }
