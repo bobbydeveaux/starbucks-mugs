@@ -1,0 +1,239 @@
+Epics:
+- features:
+  - dependencies: []
+    description: FastAPI application skeleton, PostgreSQL schema (tenant_config, scan_event,
+      batch_job, compliance_report tables), Alembic migrations, Redis setup, Docker
+      and Docker Compose configuration, and Helm charts for Kubernetes deployment.
+    estimatedComplexity: medium
+    files:
+    - fileguard/config.py
+    - fileguard/db/session.py
+    - fileguard/models/scan_event.py
+    - fileguard/models/tenant_config.py
+    - fileguard/models/batch_job.py
+    - fileguard/models/compliance_report.py
+    - migrations/
+    - docker/Dockerfile
+    - docker-compose.yml
+    - helm/
+    id: fileguard-feat-project-setup
+    name: Project Scaffolding & Database Schema
+    project: fileguard
+    type: enabler
+  - dependencies:
+    - fileguard-feat-project-setup
+    description: Bearer token authentication supporting API key (bcrypt-hashed) and
+      OAuth 2.0 client credentials (JWT/JWKS). Redis-backed sliding window rate limiting
+      per tenant (default 100 req/min). Tenant config loading at request time.
+    estimatedComplexity: medium
+    files:
+    - fileguard/api/middleware/auth.py
+    - fileguard/api/middleware/rate_limit.py
+    - fileguard/schemas/tenant.py
+    id: fileguard-feat-auth-gateway
+    name: Authentication & Rate Limiting Middleware
+    project: fileguard
+    type: enabler
+  id: fileguard-epic-foundation
+  name: Foundation & Infrastructure
+- features:
+  - dependencies:
+    - fileguard-feat-project-setup
+    description: Text extraction from PDF (pdfminer.six), DOCX (python-docx), CSV,
+      JSON, TXT, and ZIP archives. Returns normalised text with byte-offset mapping
+      for PII span localisation. Thread-pool execution for CPU-bound extraction.
+    estimatedComplexity: medium
+    files:
+    - fileguard/core/document_extractor.py
+    id: fileguard-feat-document-extractor
+    name: Document Text Extractor
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-project-setup
+    description: ClamAV daemon integration via clamd Unix socket for signature-based
+      and heuristic scanning. Abstract AVEngineAdapter plugin interface for optional
+      commercial engines (Sophos, CrowdStrike). Fail-secure on daemon unreachable.
+    estimatedComplexity: medium
+    files:
+    - fileguard/core/av_adapter.py
+    - fileguard/core/adapters/clamav_adapter.py
+    id: fileguard-feat-av-engine
+    name: Antivirus Engine Adapter
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-document-extractor
+    description: Built-in UK regex pattern library (NI number, NHS number, email,
+      phone, postcode). Custom regex patterns loaded from JSON config at startup.
+      Configurable Google DLP and AWS Macie cloud backend adapters. Returns findings
+      with category, severity, and byte offset.
+    estimatedComplexity: high
+    files:
+    - fileguard/core/pii_detector.py
+    - fileguard/core/patterns/uk_patterns.py
+    - fileguard/core/adapters/dlp_adapter.py
+    id: fileguard-feat-pii-detector
+    name: PII Detection Engine
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-pii-detector
+    description: Replaces matched PII spans with [REDACTED] tokens in extracted content
+      and reconstructs the output file. Operates on findings produced by PIIDetector.
+      Redacted file returned as signed URL when requested.
+    estimatedComplexity: medium
+    files:
+    - fileguard/core/redaction.py
+    id: fileguard-feat-redaction
+    name: PII Redaction Engine
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-av-engine
+    - fileguard-feat-pii-detector
+    description: 'Evaluates AV and PII findings against per-tenant, per-file-type
+      disposition rules to determine final action: block, quarantine, or pass-with-flags.
+      Quarantine store writes AES-256 encrypted objects with TTL. Fail-secure default
+      rejects on unhandled exceptions.'
+    estimatedComplexity: medium
+    files:
+    - fileguard/core/disposition.py
+    - fileguard/services/quarantine.py
+    id: fileguard-feat-disposition
+    name: Disposition Engine
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-document-extractor
+    - fileguard-feat-av-engine
+    - fileguard-feat-pii-detector
+    - fileguard-feat-redaction
+    - fileguard-feat-disposition
+    description: 'ScanContext dataclass shared across composable pipeline steps. ScanPipeline
+      class executing: extract → AV scan → PII detect → redact → disposition → audit.
+      Celery scan worker wrapping the pipeline for async and batch execution. OpenTelemetry
+      trace spans per step.'
+    estimatedComplexity: high
+    files:
+    - fileguard/core/pipeline.py
+    - fileguard/core/context.py
+    - fileguard/workers/scan_worker.py
+    id: fileguard-feat-pipeline-orchestrator
+    name: Scan Pipeline Orchestrator
+    project: fileguard
+    type: feature
+  id: fileguard-epic-scan-pipeline
+  name: Scan Pipeline Core
+- features:
+  - dependencies:
+    - fileguard-feat-pipeline-orchestrator
+    - fileguard-feat-auth-gateway
+    description: POST /v1/scan accepting multipart file upload (≤50MB). Validates
+      file type and size, runs synchronous scan pipeline, returns verdict JSON (status,
+      action, findings, file_hash, scan_duration_ms, redacted_file_url) within 5-second
+      p95 SLA. GET /v1/scan/{id} for result retrieval.
+    estimatedComplexity: medium
+    files:
+    - fileguard/api/handlers/scan.py
+    - fileguard/schemas/scan.py
+    id: fileguard-feat-realtime-scan
+    name: Real-Time Scan Endpoint
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-realtime-scan
+    description: POST /v1/scan/signed-url generating a pre-signed object storage URL
+      for files 50MB–500MB. Scan triggered on upload completion event; result retrievable
+      via scan_id. Upload completes within 60-second SLA.
+    estimatedComplexity: medium
+    files:
+    - fileguard/api/handlers/signed_url.py
+    id: fileguard-feat-signed-url
+    name: Signed URL Upload for Large Files
+    project: fileguard
+    type: feature
+  id: fileguard-epic-api
+  name: REST API Endpoints
+- features:
+  - dependencies:
+    - fileguard-feat-pipeline-orchestrator
+    - fileguard-feat-auth-gateway
+    description: 'Cron-scheduled batch jobs connecting to S3 and GCS buckets. Partitions
+      prefix ranges across parallel Celery workers (≥500 files/hour per worker). Tracks
+      last_run_at per job to scan only new files. Writes structured result manifest
+      back to bucket. Dead-letter queue with 3-attempt exponential backoff retry.
+      REST API: POST/GET/DELETE /v1/batch/jobs.'
+    estimatedComplexity: high
+    files:
+    - fileguard/batch/s3_connector.py
+    - fileguard/batch/gcs_connector.py
+    - fileguard/batch/job_processor.py
+    - fileguard/api/handlers/batch.py
+    - fileguard/schemas/batch.py
+    id: fileguard-feat-batch-processor
+    name: Cloud Bucket Batch Job Processor
+    project: fileguard
+    type: feature
+  id: fileguard-epic-batch
+  name: Batch Processing
+- features:
+  - dependencies:
+    - fileguard-feat-project-setup
+    description: Appends HMAC-SHA256-signed ScanEvent records to PostgreSQL after
+      every scan. Signature computed over (id, file_hash, status, action_taken, created_at).
+      Append-only enforced at application layer. Structured JSON logs with correlation_id,
+      tenant_id, scan_id on every request.
+    estimatedComplexity: medium
+    files:
+    - fileguard/services/audit.py
+    id: fileguard-feat-audit-service
+    name: Tamper-Evident Audit Logging
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-audit-service
+    description: Asynchronous forwarding of ScanEvent records to Splunk via HTTP Event
+      Collector (HEC) and RiverSafe WatchTower REST API. Decoupled from scan critical
+      path. Prometheus counter for delivery errors. Alert on failure rate >0.5%.
+    estimatedComplexity: medium
+    files:
+    - fileguard/services/siem.py
+    id: fileguard-feat-siem-forwarding
+    name: SIEM Event Forwarding
+    project: fileguard
+    type: feature
+  - dependencies:
+    - fileguard-feat-audit-service
+    description: Scheduled Celery job generating PDF and JSON compliance reports with
+      configurable daily/weekly cadence. Reports contain file count, verdict breakdown,
+      and PII hit counts by category per period. GET /v1/reports and GET /v1/reports/{id}/download
+      endpoints for retrieval.
+    estimatedComplexity: medium
+    files:
+    - fileguard/services/reports.py
+    - fileguard/api/handlers/reports.py
+    - fileguard/schemas/report.py
+    id: fileguard-feat-compliance-reports
+    name: Scheduled Compliance Report Generation
+    project: fileguard
+    type: feature
+  id: fileguard-epic-audit-compliance
+  name: Audit & Compliance
+- features:
+  - dependencies:
+    - fileguard-feat-realtime-scan
+    description: Async Celery worker delivering full scan result payloads via HTTPS
+      POST to tenant-configured callback URLs with retry logic. Python CLI tool wrapping
+      the REST API for manual file submission, batch job management, and status polling.
+    estimatedComplexity: low
+    files:
+    - fileguard/workers/webhook_worker.py
+    - cli/fileguard_cli.py
+    id: fileguard-feat-webhook-cli
+    name: Webhook Dispatcher & CLI Tool
+    project: fileguard
+    type: feature
+  id: fileguard-epic-async-integration
+  name: Async Callbacks & Developer Tools
+Version: v1alpha1
