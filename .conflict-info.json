@@ -4,7 +4,8 @@
   "headBranch": "feature/140-fileguard-sprint-2-issue-140",
   "conflictedFiles": [
     ".claude-output.json",
-    "docs/concepts/fileguard/README.md"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 2
+  "conflictCount": 3
 }

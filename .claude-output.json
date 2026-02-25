@@ -1,21 +1,26 @@
 {
-  "prTitle": "feat: add DocumentExtractor with thread-pool execution for CPU-bound extraction",
-  "prBody": "## Summary\n\nImplements `DocumentExtractor` in `fileguard/core/document_extractor.py` with thread-pool execution for CPU-bound text extraction, along with comprehensive unit tests.\n\n### What was added\n\n**`fileguard/core/document_extractor.py`** — New module containing:\n- `DocumentExtractor` class supporting six formats: PDF (pdfminer.six), DOCX (python-docx), CSV, JSON, TXT, and ZIP (recursive)\n- `ExtractionResult` dataclass with `text: str` and `offsets: list[OffsetEntry]`\n- `OffsetEntry` dataclass mapping normalised text spans to byte positions in the source\n- `ExtractionError` exception raised for unsupported MIME types and corrupt files\n- Thread-pool execution via `asyncio.get_running_loop().run_in_executor()` — the event loop is never blocked during CPU-bound work\n- `THREAD_POOL_WORKERS` (from settings) controls pool size (default: 4)\n- ZIP archives are recursively unpacked; corrupt members are skipped with a warning\n- Consistent text normalisation across all formats (collapse whitespace, strip blank lines)\n\n**`fileguard/core/__init__.py`** — Package initialiser for the new `core` sub-package.\n\n**`tests/unit/test_document_extractor.py`** — Unit tests covering:\n- All six format handlers with in-memory bytes (no filesystem or network dependencies)\n- PDF and DOCX tested with mocked extraction libraries\n- Byte-offset invariant: `result.text[entry.text_start:entry.text_end]` verified for every format\n- ZIP recursion and corrupt-member skip-not-abort behaviour\n- Error paths: `ExtractionError` for unsupported MIME types and malformed inputs\n- Thread-pool dispatch: `run_in_executor` called with the correct executor and `_extract_sync`\n- Actual worker-thread execution verified (dispatch confirmed not to run on the event-loop thread)\n- `_normalize()` helper edge cases\n\n### Acceptance criteria satisfied\n\n- All six format handlers have passing tests verifying extracted text and offset structure\n- Byte-offset map entries correctly reference character positions in the normalised text\n- Error-path tests confirm `ExtractionError` for unsupported MIME types and malformed files\n- All tests pass with pytest and no external network or filesystem dependencies\n- ThreadPoolExecutor mocked to assert concurrent dispatch\n\nCloses #140",
+  "prTitle": "feat: integrate file watcher with agent alert pipeline",
+  "prBody": "## Summary\n\n- Implement `internal/watcher` package with cross-platform `FileWatcher` satisfying the `agent.Watcher` interface\n- Linux backend uses `inotify(7)` via `syscall` package (non-blocking, 50ms poll interval) supporting read/write/create/delete events\n- Non-Linux fallback uses 500ms polling via `os.Stat` to detect mtime/size changes\n- `FileWatcher` adds goroutine lifecycle management: automatic restart with exponential backoff (1s → 30s max) when the platform watcher errors, structured logging for dropped events\n- `cmd/agent/main.go` now calls `buildFileWatchers(cfg, logger)` to create one `FileWatcher` per `FILE`-type rule and registers them with the agent via `agent.WithWatchers`\n- Test suite covers: start/stop, 5s event delivery SLA, restart-on-error, context cancellation, interface compliance, and invalid glob handling\n- New doc `docs/concepts/tripwire-cybersecurity-tool/file-watcher.md` covers the package API, platform implementations, goroutine lifecycle, configuration, and alert event format\n\nCloses #161",
   "testsPass": true,
   "filesChanged": [
-    "fileguard/core/__init__.py",
-    "fileguard/core/document_extractor.py",
-    "tests/unit/test_document_extractor.py"
+    "internal/watcher/watcher.go",
+    "internal/watcher/file_watcher.go",
+    "internal/watcher/file_watcher_linux.go",
+    "internal/watcher/file_watcher_other.go",
+    "internal/watcher/file_watcher_test.go",
+    "cmd/agent/main.go"
   ],
   "docsUpdated": [
-    "docs/concepts/fileguard/README.md"
+    "docs/concepts/tripwire-cybersecurity-tool/file-watcher.md",
+    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md"
   ],
   "docsReviewed": [
-    "docs/concepts/fileguard/LLD.md",
-    "docs/concepts/fileguard/HLD.md",
-    "docs/concepts/fileguard/tasks.yaml",
-    "docs/concepts/fileguard/audit.md",
-    "docs/concepts/fileguard/middleware.md"
+    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/PRD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/ROAM.md",
+    "docs/concepts/tripwire-cybersecurity-tool/agent-configuration.md",
+    "docs/concepts/tripwire-cybersecurity-tool/storage.md"
   ],
-  "completedTasks": [1, 2, 3, 4]
+  "completedTasks": [1, 2, 3]
 }

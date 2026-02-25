@@ -151,10 +151,20 @@ rules:
     target: /etc/passwd
     severity: CRITICAL
 
+  - name: ssh-config-watch
+    type: FILE
+    target: /etc/ssh/sshd_config
+    severity: WARN
+
   - name: home-dir-watch
     type: FILE
     target: /home/operator
     severity: WARN
+
+  - name: var-log-auth
+    type: FILE
+    target: /var/log/auth.log
+    severity: INFO
 ```
 
 See [`agent-configuration.md`](agent-configuration.md) for the full
