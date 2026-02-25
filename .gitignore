@@ -21,3 +21,12 @@ dist/
 .env
 .env.local
 .env.*.local
+
+# Claude Code workspace files
+.claude/
+.coo/
+*.claude-session
+*.claude-checkpoint
+.worktrees/
+.codex/
+AGENTS.md
