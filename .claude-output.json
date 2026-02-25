@@ -1,0 +1,17 @@
+{
+  "prTitle": "feat: define Watcher interface and common FileEvent types",
+  "prBody": "## Summary\n\n- Adds `internal/watcher/watcher.go` with the `Watcher` interface (`Watch(paths []string) error`, `Stop() error`, `Events() <-chan FileEvent`), `FileEvent` struct (FilePath, PID, UID, Username, EventType, Timestamp), and `EventType` constants (`EventRead`, `EventWrite`)\n- Adds `internal/watcher/file_watcher.go` with `WatcherConfig`, `NewWatcher` constructor, and the `baseWatcher` no-op fallback that satisfies the interface on all platforms\n- Establishes the `platformFactory` registration hook so future platform-specific files (`file_watcher_linux.go`, `file_watcher_darwin.go`) can inject their inotify/FSEvents constructors via `init()` without modifying shared files\n- Documents build-tag conventions used by task-2 platform implementations\n\nCloses #159",
+  "testsPass": true,
+  "filesChanged": [
+    "internal/watcher/watcher.go",
+    "internal/watcher/file_watcher.go"
+  ],
+  "docsUpdated": [],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md",
+    "docs/concepts/tripwire-cybersecurity-tool/file-watcher.md",
+    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md"
+  ],
+  "completedTasks": [1]
+}
