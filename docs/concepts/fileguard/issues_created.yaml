@@ -1,0 +1,39 @@
+GeneratedAt: "2026-02-25T20:55:18Z"
+Issues:
+- IssueNumber: 133
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/133
+  TaskID: task-fileguard-feat-project-setup-1
+- IssueNumber: 134
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/134
+  TaskID: task-fileguard-feat-project-setup-2
+- IssueNumber: 135
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/135
+  TaskID: task-fileguard-feat-project-setup-3
+- IssueNumber: 136
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/136
+  TaskID: task-fileguard-feat-project-setup-4
+- IssueNumber: 137
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/137
+  TaskID: task-fileguard-feat-auth-gateway-1
+- IssueNumber: 138
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/138
+  TaskID: task-fileguard-feat-auth-gateway-2
+- IssueNumber: 139
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/139
+  TaskID: task-fileguard-feat-document-extractor-1
+- IssueNumber: 140
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/140
+  TaskID: task-fileguard-feat-document-extractor-2
+- IssueNumber: 141
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/141
+  TaskID: task-fileguard-feat-av-engine-1
+- IssueNumber: 142
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/142
+  TaskID: task-fileguard-feat-av-engine-2
+- IssueNumber: 143
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/143
+  TaskID: task-fileguard-feat-audit-service-1
+- IssueNumber: 144
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/144
+  TaskID: task-fileguard-feat-audit-service-2
+Plan: fileguard-plan
