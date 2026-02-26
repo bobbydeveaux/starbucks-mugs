@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json: the file was deleted by origin/main (intentional removal of a transient AI-task metadata artifact) but present on this branch. Accepted the deletion since .claude-output.json is a generated ephemeral file not meant to persist in the codebase.",
-  "strategyUsed": "accepted theirs (deletion) — .claude-output.json is a transient metadata file produced by the previous Claude task run; origin/main correctly removed it, and there is no functional reason to keep it in the repository"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in .claude-resolution.json and .conflict-info.json. Both files are CI/CD workflow metadata generated per-branch. .conflict-info.json was already resolved in the working tree (correct PR #291 and branch context). .claude-resolution.json had a conflict between two previous AI-written summaries about a prior .claude-output.json resolution; replaced with current resolution metadata.",
+  "strategyUsed": "replaced both conflicted metadata files with correct current-context values — .conflict-info.json already had no markers and was staged as-is; .claude-resolution.json conflict markers were removed and the file was rewritten to reflect this resolution session rather than carrying forward stale summaries from prior merge runs"
 }

@@ -1,9 +1,10 @@
 {
-  "prNumber": 296,
+  "prNumber": 291,
   "baseBranch": "main",
-  "headBranch": "feature/181-fileguard-sprint-3-issue-181",
+  "headBranch": "feature/248-tripwire-cybersecurity-tool-sprint-4-issue-248",
   "conflictedFiles": [
-    ".claude-output.json"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }
