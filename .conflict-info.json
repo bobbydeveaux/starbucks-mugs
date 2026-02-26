@@ -1,15 +1,9 @@
 {
-  "prNumber": 305,
+  "prNumber": 316,
   "baseBranch": "main",
-  "headBranch": "feature/259-tripwire-cybersecurity-tool-sprint-5-issue-259",
+  "headBranch": "feature/279-fileguard-sprint-4-issue-279",
   "conflictedFiles": [
-    ".claude-output.json",
-    "docs/components.md",
-    "package-lock.json",
-    "package.json",
-    "src/App.tsx",
-    "src/hooks/useAlerts.test.ts",
-    "src/hooks/useAlerts.ts"
+    "fileguard/config.py"
   ],
-  "conflictCount": 7
+  "conflictCount": 1
 }
