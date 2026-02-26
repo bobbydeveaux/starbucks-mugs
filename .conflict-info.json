@@ -1,9 +1,15 @@
 {
-  "prNumber": 205,
+  "prNumber": 236,
   "baseBranch": "main",
-  "headBranch": "feature/143-fileguard-sprint-2-issue-143",
+  "headBranch": "feature/180-tripwire-cybersecurity-tool-sprint-3-issue-180",
   "conflictedFiles": [
-    ".claude-output.json"
+    ".review-feedback.txt",
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md",
+    "go.mod",
+    "internal/server/grpc/server.go",
+    "internal/server/grpc/server_test.go",
+    "internal/server/websocket/broadcaster.go",
+    "proto/alert.proto"
   ],
-  "conflictCount": 1
+  "conflictCount": 7
 }

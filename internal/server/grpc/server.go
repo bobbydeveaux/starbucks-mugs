@@ -1,266 +1,322 @@
-// Package grpc implements the TripWire dashboard gRPC server.
+// Package grpc provides the gRPC server for the TripWire dashboard.
 //
-// The Server type satisfies the AlertServiceServer interface generated from
-// proto/alert.proto and wires together the storage layer (PostgreSQL) and the
-// WebSocket broadcaster for real-time alert fan-out to browser clients.
+// # mTLS Configuration
 //
-// Lifecycle
+// The server requires mutual TLS (mTLS): every connecting agent must present a
+// valid client certificate signed by the configured CA.  The server itself also
+// presents a certificate signed by the same CA so that agents can verify the
+// dashboard identity.
 //
-//	srv := grpc.NewServer(store, broadcaster, logger)
-//	grpcSrv := grpc.NewGRPCServer()
-//	alertpb.RegisterAlertServiceServer(grpcSrv, srv)
-//	grpcSrv.Serve(listener)
+// Certificate paths are supplied via [Config]:
+//
+//	Config{
+//	    CertPath: "/etc/tripwire/server.crt",
+//	    KeyPath:  "/etc/tripwire/server.key",
+//	    CAPath:   "/etc/tripwire/ca.crt",
+//	    Addr:     ":4443",
+//	}
+//
+// # Agent Identity (Cert CN Extraction)
+//
+// The Common Name (CN) of the connecting agent's client certificate is the
+// authoritative agent identity.  It is extracted from the peer's TLS
+// connection state on every RPC call and injected into the request context by
+// the [cnInterceptor].
+//
+// Downstream handlers retrieve the agent identity via [AgentCNFromContext]:
+//
+//	cn, ok := grpcserver.AgentCNFromContext(ctx)
+//	if !ok {
+//	    return nil, status.Error(codes.Unauthenticated, "missing agent identity")
+//	}
+//
+// # Graceful Shutdown
+//
+// Call [Server.GracefulStop] (or the context-aware [Server.Serve]) to drain
+// in-flight RPCs before closing the listener.  A hard stop is triggered if the
+// context is cancelled before draining completes.
 package grpc
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"time"
+	"net"
+	"os"
 
-	"github.com/google/uuid"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"github.com/tripwire/agent/internal/server/grpc/alertpb"
-	"github.com/tripwire/agent/internal/server/storage"
-	ws "github.com/tripwire/agent/internal/server/websocket"
+	alertpb "github.com/tripwire/agent/proto/alert"
 )
 
-// Store is the subset of storage.Store methods used by the gRPC server.
-// Defined as an interface so tests can substitute a fake.
-type Store interface {
-	// UpsertHost persists the host record and returns the stable host_id that
-	// is stored in the database.  On a hostname conflict the existing host_id
-	// is returned so that alert correlation remains intact across reconnects.
-	UpsertHost(ctx context.Context, h storage.Host) (string, error)
-	GetHost(ctx context.Context, hostID string) (*storage.Host, error)
-	BatchInsertAlerts(ctx context.Context, alert storage.Alert) error
+// contextKey is an unexported type for context keys in this package to avoid
+// collisions with keys defined by other packages.
+type contextKey int
+
+const agentCNKey contextKey = 0
+
+// AgentCNFromContext retrieves the agent Common Name injected by the CN
+// interceptor.  It returns ("", false) when no CN is present (unauthenticated
+// request or interceptor not in the chain).
+func AgentCNFromContext(ctx context.Context) (string, bool) {
+	cn, ok := ctx.Value(agentCNKey).(string)
+	return cn, ok && cn != ""
 }
 
-// Server implements alertpb.AlertServiceServer.
+// Config holds the TLS certificate and listener configuration for the gRPC
+// server.
+type Config struct {
+	// CertPath is the path to the PEM-encoded server TLS certificate. Required.
+	CertPath string
+
+	// KeyPath is the path to the PEM-encoded server TLS private key. Required.
+	KeyPath string
+
+	// CAPath is the path to the PEM-encoded CA certificate used to verify
+	// client (agent) certificates for mTLS. Required.
+	CAPath string
+
+	// Addr is the TCP address the gRPC server listens on (e.g. ":4443").
+	// Defaults to ":4443" when empty.
+	Addr string
+}
+
+// Server wraps a grpc.Server with lifecycle management and mTLS configuration.
 type Server struct {
-	alertpb.UnimplementedAlertServiceServer
-
-	store       Store
-	broadcaster *ws.Broadcaster
-	logger      *slog.Logger
+	cfg    Config
+	logger *slog.Logger
+	grpc   *grpc.Server
 }
 
-// NewServer creates a Server wired to store and broadcaster.
-func NewServer(store Store, broadcaster *ws.Broadcaster, logger *slog.Logger) *Server {
-	return &Server{
-		store:       store,
-		broadcaster: broadcaster,
-		logger:      logger,
-	}
-}
-
-// RegisterAgent handles the RegisterAgent RPC.
+// New creates a new Server, loading TLS credentials from the paths in cfg and
+// registering srv as the AlertService implementation.
 //
-// It upserts the host record in PostgreSQL and returns the stable host_id
-// UUID that the agent must embed in every subsequent AgentEvent.  When an
-// agent reconnects under the same hostname, the existing host_id is returned
-// so that alert correlation with historical records is preserved.
-func (s *Server) RegisterAgent(ctx context.Context, req *alertpb.RegisterRequest) (*alertpb.RegisterResponse, error) {
-	if req.Hostname == "" {
-		return nil, status.Error(codes.InvalidArgument, "hostname is required")
+// If cfg.Addr is empty it defaults to ":4443".
+//
+// The returned Server has not yet started listening; call [Server.Serve] to
+// accept connections.
+func New(cfg Config, logger *slog.Logger, srv alertpb.AlertServiceServer) (*Server, error) {
+	if cfg.Addr == "" {
+		cfg.Addr = ":4443"
 	}
 
-	// Generate a candidate UUID.  UpsertHost will return the existing host_id
-	// if the hostname already exists, discarding this candidate.
-	candidateID := uuid.NewString()
-	now := time.Now().UTC()
-
-	h := storage.Host{
-		HostID:       candidateID,
-		Hostname:     req.Hostname,
-		Platform:     req.Platform,
-		AgentVersion: req.AgentVersion,
-		LastSeen:     &now,
-		Status:       storage.HostStatusOnline,
-	}
-
-	// effectiveHostID is the UUID that is actually stored in the database.
-	// On the first registration it equals candidateID; on reconnects it is
-	// the original UUID that was assigned when the host first registered.
-	effectiveHostID, err := s.store.UpsertHost(ctx, h)
+	creds, err := loadTLSCredentials(cfg)
 	if err != nil {
-		s.logger.Error("grpc: UpsertHost failed",
-			slog.String("hostname", req.Hostname),
-			slog.Any("error", err),
-		)
-		return nil, status.Errorf(codes.Internal, "register agent: %v", err)
+		return nil, fmt.Errorf("grpc server: load TLS credentials: %w", err)
 	}
 
-	s.logger.Info("agent registered",
-		slog.String("hostname", req.Hostname),
-		slog.String("host_id", effectiveHostID),
-		slog.String("platform", req.Platform),
-		slog.String("agent_version", req.AgentVersion),
+	gs := grpc.NewServer(
+		grpc.Creds(creds),
+		grpc.ChainUnaryInterceptor(cnUnaryInterceptor(logger)),
+		grpc.ChainStreamInterceptor(cnStreamInterceptor(logger)),
 	)
 
-	return &alertpb.RegisterResponse{
-		HostId:       effectiveHostID,
-		ServerTimeUs: time.Now().UnixMicro(),
+	alertpb.RegisterAlertServiceServer(gs, srv)
+
+	return &Server{
+		cfg:    cfg,
+		logger: logger,
+		grpc:   gs,
 	}, nil
 }
 
-// StreamAlerts handles the bidirectional StreamAlerts RPC.
-//
-// For each incoming AgentEvent the handler:
-//  1. Validates the required fields.
-//  2. Persists the alert to PostgreSQL via BatchInsertAlerts.
-//  3. Publishes an AlertMessage to the WebSocket Broadcaster for real-time
-//     fan-out to connected browser clients.
-//
-// The response stream is used only for server-initiated ServerCommand
-// messages (currently only a PING keepalive to detect stale streams).
-func (s *Server) StreamAlerts(stream alertpb.AlertService_StreamAlertsServer) error {
-	ctx := stream.Context()
-
-	for {
-		evt, err := stream.Recv()
-		if err != nil {
-			// io.EOF is the canonical end-of-stream signal from the gRPC
-			// runtime.  Context cancellation and deadline exceeded are also
-			// considered normal closure (e.g. agent restart, client timeout).
-			// All other errors are genuine transport failures and are returned
-			// so that the caller can observe and log them appropriately.
-			if err == io.EOF ||
-				err == context.Canceled ||
-				err == context.DeadlineExceeded ||
-				status.Code(err) == codes.Canceled ||
-				status.Code(err) == codes.DeadlineExceeded {
-				s.logger.Debug("grpc: StreamAlerts stream closed", slog.Any("reason", err))
-				return nil
-			}
-			s.logger.Error("grpc: StreamAlerts transport error", slog.Any("error", err))
-			return err
-		}
-
-		if err := s.handleEvent(ctx, stream, evt); err != nil {
-			return err
-		}
-	}
-}
-
-// handleEvent processes a single AgentEvent received from the stream.
-func (s *Server) handleEvent(ctx context.Context, stream alertpb.AlertService_StreamAlertsServer, evt *alertpb.AgentEvent) error {
-	// --- Validation ---
-	if evt.AlertId == "" {
-		return status.Error(codes.InvalidArgument, "alert_id is required")
-	}
-	if evt.HostId == "" {
-		return status.Error(codes.InvalidArgument, "host_id is required")
-	}
-	if !isValidTripwireType(evt.TripwireType) {
-		return status.Errorf(codes.InvalidArgument, "invalid tripwire_type %q", evt.TripwireType)
-	}
-	if !isValidSeverity(evt.Severity) {
-		return status.Errorf(codes.InvalidArgument, "invalid severity %q", evt.Severity)
-	}
-
-	// --- Resolve hostname for WebSocket fan-out (best-effort) ---
-	hostname := evt.HostId // fallback when DB lookup fails
-	if host, err := s.store.GetHost(ctx, evt.HostId); err == nil {
-		hostname = host.Hostname
-	}
-
-	// --- Convert timestamp ---
-	var ts time.Time
-	if evt.TimestampUs > 0 {
-		ts = time.UnixMicro(evt.TimestampUs).UTC()
-	} else {
-		ts = time.Now().UTC()
-	}
-	receivedAt := time.Now().UTC()
-
-	// --- Normalise event_detail ---
-	detail, err := normaliseDetail(evt.EventDetailJson)
+// Serve starts listening on cfg.Addr and blocks until ctx is cancelled or an
+// error occurs.  When ctx is cancelled Serve attempts a graceful drain.
+func (s *Server) Serve(ctx context.Context) error {
+	lis, err := net.Listen("tcp", s.cfg.Addr)
 	if err != nil {
-		s.logger.Warn("grpc: invalid event_detail_json, using null",
-			slog.String("alert_id", evt.AlertId),
-			slog.Any("error", err),
-		)
-		detail = json.RawMessage("null")
+		return fmt.Errorf("grpc server: listen %s: %w", s.cfg.Addr, err)
 	}
 
-	// --- Persist to PostgreSQL ---
-	alert := storage.Alert{
-		AlertID:      evt.AlertId,
-		HostID:       evt.HostId,
-		Timestamp:    ts,
-		TripwireType: storage.TripwireType(evt.TripwireType),
-		RuleName:     evt.RuleName,
-		EventDetail:  detail,
-		Severity:     storage.Severity(evt.Severity),
-		ReceivedAt:   receivedAt,
-	}
-
-	if err := s.store.BatchInsertAlerts(ctx, alert); err != nil {
-		s.logger.Error("grpc: BatchInsertAlerts failed",
-			slog.String("alert_id", evt.AlertId),
-			slog.Any("error", err),
-		)
-		return status.Errorf(codes.Internal, "persist alert %s: %v", evt.AlertId, err)
-	}
-
-	s.logger.Info("alert ingested",
-		slog.String("alert_id", evt.AlertId),
-		slog.String("host_id", evt.HostId),
-		slog.String("type", evt.TripwireType),
-		slog.String("rule", evt.RuleName),
-		slog.String("severity", evt.Severity),
+	s.logger.Info("gRPC server listening",
+		slog.String("addr", s.cfg.Addr),
+		slog.String("tls", "mTLS"),
 	)
 
-	// --- Fan out to WebSocket clients ---
-	s.broadcaster.Broadcast(ws.AlertMessage{
-		Type: "alert",
-		Data: ws.AlertData{
-			AlertID:      evt.AlertId,
-			HostID:       evt.HostId,
-			Hostname:     hostname,
-			Timestamp:    ts.Format(time.RFC3339),
-			TripwireType: evt.TripwireType,
-			RuleName:     evt.RuleName,
-			Severity:     evt.Severity,
-			EventDetail:  detail,
-		},
-	})
+	return s.ServeOnListener(ctx, lis)
+}
 
+// ServeOnListener accepts gRPC connections on lis and blocks until ctx is
+// cancelled or a fatal error occurs.  It is useful in tests where the caller
+// controls the listener (e.g. obtained from net.Listen("tcp", "127.0.0.1:0")).
+//
+// When ctx is cancelled a graceful stop is initiated; the method returns only
+// after all in-flight RPCs have completed.
+func (s *Server) ServeOnListener(ctx context.Context, lis net.Listener) error {
+	// Start the gRPC server in a background goroutine.
+	servErrCh := make(chan error, 1)
+	go func() {
+		if err := s.grpc.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			servErrCh <- err
+		}
+		close(servErrCh)
+	}()
+
+	// Wait for context cancellation or a fatal server error.
+	select {
+	case <-ctx.Done():
+		s.logger.Info("gRPC server: context cancelled, initiating graceful stop")
+		s.grpc.GracefulStop()
+	case err := <-servErrCh:
+		if err != nil {
+			return fmt.Errorf("grpc server: serve: %w", err)
+		}
+		return nil
+	}
+
+	// Wait for the graceful stop to complete.
+	if err := <-servErrCh; err != nil {
+		return fmt.Errorf("grpc server: serve after graceful stop: %w", err)
+	}
 	return nil
 }
 
-// --- Validation helpers -------------------------------------------------------
-
-func isValidTripwireType(t string) bool {
-	switch storage.TripwireType(t) {
-	case storage.TripwireTypeFile, storage.TripwireTypeNetwork, storage.TripwireTypeProcess:
-		return true
-	}
-	return false
+// GracefulStop signals the gRPC server to stop accepting new connections and
+// blocks until all active RPCs have finished.
+func (s *Server) GracefulStop() {
+	s.grpc.GracefulStop()
 }
 
-func isValidSeverity(s string) bool {
-	switch storage.Severity(s) {
-	case storage.SeverityInfo, storage.SeverityWarn, storage.SeverityCritical:
-		return true
-	}
-	return false
+// Stop forcefully terminates all active RPCs and closes the listener.
+// Prefer GracefulStop for clean shutdowns.
+func (s *Server) Stop() {
+	s.grpc.Stop()
 }
 
-// normaliseDetail ensures that b is valid JSON.  An empty or nil slice is
-// treated as SQL NULL (returned as json.RawMessage("null")).  An invalid JSON
-// payload returns an error.
-func normaliseDetail(b []byte) (json.RawMessage, error) {
-	if len(b) == 0 {
-		return json.RawMessage("null"), nil
+// ─── TLS helpers ─────────────────────────────────────────────────────────────
+
+// loadTLSCredentials reads the server certificate+key and CA certificate from
+// the paths in cfg and returns gRPC transport credentials configured for mTLS.
+//
+// The returned credentials require every client (agent) to present a
+// certificate signed by the CA; connections without a valid client cert are
+// rejected at the TLS handshake.
+func loadTLSCredentials(cfg Config) (credentials.TransportCredentials, error) {
+	// Load server certificate and private key.
+	serverCert, err := tls.LoadX509KeyPair(cfg.CertPath, cfg.KeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("load server cert/key (%s, %s): %w", cfg.CertPath, cfg.KeyPath, err)
 	}
-	if !json.Valid(b) {
-		return nil, fmt.Errorf("event_detail_json is not valid JSON")
+
+	// Load the CA certificate for verifying client (agent) certificates.
+	caPEM, err := os.ReadFile(cfg.CAPath)
+	if err != nil {
+		return nil, fmt.Errorf("read CA cert %s: %w", cfg.CAPath, err)
 	}
-	return json.RawMessage(b), nil
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(caPEM) {
+		return nil, fmt.Errorf("parse CA cert from %s: no certificates found", cfg.CAPath)
+	}
+
+	tlsConfig := &tls.Config{
+		// Present the server certificate to connecting agents.
+		Certificates: []tls.Certificate{serverCert},
+
+		// Require clients to present a certificate (mTLS).
+		ClientAuth: tls.RequireAndVerifyClientCert,
+
+		// Verify client certificates against our CA pool.
+		ClientCAs: caPool,
+
+		// Enforce TLS 1.2 minimum for security.
+		MinVersion: tls.VersionTLS12,
+	}
+
+	return credentials.NewTLS(tlsConfig), nil
 }
+
+// ─── CN extraction interceptors ──────────────────────────────────────────────
+
+// extractCN retrieves the client certificate Common Name from the TLS peer
+// information stored in ctx by the gRPC transport.
+//
+// It returns ("", errNoCert) when the peer has no client certificate, which
+// should not happen when mTLS is properly enforced at the transport layer but
+// is guarded against here for defence-in-depth.
+func extractCN(ctx context.Context) (string, error) {
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return "", errors.New("no peer in context")
+	}
+
+	tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo)
+	if !ok {
+		return "", errors.New("peer auth info is not TLSInfo")
+	}
+
+	if len(tlsInfo.State.VerifiedChains) == 0 || len(tlsInfo.State.VerifiedChains[0]) == 0 {
+		return "", errors.New("no verified client certificate chain")
+	}
+
+	leaf := tlsInfo.State.VerifiedChains[0][0]
+	if leaf.Subject.CommonName == "" {
+		return "", errors.New("client certificate has empty Common Name")
+	}
+
+	return leaf.Subject.CommonName, nil
+}
+
+// cnUnaryInterceptor is a gRPC unary server interceptor that extracts the
+// client certificate CN and injects it into the request context.  If the CN
+// cannot be extracted the RPC is rejected with codes.Unauthenticated.
+func cnUnaryInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		cn, err := extractCN(ctx)
+		if err != nil {
+			logger.Warn("gRPC: failed to extract client cert CN",
+				slog.String("method", info.FullMethod),
+				slog.String("error", err.Error()),
+			)
+			return nil, status.Errorf(codes.Unauthenticated, "client certificate CN extraction failed: %v", err)
+		}
+
+		logger.Debug("gRPC: authenticated agent",
+			slog.String("method", info.FullMethod),
+			slog.String("agent_cn", cn),
+		)
+
+		ctx = context.WithValue(ctx, agentCNKey, cn)
+		return handler(ctx, req)
+	}
+}
+
+// cnStreamInterceptor is a gRPC streaming server interceptor that extracts the
+// client certificate CN and injects it into the stream context.  If the CN
+// cannot be extracted the stream is rejected with codes.Unauthenticated.
+func cnStreamInterceptor(logger *slog.Logger) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		ctx := ss.Context()
+		cn, err := extractCN(ctx)
+		if err != nil {
+			logger.Warn("gRPC: failed to extract client cert CN",
+				slog.String("method", info.FullMethod),
+				slog.String("error", err.Error()),
+			)
+			return status.Errorf(codes.Unauthenticated, "client certificate CN extraction failed: %v", err)
+		}
+
+		logger.Debug("gRPC: authenticated agent stream",
+			slog.String("method", info.FullMethod),
+			slog.String("agent_cn", cn),
+		)
+
+		wrapped := &cnServerStream{ServerStream: ss, ctx: context.WithValue(ctx, agentCNKey, cn)}
+		return handler(srv, wrapped)
+	}
+}
+
+// cnServerStream wraps a grpc.ServerStream with a context that carries the
+// agent CN.
+type cnServerStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s *cnServerStream) Context() context.Context { return s.ctx }

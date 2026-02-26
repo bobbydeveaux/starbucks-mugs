@@ -1,70 +1,80 @@
-# gRPC AlertService — Implementation Reference
+# gRPC Alert Service & WebSocket Broadcaster
 
 **Status:** Implemented (Sprint 3)
-**Packages:**
-- `internal/server/grpc/alertpb/` — generated protobuf message & service types
-- `internal/server/grpc/` — `Server` implementation
-- `internal/server/websocket/` — `Broadcaster` + `Handler`
+
+This document describes the gRPC alert ingestion service and the in-process
+WebSocket broadcaster that together form the real-time alert pipeline of the
+TripWire dashboard server.
 
 ---
 
 ## Overview
 
-The AlertService gRPC server is the primary ingestion endpoint for the TripWire
-dashboard.  Agent binaries dial the dashboard via mTLS and:
-
-1. Call `RegisterAgent` once to obtain a stable `host_id` UUID.
-2. Open a `StreamAlerts` bidirectional stream to push `AgentEvent` messages
-   continuously.
-
-On each received `AgentEvent` the server:
-
-1. Validates required fields (`alert_id`, `host_id`, `tripwire_type`, `severity`).
-2. Persists the alert to PostgreSQL via `storage.Store.BatchInsertAlerts` (buffered,
-   flushed every 100 ms or at 100 rows — whichever comes first).
-3. Fans out the alert to all connected browser WebSocket clients via the
-   in-process `Broadcaster`.
+```
+TripWire Agent                 Dashboard Server
+┌────────────┐  gRPC stream   ┌──────────────────────────────────┐
+│ AgentEvent │──────────────▶ │  AlertService.StreamAlerts        │
+└────────────┘  ServerCommand │   1. Validate event               │
+                ◀──────────── │   2. Persist to PostgreSQL        │
+                              │   3. Publish to Broadcaster ──▶ chan│
+                              └──────────────────────────────────┘
+                                         │
+                                         ▼ (non-blocking fan-out)
+                              ┌──────────────────────────────────┐
+                              │  InProcessBroadcaster            │
+                              │  sync.Map: ch1, ch2, ch3 ...     │
+                              └──────────────────────────────────┘
+                                   │         │         │
+                                   ▼         ▼         ▼
+                              WS client1  WS client2  WS client3
+```
 
 ---
 
-## Proto Definition
+## gRPC Service
 
-Source: `proto/alert.proto`
+### Package
+
+```
+internal/server/grpc/alert_service.go
+```
+
+### Proto definition
 
 ```protobuf
+// proto/alert.proto
 service AlertService {
-  rpc RegisterAgent(RegisterRequest) returns (RegisterResponse);
   rpc StreamAlerts(stream AgentEvent) returns (stream ServerCommand);
+  rpc RegisterAgent(RegisterRequest) returns (RegisterResponse);
 }
 ```
 
-Generated Go code is committed to `internal/server/grpc/alertpb/` so that
-builds do not require `protoc`.  Regenerate with:
-
+Generate Go code with:
 ```sh
-protoc \
-  --proto_path=proto \
-  --go_out=internal/server/grpc/alertpb --go_opt=paths=source_relative \
-  --go-grpc_out=internal/server/grpc/alertpb --go-grpc_opt=paths=source_relative \
-  proto/alert.proto
+protoc --go_out=. --go_opt=paths=source_relative \
+       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+       proto/alert.proto
 ```
 
----
+Pre-generated stubs live in `proto/alert/`.
 
-## gRPC Server
-
-**File:** `internal/server/grpc/server.go`
+### Constructor
 
 ```go
-// Construct the server (wire at startup):
-srv := grpc.NewServer(store, broadcaster, logger)
-
-grpcSrv := googlegrpc.NewServer( /* TLS credentials, interceptors */ )
-alertpb.RegisterAlertServiceServer(grpcSrv, srv)
-grpcSrv.Serve(listener)
+svc := grpc.NewAlertService(
+    store,       // storage.Store (Postgres)
+    broadcaster, // websocket.Broadcaster
+    logger,      // *slog.Logger
+    300,         // maxEventAgeSecs (0 = default 300)
+)
 ```
 
 ### RegisterAgent
+
+Upserts a `Host` record in PostgreSQL.  The hostname is taken from the mTLS
+client-certificate CN when available, falling back to the `hostname` field in
+the `RegisterRequest`.  Returns the dashboard-assigned `host_id` and the server
+clock for skew compensation.
 
 | Field        | Required | Notes                                     |
 |--------------|----------|-------------------------------------------|
@@ -73,16 +83,23 @@ grpcSrv.Serve(listener)
 | `agent_version` | no    | Stored for diagnostic purposes            |
 
 Returns a `RegisterResponse` with:
-- `host_id` — the stable UUID for this hostname.  The server generates a
-  candidate UUID on every call, but uses `INSERT … ON CONFLICT (hostname) DO
-  UPDATE … RETURNING host_id` so that the **existing** `host_id` is returned
-  when the agent reconnects.  Alert correlation with historical records is
-  preserved across agent restarts.
+- `host_id` — the server-assigned UUID for this host.
 - `server_time_us` — server clock in Unix microseconds (clock-skew detection)
 
 ### StreamAlerts
 
-The server loops on `stream.Recv()`.  For each `AgentEvent`:
+Reads `AgentEvent` messages from the bidirectional client stream and for each:
+
+1. **Validates** the event (required fields, timestamp bounds ±5 min/+60s,
+   `tripwire_type` ∈ {FILE, NETWORK, PROCESS}, `severity` ∈ {INFO, WARN, CRITICAL},
+   JSON validity of `event_detail_json`).
+2. **Persists** a valid alert to PostgreSQL via `store.BatchInsertAlerts` (batched,
+   100 ms flush interval).
+3. **Publishes** the persisted alert to the WebSocket broadcaster using a
+   **non-blocking send** — slow or disconnected WebSocket clients cannot stall
+   the gRPC goroutine.
+4. Sends an `ACK` `ServerCommand` back to the agent.  Invalid events receive an
+   `ERROR` `ServerCommand` and are not written to the database.
 
 | Field             | Validated as                                         |
 |-------------------|------------------------------------------------------|
@@ -90,108 +107,111 @@ The server loops on `stream.Recv()`.  For each `AgentEvent`:
 | `host_id`         | Non-empty string; must have been issued by `RegisterAgent` |
 | `tripwire_type`   | One of `FILE`, `NETWORK`, `PROCESS`                  |
 | `severity`        | One of `INFO`, `WARN`, `CRITICAL`                    |
-| `timestamp_us`    | Unix µs; defaults to server `time.Now()` if zero    |
+| `timestamp_us`    | Unix µs; must be within [-5 min, +60s] of server time |
 | `event_detail_json` | Must be valid JSON or empty; stored as `null`      |
 
-The server returns `nil` on clean stream close (`io.EOF`, `context.Canceled`,
-`context.DeadlineExceeded`, gRPC `Canceled`/`DeadlineExceeded` codes).
-Genuine transport errors are distinguished from normal closure and returned
-as non-nil errors so that the gRPC runtime can observe and log them.
-Validation failures also return a gRPC status error.
+---
+
+## gRPC Server (mTLS Infrastructure)
+
+**File:** `internal/server/grpc/server.go`
+
+```go
+// Construct the server (wire at startup):
+srv := grpc.New(cfg, logger, alertService)
+```
+
+The server requires mutual TLS (mTLS). Certificate paths are supplied via `Config`:
+
+```go
+cfg := grpcserver.Config{
+    CertPath: "/etc/tripwire/server.crt",
+    KeyPath:  "/etc/tripwire/server.key",
+    CAPath:   "/etc/tripwire/ca.crt",
+    Addr:     ":4443",
+}
+```
+
+The Common Name (CN) of the connecting agent's mTLS client certificate is extracted and injected into the request context. Handlers can retrieve it via `grpcserver.AgentCNFromContext(ctx)`.
 
 ---
 
 ## WebSocket Broadcaster
 
-**Files:** `internal/server/websocket/broadcaster.go`,
-`internal/server/websocket/handler.go`
+### Package
 
-### Broadcaster
-
-The `Broadcaster` maintains a `sync.Map` of connected `Client` instances.
-Each `Client` owns a buffered send channel (default depth: 64).
-
-```go
-bc := ws.NewBroadcaster(logger, 64 /* clientBufSize */)
-
-// Register a new client (call when a WS connection is accepted):
-client := bc.Register(clientID)
-defer bc.Unregister(clientID)
-
-// Fan out an alert to all clients (called by the gRPC server):
-bc.Broadcast(ws.AlertMessage{ Type: "alert", Data: ws.AlertData{...} })
+```
+internal/server/websocket/broadcaster.go
 ```
 
-`Broadcast` never blocks.  Slow clients with full send buffers have messages
-dropped; `client.Dropped` is incremented for observability.
-
-### Handler
-
-`Handler` is an `http.Handler` that upgrades HTTP connections to WebSocket
-using the RFC 6455 handshake (no external library required — standard
-`net/http` + `http.Hijacker`).
+### Interface
 
 ```go
-h := ws.NewHandler(bc, logger, 10*time.Second /* writeTimeout */)
-mux.Handle("/ws/alerts", h)
-```
-
-Wire it into the dashboard HTTP router (chi or `net/http.ServeMux`).
-
-### WebSocket Message Format
-
-Server → Client (JSON text frame):
-
-```json
-{
-  "type": "alert",
-  "data": {
-    "alert_id":      "uuid",
-    "host_id":       "uuid",
-    "hostname":      "web-01",
-    "timestamp":     "2026-02-26T10:00:00Z",
-    "tripwire_type": "FILE",
-    "rule_name":     "etc-passwd-watch",
-    "severity":      "CRITICAL",
-    "event_detail":  { "path": "/etc/passwd", "pid": 1234 }
-  }
+type Broadcaster interface {
+    Subscribe(ctx context.Context) <-chan storage.Alert
+    Unsubscribe(ch <-chan storage.Alert)
+    Publish(a storage.Alert)
+    Close()
 }
 ```
 
----
+### InProcessBroadcaster
 
-## Integration Example
+The concrete implementation for single-instance deployments.
 
 ```go
-// main.go (dashboard server)
-store, _ := storage.New(ctx, connStr, 0, 0)
-defer store.Close(ctx)
+b := websocket.NewBroadcaster(logger, 64 /* per-subscriber buffer */)
+defer b.Close()
 
-logger := slog.New(...)
-bc := ws.NewBroadcaster(logger, 64)
+// WebSocket handler subscribes on connect:
+ch := b.Subscribe(clientCtx)
 
-// gRPC server
-alertSrv := grpcserver.NewServer(store, bc, logger)
-grpcSrv := googlegrpc.NewServer(tlsCredentials)
-alertpb.RegisterAlertServiceServer(grpcSrv, alertSrv)
-go grpcSrv.Serve(grpcListener)
+// Alert service publishes on every persisted event (non-blocking):
+b.Publish(alert)
 
-// HTTP / WebSocket server
-mux := http.NewServeMux()
-mux.Handle("/ws/alerts", ws.NewHandler(bc, logger, 0))
-mux.HandleFunc("/healthz", healthzHandler)
-http.Serve(httpListener, mux)
+// WebSocket handler reads and writes to the browser:
+for a := range ch {
+    conn.WriteJSON(a)
+}
 ```
+
+### Fan-out semantics
+
+| Property | Detail |
+|---|---|
+| **Delivery** | Best-effort; drops for full buffers |
+| **Back-pressure** | None — `Publish` is always O(1) and non-blocking |
+| **Concurrency** | `sync.Map` for lock-free subscriber enumeration |
+| **Cleanup** | Context cancellation automatically calls `Unsubscribe` |
+| **Multi-instance** | Replace `InProcessBroadcaster` with a Redis pub/sub adapter |
+
+### Non-blocking publish
+
+```go
+// Inside Publish:
+select {
+case ch <- a:
+    // delivered
+default:
+    logger.Warn("subscriber buffer full, dropping alert", ...)
+}
+```
+
+A full subscriber buffer (caused by a slow or disconnected browser client)
+results in a warning log and a dropped alert for **that subscriber only**.
+Other subscribers and the gRPC ingestion goroutine are unaffected.
 
 ---
 
-## Test Coverage
+## Acceptance Criteria
 
-| Test file                                                    | Scenarios |
-|--------------------------------------------------------------|-----------|
-| `internal/server/grpc/server_test.go`                        | RegisterAgent (success, stable host_id on reconnect, missing hostname); StreamAlerts (happy path with DB + WS fan-out, invalid type/severity, missing IDs, zero timestamp, null event_detail) |
-| `internal/server/websocket/broadcaster_test.go`              | Register/Unregister, Broadcast delivery, drop on full buffer, empty room, unregister unknown ID |
-| `internal/server/websocket/handler_test.go`                  | Reject non-WS request, reject missing key, full handshake + broadcast delivery |
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | Each persisted alert is published to the broadcaster without blocking StreamAlerts | `Publish` non-blocking select/default |
+| 2 | A slow/disconnected WebSocket consumer does not cause back-pressure on the gRPC stream | Per-subscriber buffered channel; drop-on-full |
+| 3 | Integration test confirms an ingested event appears on a subscribed WebSocket connection | `TestIntegration_IngestedEventAppearsOnWebSocketSubscription` |
+
+---
 
 ## Security Notes
 
@@ -213,3 +233,28 @@ length of `0xFFFFFFFFFFFFFFFF` and the memory exhaustion that would result from
 allocating a buffer for an arbitrarily large frame.  The `readLoop` goroutine
 also runs with a `recover()` as defence-in-depth so a panic cannot crash the
 server process.
+
+---
+
+## Tests
+
+```sh
+go test ./internal/server/grpc/...
+go test ./internal/server/websocket/...
+```
+
+Key test cases:
+
+| Test | What it checks |
+|---|---|
+| `TestStreamAlerts_PersistsAndBroadcasts` | Happy path: persist + broadcast + ACK |
+| `TestStreamAlerts_SlowSubscriberDoesNotBlock` | Criterion §2: 10 events with a full buffer completes quickly |
+| `TestIntegration_IngestedEventAppearsOnWebSocketSubscription` | Criterion §3: end-to-end event delivery |
+| `TestBroadcaster_SlowConsumer_DropsNotBlocks` | Publish never blocks on a slow consumer |
+| `TestBroadcaster_ContextCancelUnsubscribes` | Automatic cleanup on context cancel |
+| `TestStreamAlerts_InvalidTripwireType` | Validation: error ACK, no persistence |
+| `TestStreamAlerts_StaleTimestamp` | Validation: reject events >5 min old |
+| `TestStreamAlerts_StoreError_SendsErrorACK` | DB failure: error ACK, no broadcast |
+| `TestMTLSAcceptsValidClientCert` | mTLS: valid client cert authenticated, CN extracted |
+| `TestMTLSRejectsNoClientCert` | mTLS: connection without client cert rejected |
+| `TestMTLSRejectsUnknownCAClientCert` | mTLS: rogue CA cert rejected |

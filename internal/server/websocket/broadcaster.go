@@ -1,144 +1,142 @@
-// Package websocket provides the real-time alert fan-out layer for the
-// TripWire dashboard server.
+// Package websocket provides the in-process WebSocket broadcaster for the
+// TripWire dashboard server.  The Broadcaster fans newly ingested alerts out
+// to all currently-connected browser clients without blocking the gRPC alert
+// ingestion goroutine.
 //
-// The Broadcaster maintains a registry of connected WebSocket clients and
-// publishes alert messages to all of them concurrently.  For single-instance
-// deployments the broadcaster is in-process (backed by a sync.Map).  For
-// multi-instance deployments, operators replace the broadcaster with a
-// Redis-backed implementation that satisfies the same Publisher interface.
+// Design notes
+//
+//   - Each WebSocket client has a dedicated buffered channel.  A non-blocking
+//     send is used so that a slow or disconnected client never applies
+//     back-pressure to the gRPC StreamAlerts goroutine.
+//   - Subscriptions are tracked in a sync.Map to allow concurrent reads
+//     without a global lock on the hot broadcast path.
+//   - Closing a subscription signals the associated WebSocket pump goroutine
+//     to exit cleanly.
 package websocket
 
 import (
-	"encoding/json"
+	"context"
 	"log/slog"
 	"sync"
 	"sync/atomic"
+
+	"github.com/tripwire/agent/internal/server/storage"
 )
 
-// AlertMessage is the JSON envelope pushed to every connected browser client
-// when a new alert arrives.  The structure matches the WebSocket protocol
-// defined in the TripWire HLD.
-type AlertMessage struct {
-	Type string      `json:"type"` // always "alert"
-	Data AlertData   `json:"data"`
+// Broadcaster is the interface for fanning alert events out to subscribed
+// WebSocket clients.
+type Broadcaster interface {
+	// Subscribe registers a new consumer and returns a channel on which
+	// alerts will be delivered.  The channel is buffered; when the buffer
+	// is full a subsequent Publish call drops the alert for that consumer
+	// rather than blocking.  Call Unsubscribe to release resources.
+	Subscribe(ctx context.Context) <-chan storage.Alert
+
+	// Unsubscribe removes the subscription associated with ch and closes the
+	// channel so the consumer loop exits cleanly.  It is safe to call
+	// Unsubscribe after the broadcaster has been closed.
+	Unsubscribe(ch <-chan storage.Alert)
+
+	// Publish fans a to every current subscriber using a non-blocking send.
+	// Subscribers whose channel buffer is full receive a dropped-alert log
+	// entry rather than causing Publish to block.
+	Publish(a storage.Alert)
+
+	// Close removes all subscriptions, drains and closes every subscriber
+	// channel, and releases internal resources.  After Close returns,
+	// Publish is a no-op and Subscribe returns a closed channel.
+	Close()
 }
 
-// AlertData carries the alert fields visible to the browser.
-type AlertData struct {
-	AlertID      string          `json:"alert_id"`
-	HostID       string          `json:"host_id"`
-	Hostname     string          `json:"hostname"`
-	Timestamp    string          `json:"timestamp"` // RFC 3339
-	TripwireType string          `json:"tripwire_type"`
-	RuleName     string          `json:"rule_name"`
-	Severity     string          `json:"severity"`
-	EventDetail  json.RawMessage `json:"event_detail,omitempty"`
-}
-
-// Client represents a single connected WebSocket browser session.
+// InProcessBroadcaster is the single-instance, in-process Broadcaster
+// implementation.  It is safe for concurrent use.
 //
-// Each client owns a buffered send channel.  The broadcaster writes to this
-// channel without blocking; if the channel is full (slow consumer) the
-// message is dropped and Dropped is incremented.
-type Client struct {
-	id      string
-	send    chan []byte
-	Dropped atomic.Int64
+// For multi-instance dashboard deployments the same Broadcaster interface can
+// be backed by a Redis pub/sub adapter without changing the alert service or
+// WebSocket handler code.
+type InProcessBroadcaster struct {
+	subs      sync.Map        // map[<-chan storage.Alert]chan storage.Alert
+	bufSize   int             // per-subscriber channel buffer depth
+	logger    *slog.Logger
+	closed    atomic.Bool
+	closeOnce sync.Once
 }
 
-// newClient allocates a Client with the given unique id.
-// bufSize controls how many messages can be queued before dropping occurs.
-func newClient(id string, bufSize int) *Client {
-	return &Client{
-		id:   id,
-		send: make(chan []byte, bufSize),
-	}
-}
-
-// Send returns the receive-only channel that the WebSocket writer goroutine
-// should drain.
-func (c *Client) Send() <-chan []byte {
-	return c.send
-}
-
-// ID returns the client's unique identifier.
-func (c *Client) ID() string {
-	return c.id
-}
-
-// Broadcaster fans out serialised alert messages to all registered Client
-// instances.  It is safe for concurrent use from multiple goroutines.
-type Broadcaster struct {
-	clients sync.Map // map[string]*Client
-	logger  *slog.Logger
-	bufSize int
-}
-
-// NewBroadcaster creates a Broadcaster.
+// NewBroadcaster creates an InProcessBroadcaster.
 //
-// clientBufSize is the per-client send-channel buffer depth.  A value of 64
-// is reasonable for most deployments; increase if browser clients are slow
-// consumers.
-func NewBroadcaster(logger *slog.Logger, clientBufSize int) *Broadcaster {
-	if clientBufSize <= 0 {
-		clientBufSize = 64
+// bufSize is the per-subscriber channel buffer depth.  A value of 64 is
+// sufficient for a 100 ms flush interval generating up to 640 alerts/s per
+// subscriber before drops begin.  Pass 0 to use the default of 64.
+func NewBroadcaster(logger *slog.Logger, bufSize int) *InProcessBroadcaster {
+	if bufSize <= 0 {
+		bufSize = 64
 	}
-	return &Broadcaster{
+	return &InProcessBroadcaster{
+		bufSize: bufSize,
 		logger:  logger,
-		bufSize: clientBufSize,
 	}
 }
 
-// Register adds a new Client to the broadcaster and returns it.
+// Subscribe implements Broadcaster.
+func (b *InProcessBroadcaster) Subscribe(ctx context.Context) <-chan storage.Alert {
+	ch := make(chan storage.Alert, b.bufSize)
+	if b.closed.Load() {
+		close(ch)
+		return ch
+	}
+	b.subs.Store(ch, ch)
+
+	// Unsubscribe automatically when the caller's context is cancelled.
+	if ctx != nil {
+		go func() {
+			<-ctx.Done()
+			b.Unsubscribe(ch)
+		}()
+	}
+
+	return ch
+}
+
+// Unsubscribe implements Broadcaster.
+func (b *InProcessBroadcaster) Unsubscribe(ch <-chan storage.Alert) {
+	if actual, loaded := b.subs.LoadAndDelete(ch); loaded {
+		close(actual.(chan storage.Alert))
+	}
+}
+
+// Publish implements Broadcaster.
 //
-// The caller is responsible for calling Unregister when the WebSocket
-// connection closes.
-func (b *Broadcaster) Register(id string) *Client {
-	c := newClient(id, b.bufSize)
-	b.clients.Store(id, c)
-	b.logger.Debug("websocket client registered", slog.String("client_id", id))
-	return c
-}
-
-// Unregister removes the client identified by id and closes its send channel
-// so that the writer goroutine exits cleanly.
-func (b *Broadcaster) Unregister(id string) {
-	if v, ok := b.clients.LoadAndDelete(id); ok {
-		c := v.(*Client)
-		close(c.send)
-		b.logger.Debug("websocket client unregistered", slog.String("client_id", id))
-	}
-}
-
-// Broadcast serialises msg as JSON and delivers it to every registered
-// client.  Clients with full send buffers are skipped and their Dropped
-// counter is incremented.  Broadcast never blocks.
-func (b *Broadcaster) Broadcast(msg AlertMessage) {
-	raw, err := json.Marshal(msg)
-	if err != nil {
-		b.logger.Error("websocket: failed to marshal alert message", slog.Any("error", err))
+// The non-blocking select/default pattern ensures that a slow subscriber (or
+// one whose context has already been cancelled) never stalls the gRPC
+// StreamAlerts goroutine.
+func (b *InProcessBroadcaster) Publish(a storage.Alert) {
+	if b.closed.Load() {
 		return
 	}
 
-	b.clients.Range(func(_, v any) bool {
-		c := v.(*Client)
+	b.subs.Range(func(key, value any) bool {
+		ch := value.(chan storage.Alert)
 		select {
-		case c.send <- raw:
+		case ch <- a:
+			// delivered
 		default:
-			c.Dropped.Add(1)
-			b.logger.Warn("websocket: client send buffer full, message dropped",
-				slog.String("client_id", c.id))
+			b.logger.Warn("websocket broadcaster: subscriber buffer full, dropping alert",
+				slog.String("alert_id", a.AlertID),
+				slog.String("severity", string(a.Severity)),
+			)
 		}
-		return true
+		return true // continue ranging
 	})
 }
 
-// ClientCount returns the number of currently registered clients.
-func (b *Broadcaster) ClientCount() int {
-	count := 0
-	b.clients.Range(func(_, _ any) bool {
-		count++
-		return true
+// Close implements Broadcaster.
+func (b *InProcessBroadcaster) Close() {
+	b.closeOnce.Do(func() {
+		b.closed.Store(true)
+		b.subs.Range(func(key, value any) bool {
+			b.subs.Delete(key)
+			close(value.(chan storage.Alert))
+			return true
+		})
 	})
-	return count
 }

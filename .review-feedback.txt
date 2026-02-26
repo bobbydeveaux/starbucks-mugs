@@ -116,6 +116,14 @@ Even after fixing the int64 overflow, reading arbitrarily large client frames in
 - Documentation (`grpc-alert-service.md`) is thorough and consistent with the implementation.
 - `go.mod` promotion of indirect to direct dependencies is correct.
 
+---
+
+### Additional Review Note (from main branch)
+
+The review is complete. The single blocking issue is a **test compilation failure**: `process_watcher_test.go` is in `package watcher` and calls `noopLogger()`, which is defined in `file_test.go` under the separate `package watcher_test`. Go's package system does not make symbols from the external test package visible to internal test files in the same directory, so `go test ./internal/watcher/...` will fail with `undefined: noopLogger`.
+
+The fix is straightforward — add `noopLogger()` directly to `process_watcher_test.go` or a shared internal test helper file — but it must be done before the tests can be verified.
+
 **Action Required**: Please address the blocking issues above before merging.
 
 ---

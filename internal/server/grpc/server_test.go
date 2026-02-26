@@ -2,388 +2,374 @@ package grpc_test
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"io"
 	"log/slog"
+	"math/big"
+	"net"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 
-	"github.com/tripwire/agent/internal/server/grpc"
-	"github.com/tripwire/agent/internal/server/grpc/alertpb"
-	"github.com/tripwire/agent/internal/server/storage"
-	ws "github.com/tripwire/agent/internal/server/websocket"
+	grpcserver "github.com/tripwire/agent/internal/server/grpc"
+	alertpb "github.com/tripwire/agent/proto/alert"
 )
 
-// --- fakes -------------------------------------------------------------------
+// ─── In-memory test PKI ───────────────────────────────────────────────────────
 
-// fakeStore satisfies grpc.Store without a real database.
-type fakeStore struct {
-	hosts         map[string]storage.Host // keyed by HostID
-	insertedAlerts []storage.Alert
-	upsertErr     error
-	insertErr     error
+// testPKI holds an in-memory CA and a signed server certificate.
+type testPKI struct {
+	caPool     *x509.CertPool
+	caCert     *x509.Certificate
+	caKey      *ecdsa.PrivateKey
+	caCertPath string
+	srvCrtPath string
+	srvKeyPath string
 }
 
-func newFakeStore() *fakeStore {
-	return &fakeStore{hosts: make(map[string]storage.Host)}
-}
+// newTestPKI generates a self-signed CA and signs a server certificate for
+// localhost/127.0.0.1.  Key material is written to t.TempDir().
+func newTestPKI(t *testing.T) *testPKI {
+	t.Helper()
+	dir := t.TempDir()
 
-func (f *fakeStore) UpsertHost(_ context.Context, h storage.Host) (string, error) {
-	if f.upsertErr != nil {
-		return "", f.upsertErr
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate CA key: %v", err)
 	}
-	// Check if a host with the same hostname already exists and return its
-	// stable host_id, mirroring the ON CONFLICT … RETURNING behaviour of the
-	// real PostgreSQL implementation.
-	for _, existing := range f.hosts {
-		if existing.Hostname == h.Hostname {
-			// Update mutable fields on the existing record.
-			existing.Platform = h.Platform
-			existing.AgentVersion = h.AgentVersion
-			existing.LastSeen = h.LastSeen
-			existing.Status = h.Status
-			f.hosts[existing.HostID] = existing
-			return existing.HostID, nil
-		}
+
+	caTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "TripWire Test CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 	}
-	f.hosts[h.HostID] = h
-	return h.HostID, nil
+
+	caCertDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
+	if err != nil {
+		t.Fatalf("create CA cert: %v", err)
+	}
+	caCert, _ := x509.ParseCertificate(caCertDER)
+
+	caPool := x509.NewCertPool()
+	caPool.AddCert(caCert)
+	caPath := filepath.Join(dir, "ca.crt")
+	writePEMCert(t, caPath, caCertDER)
+
+	// Server certificate
+	srvKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	srvTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "tripwire-dashboard"},
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	srvCertDER, _ := x509.CreateCertificate(rand.Reader, srvTemplate, caCert, &srvKey.PublicKey, caKey)
+
+	srvCrtPath := filepath.Join(dir, "server.crt")
+	srvKeyPath := filepath.Join(dir, "server.key")
+	writePEMCert(t, srvCrtPath, srvCertDER)
+	writePEMKey(t, srvKeyPath, srvKey)
+
+	return &testPKI{
+		caPool:     caPool,
+		caCert:     caCert,
+		caKey:      caKey,
+		caCertPath: caPath,
+		srvCrtPath: srvCrtPath,
+		srvKeyPath: srvKeyPath,
+	}
 }
 
-func (f *fakeStore) GetHost(_ context.Context, hostID string) (*storage.Host, error) {
-	h, ok := f.hosts[hostID]
+// signClientCert creates and signs a client certificate with the given CN.
+func (p *testPKI) signClientCert(t *testing.T, cn string) tls.Certificate {
+	t.Helper()
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(time.Now().UnixNano()),
+		Subject:      pkix.Name{CommonName: cn},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+
+	certDER, _ := x509.CreateCertificate(rand.Reader, template, p.caCert, &key.PublicKey, p.caKey)
+	leaf, _ := x509.ParseCertificate(certDER)
+
+	return tls.Certificate{
+		Certificate: [][]byte{certDER},
+		PrivateKey:  key,
+		Leaf:        leaf,
+	}
+}
+
+// ─── PEM write helpers ────────────────────────────────────────────────────────
+
+func writePEMCert(t *testing.T, path string, der []byte) {
+	t.Helper()
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create %s: %v", path, err)
+	}
+	defer f.Close()
+	_ = pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
+func writePEMKey(t *testing.T, path string, key *ecdsa.PrivateKey) {
+	t.Helper()
+	der, _ := x509.MarshalECPrivateKey(key)
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create %s: %v", path, err)
+	}
+	defer f.Close()
+	_ = pem.Encode(f, &pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
+}
+
+// ─── Stub service ─────────────────────────────────────────────────────────────
+
+// echoService is a minimal AlertServiceServer that captures the agent CN from
+// the request context and returns a fixed ACK.
+type echoService struct {
+	alertpb.UnimplementedAlertServiceServer
+	lastCN string
+}
+
+func (s *echoService) RegisterAgent(ctx context.Context, _ *alertpb.RegisterRequest) (*alertpb.RegisterResponse, error) {
+	cn, ok := grpcserver.AgentCNFromContext(ctx)
 	if !ok {
-		return nil, context.DeadlineExceeded // simulate not-found
+		return nil, status.Error(3 /* codes.InvalidArgument */, "no agent CN")
 	}
-	return &h, nil
+	s.lastCN = cn
+	return &alertpb.RegisterResponse{HostId: "test-ack"}, nil
 }
 
-func (f *fakeStore) BatchInsertAlerts(_ context.Context, alert storage.Alert) error {
-	if f.insertErr != nil {
-		return f.insertErr
-	}
-	f.insertedAlerts = append(f.insertedAlerts, alert)
-	return nil
-}
+// ─── Server launch helper ─────────────────────────────────────────────────────
 
-// fakeStream satisfies alertpb.AlertService_StreamAlertsServer for testing.
-type fakeStream struct {
-	events []*alertpb.AgentEvent
-	pos    int
-	sent   []*alertpb.ServerCommand
-	ctx    context.Context
-}
+// startServer starts an in-process gRPC server on a random OS-assigned port
+// and returns its address.  The server is stopped when t finishes.
+func startServer(t *testing.T, pki *testPKI, svc alertpb.AlertServiceServer) string {
+	t.Helper()
 
-func newFakeStream(ctx context.Context, events ...*alertpb.AgentEvent) *fakeStream {
-	return &fakeStream{events: events, ctx: ctx}
-}
-
-func (f *fakeStream) Recv() (*alertpb.AgentEvent, error) {
-	if f.pos >= len(f.events) {
-		// Signal EOF so the server exits the loop cleanly.
-		return nil, context.Canceled
-	}
-	evt := f.events[f.pos]
-	f.pos++
-	return evt, nil
-}
-
-func (f *fakeStream) Send(cmd *alertpb.ServerCommand) error {
-	f.sent = append(f.sent, cmd)
-	return nil
-}
-
-// grpc.ServerStream stubs — satisfies google.golang.org/grpc.ServerStream.
-func (f *fakeStream) SetHeader(md metadata.MD) error  { return nil }
-func (f *fakeStream) SendHeader(md metadata.MD) error { return nil }
-func (f *fakeStream) SetTrailer(md metadata.MD)       {}
-func (f *fakeStream) Context() context.Context        { return f.ctx }
-func (f *fakeStream) SendMsg(m any) error             { return nil }
-func (f *fakeStream) RecvMsg(m any) error             { return nil }
-
-// --- helpers -----------------------------------------------------------------
-
-func newTestServer(store grpc.Store) *grpc.Server {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	bc := ws.NewBroadcaster(logger, 16)
-	return grpc.NewServer(store, bc, logger)
-}
-
-func newTestServerWithBroadcaster(store grpc.Store, bc *ws.Broadcaster) *grpc.Server {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	return grpc.NewServer(store, bc, logger)
-}
-
-// --- RegisterAgent tests -----------------------------------------------------
-
-func TestRegisterAgent_Success(t *testing.T) {
-	t.Parallel()
-
-	store := newFakeStore()
-	srv := newTestServer(store)
-
-	resp, err := srv.RegisterAgent(context.Background(), &alertpb.RegisterRequest{
-		Hostname:     "web-01",
-		Platform:     "linux",
-		AgentVersion: "1.0.0",
-	})
+	// Listen on an OS-assigned port so tests never collide.
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("listen: %v", err)
 	}
-	if resp.HostId == "" {
-		t.Error("expected non-empty host_id in response")
-	}
-	if resp.ServerTimeUs == 0 {
-		t.Error("expected non-zero server_time_us")
+	addr := lis.Addr().String()
+
+	cfg := grpcserver.Config{
+		CertPath: pki.srvCrtPath,
+		KeyPath:  pki.srvKeyPath,
+		CAPath:   pki.caCertPath,
 	}
 
-	// Verify host was upserted.
-	if len(store.hosts) != 1 {
-		t.Fatalf("expected 1 upserted host, got %d", len(store.hosts))
-	}
-	for _, h := range store.hosts {
-		if h.Hostname != "web-01" {
-			t.Errorf("hostname: got %q, want %q", h.Hostname, "web-01")
-		}
-		if h.Status != storage.HostStatusOnline {
-			t.Errorf("status: got %q, want %q", h.Status, storage.HostStatusOnline)
-		}
-	}
-}
-
-func TestRegisterAgent_StableHostIDOnReconnect(t *testing.T) {
-	t.Parallel()
-
-	store := newFakeStore()
-	srv := newTestServer(store)
-
-	ctx := context.Background()
-	req := &alertpb.RegisterRequest{
-		Hostname:     "web-01",
-		Platform:     "linux",
-		AgentVersion: "1.0.0",
-	}
-
-	// First registration — establishes the host record.
-	resp1, err := srv.RegisterAgent(ctx, req)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv, err := grpcserver.New(cfg, logger, svc)
 	if err != nil {
-		t.Fatalf("first registration: unexpected error: %v", err)
+		lis.Close()
+		t.Fatalf("grpcserver.New: %v", err)
 	}
-	if resp1.HostId == "" {
-		t.Fatal("first registration: expected non-empty host_id")
-	}
-
-	// Second registration with the same hostname (agent reconnect) — must
-	// return the same host_id so that alert correlation is preserved.
-	resp2, err := srv.RegisterAgent(ctx, req)
-	if err != nil {
-		t.Fatalf("second registration: unexpected error: %v", err)
-	}
-	if resp2.HostId != resp1.HostId {
-		t.Errorf("host_id changed on reconnect: first=%q second=%q", resp1.HostId, resp2.HostId)
-	}
-
-	// Exactly one host record must exist — not two.
-	if len(store.hosts) != 1 {
-		t.Errorf("expected 1 host record, got %d", len(store.hosts))
-	}
-}
-
-func TestRegisterAgent_MissingHostname(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestServer(newFakeStore())
-	_, err := srv.RegisterAgent(context.Background(), &alertpb.RegisterRequest{})
-	if err == nil {
-		t.Fatal("expected error for empty hostname, got nil")
-	}
-}
-
-// --- StreamAlerts tests ------------------------------------------------------
-
-func validEvent(hostID string) *alertpb.AgentEvent {
-	detail, _ := json.Marshal(map[string]string{"path": "/etc/passwd"})
-	return &alertpb.AgentEvent{
-		AlertId:         "alert-1",
-		HostId:          hostID,
-		TimestampUs:     time.Now().UnixMicro(),
-		TripwireType:    "FILE",
-		RuleName:        "etc-passwd-watch",
-		EventDetailJson: detail,
-		Severity:        "CRITICAL",
-	}
-}
-
-func TestStreamAlerts_PersistsAndBroadcasts(t *testing.T) {
-	t.Parallel()
-
-	store := newFakeStore()
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	bc := ws.NewBroadcaster(logger, 16)
-	srv := newTestServerWithBroadcaster(store, bc)
-
-	// Register a host so hostname lookup succeeds.
-	hostID := "host-uuid"
-	store.hosts[hostID] = storage.Host{HostID: hostID, Hostname: "web-01", Status: storage.HostStatusOnline}
-
-	// Register a WS client to receive broadcast.
-	client := bc.Register("browser")
-	defer bc.Unregister("browser")
 
 	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = srv.ServeOnListener(ctx, lis)
+	}()
+
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	return addr
+}
+
+// dialClient creates a gRPC client using mTLS with the given client certificate.
+func dialClient(t *testing.T, addr string, pki *testPKI, clientCert tls.Certificate) *grpc.ClientConn {
+	t.Helper()
+
+	tlsCfg := &tls.Config{
+		Certificates: []tls.Certificate{clientCert},
+		RootCAs:      pki.caPool,
+		ServerName:   "localhost",
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)))
+	if err != nil {
+		t.Fatalf("grpc.NewClient: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	return conn
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+// TestAgentCNFromContext confirms AgentCNFromContext returns false when no CN
+// has been injected (e.g., on a plain background context).
+func TestAgentCNFromContext(t *testing.T) {
+	cn, ok := grpcserver.AgentCNFromContext(context.Background())
+	if ok || cn != "" {
+		t.Errorf("expected (empty, false); got (%q, %v)", cn, ok)
+	}
+}
+
+// TestMTLSAcceptsValidClientCert verifies end-to-end mTLS: a client with a
+// valid CA-signed certificate can call RegisterAgent and the agent CN is
+// correctly extracted and returned to the handler.
+func TestMTLSAcceptsValidClientCert(t *testing.T) {
+	pki := newTestPKI(t)
+	svc := &echoService{}
+	addr := startServer(t, pki, svc)
+
+	clientCert := pki.signClientCert(t, "agent-node-42")
+	conn := dialClient(t, addr, pki, clientCert)
+	client := alertpb.NewAlertServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	stream := newFakeStream(ctx, validEvent(hostID))
-	err := srv.StreamAlerts(stream)
-	// context.Canceled is expected when the fake stream is exhausted.
+	ack, err := client.RegisterAgent(ctx, &alertpb.RegisterRequest{Hostname: "node-42"})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("RegisterAgent: %v", err)
 	}
-
-	// Verify alert was persisted.
-	if len(store.insertedAlerts) != 1 {
-		t.Fatalf("expected 1 inserted alert, got %d", len(store.insertedAlerts))
+	if ack.HostId == "" {
+		t.Errorf("ack.HostId is empty; want non-empty")
 	}
-	a := store.insertedAlerts[0]
-	if a.AlertID != "alert-1" {
-		t.Errorf("alert_id: got %q, want %q", a.AlertID, "alert-1")
-	}
-	if a.TripwireType != storage.TripwireTypeFile {
-		t.Errorf("tripwire_type: got %q, want %q", a.TripwireType, storage.TripwireTypeFile)
-	}
-	if a.Severity != storage.SeverityCritical {
-		t.Errorf("severity: got %q, want %q", a.Severity, storage.SeverityCritical)
-	}
-
-	// Verify WebSocket broadcast was received.
-	select {
-	case raw, ok := <-client.Send():
-		if !ok {
-			t.Fatal("broadcast channel closed unexpectedly")
-		}
-		var msg ws.AlertMessage
-		if err := json.Unmarshal(raw, &msg); err != nil {
-			t.Fatalf("unmarshal broadcast: %v", err)
-		}
-		if msg.Type != "alert" {
-			t.Errorf("broadcast type: got %q, want %q", msg.Type, "alert")
-		}
-		if msg.Data.AlertID != "alert-1" {
-			t.Errorf("broadcast alert_id: got %q, want %q", msg.Data.AlertID, "alert-1")
-		}
-		if msg.Data.Hostname != "web-01" {
-			t.Errorf("broadcast hostname: got %q, want %q", msg.Data.Hostname, "web-01")
-		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("timeout waiting for broadcast message")
+	if svc.lastCN != "agent-node-42" {
+		t.Errorf("lastCN = %q; want %q", svc.lastCN, "agent-node-42")
 	}
 }
 
-func TestStreamAlerts_InvalidTripwireType(t *testing.T) {
-	t.Parallel()
+// TestMTLSRejectsNoClientCert verifies that a client without a client
+// certificate is rejected at the TLS layer.
+func TestMTLSRejectsNoClientCert(t *testing.T) {
+	pki := newTestPKI(t)
+	addr := startServer(t, pki, &echoService{})
 
-	srv := newTestServer(newFakeStore())
-	ctx := context.Background()
+	// Client with no certificate.
+	tlsCfg := &tls.Config{
+		RootCAs:    pki.caPool,
+		ServerName: "localhost",
+	}
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)))
+	if err != nil {
+		t.Fatalf("grpc.NewClient: %v", err)
+	}
+	defer conn.Close()
 
-	evt := validEvent("host-id")
-	evt.TripwireType = "INVALID"
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	stream := newFakeStream(ctx, evt)
-	err := srv.StreamAlerts(stream)
+	_, err = alertpb.NewAlertServiceClient(conn).RegisterAgent(ctx, &alertpb.RegisterRequest{})
 	if err == nil {
-		t.Fatal("expected error for invalid tripwire_type, got nil")
+		t.Fatal("expected error for connection without client cert; got nil")
 	}
+	t.Logf("correctly rejected unauthenticated connection: %v", err)
 }
 
-func TestStreamAlerts_InvalidSeverity(t *testing.T) {
-	t.Parallel()
+// TestMTLSRejectsUnknownCAClientCert verifies that a client certificate signed
+// by a foreign CA is rejected.
+func TestMTLSRejectsUnknownCAClientCert(t *testing.T) {
+	pki := newTestPKI(t)
+	// Second PKI acts as a rogue CA.
+	roguePKI := newTestPKI(t)
+	addr := startServer(t, pki, &echoService{})
 
-	srv := newTestServer(newFakeStore())
-	ctx := context.Background()
+	rogueCert := roguePKI.signClientCert(t, "rogue-agent")
 
-	evt := validEvent("host-id")
-	evt.Severity = "EXTREME"
+	// Build a client that trusts the real server cert but presents a rogue client cert.
+	tlsCfg := &tls.Config{
+		Certificates: []tls.Certificate{rogueCert},
+		RootCAs:      pki.caPool,
+		ServerName:   "localhost",
+	}
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)))
+	if err != nil {
+		t.Fatalf("grpc.NewClient: %v", err)
+	}
+	defer conn.Close()
 
-	stream := newFakeStream(ctx, evt)
-	err := srv.StreamAlerts(stream)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err = alertpb.NewAlertServiceClient(conn).RegisterAgent(ctx, &alertpb.RegisterRequest{})
 	if err == nil {
-		t.Fatal("expected error for invalid severity, got nil")
+		t.Fatal("expected error for rogue CA client cert; got nil")
+	}
+	t.Logf("correctly rejected rogue CA cert: %v", err)
+}
+
+// TestCNExtraction exercises the CN extraction for various Common Name values.
+func TestCNExtraction(t *testing.T) {
+	cases := []struct {
+		cn string
+	}{
+		{"agent-prod-01"},
+		{"sensor-rack-12-us-east"},
+		{"node.example.com"},
+	}
+
+	pki := newTestPKI(t)
+	svc := &echoService{}
+	addr := startServer(t, pki, svc)
+
+	for _, tc := range cases {
+		t.Run(tc.cn, func(t *testing.T) {
+			cert := pki.signClientCert(t, tc.cn)
+			conn := dialClient(t, addr, pki, cert)
+			client := alertpb.NewAlertServiceClient(conn)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			ack, err := client.RegisterAgent(ctx, &alertpb.RegisterRequest{})
+			if err != nil {
+				t.Fatalf("RegisterAgent(%q): %v", tc.cn, err)
+			}
+			if ack.HostId == "" {
+				t.Errorf("ack.HostId is empty for CN %q", tc.cn)
+			}
+			if svc.lastCN != tc.cn {
+				t.Errorf("lastCN = %q; want %q", svc.lastCN, tc.cn)
+			}
+		})
 	}
 }
 
-func TestStreamAlerts_MissingAlertID(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestServer(newFakeStore())
-	ctx := context.Background()
-
-	evt := validEvent("host-id")
-	evt.AlertId = ""
-
-	stream := newFakeStream(ctx, evt)
-	err := srv.StreamAlerts(stream)
+// TestServerNewErrorBadCert verifies that New returns an error when the
+// certificate paths are invalid.
+func TestServerNewErrorBadCert(t *testing.T) {
+	cfg := grpcserver.Config{
+		CertPath: "/nonexistent/server.crt",
+		KeyPath:  "/nonexistent/server.key",
+		CAPath:   "/nonexistent/ca.crt",
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	_, err := grpcserver.New(cfg, logger, alertpb.UnimplementedAlertServiceServer{})
 	if err == nil {
-		t.Fatal("expected error for empty alert_id, got nil")
-	}
-}
-
-func TestStreamAlerts_MissingHostID(t *testing.T) {
-	t.Parallel()
-
-	srv := newTestServer(newFakeStore())
-	ctx := context.Background()
-
-	evt := validEvent("")
-	stream := newFakeStream(ctx, evt)
-	err := srv.StreamAlerts(stream)
-	if err == nil {
-		t.Fatal("expected error for empty host_id, got nil")
-	}
-}
-
-func TestStreamAlerts_ZeroTimestampDefaultsToNow(t *testing.T) {
-	t.Parallel()
-
-	store := newFakeStore()
-	srv := newTestServer(store)
-	store.hosts["host-id"] = storage.Host{HostID: "host-id", Hostname: "web-01"}
-
-	evt := validEvent("host-id")
-	evt.TimestampUs = 0 // zero → server should use current time
-
-	before := time.Now()
-	stream := newFakeStream(context.Background(), evt)
-	_ = srv.StreamAlerts(stream)
-	after := time.Now()
-
-	if len(store.insertedAlerts) != 1 {
-		t.Fatalf("expected 1 alert, got %d", len(store.insertedAlerts))
-	}
-	ts := store.insertedAlerts[0].Timestamp
-	if ts.Before(before.Add(-time.Second)) || ts.After(after.Add(time.Second)) {
-		t.Errorf("expected timestamp near now, got %v", ts)
-	}
-}
-
-func TestStreamAlerts_NullEventDetail(t *testing.T) {
-	t.Parallel()
-
-	store := newFakeStore()
-	srv := newTestServer(store)
-	store.hosts["host-id"] = storage.Host{HostID: "host-id", Hostname: "web-01"}
-
-	evt := validEvent("host-id")
-	evt.EventDetailJson = nil // empty → should store as "null"
-
-	stream := newFakeStream(context.Background(), evt)
-	_ = srv.StreamAlerts(stream)
-
-	if len(store.insertedAlerts) != 1 {
-		t.Fatalf("expected 1 alert, got %d", len(store.insertedAlerts))
-	}
-	if string(store.insertedAlerts[0].EventDetail) != "null" {
-		t.Errorf("expected null event_detail, got %s", store.insertedAlerts[0].EventDetail)
+		t.Fatal("expected error for invalid cert paths; got nil")
 	}
 }
