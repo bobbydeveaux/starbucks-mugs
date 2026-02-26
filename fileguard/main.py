@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fileguard.api.handlers.reports import router as reports_router
 from fileguard.api.middleware.auth import AuthMiddleware
 from fileguard.api.middleware.logging import RequestLoggingMiddleware
+from fileguard.api.routes.reports import router as reports_router
 from fileguard.config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

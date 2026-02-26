@@ -69,6 +69,8 @@ docker compose down -v
 | `ENVIRONMENT` | No | `development` | Deployment environment label |
 | `MAX_FILE_SIZE_MB` | No | `50` | Maximum synchronous scan file size |
 | `THREAD_POOL_WORKERS` | No | `4` | Worker threads for CPU-bound extraction |
+| `REPORTS_DIR` | No | `/tmp/fileguard/reports` | Local directory where generated compliance report files are stored |
+| `REPORT_CADENCE` | No | `daily` | Beat schedule cadence for automatic report generation (`daily` or `weekly`) |
 | `RUN_MIGRATIONS` | No | `false` | Run `alembic upgrade head` on container start |
 
 ## API Reference
@@ -115,11 +117,11 @@ fileguard/              Python package (FastAPI application)
 ├── main.py             Application entry point + middleware registration
 ├── config.py           Pydantic Settings configuration
 ├── api/
-│   ├── handlers/
-│   │   └── reports.py  GET /v1/reports (list) and GET /v1/reports/{id}/download
-│   └── middleware/
-│       ├── auth.py     Bearer-token authentication middleware
-│       └── rate_limit.py Redis-backed sliding-window rate limiter
+│   ├── middleware/
+│   │   ├── auth.py     Bearer-token authentication middleware
+│   │   └── rate_limit.py Redis-backed sliding-window rate limiter
+│   └── routes/
+│       └── reports.py  GET /v1/reports and GET /v1/reports/{id}/download handlers
 ├── core/
 │   ├── av_engine.py    Abstract AVEngineAdapter interface + ScanResult/Finding types
 │   ├── clamav_adapter.py ClamAV clamd TCP socket adapter (fail-secure)
@@ -130,10 +132,14 @@ fileguard/              Python package (FastAPI application)
 │   ├── batch_job.py      SQLAlchemy ORM model for batch_job table
 │   └── compliance_report.py  SQLAlchemy ORM model for compliance_report table
 ├── schemas/
-│   ├── tenant.py         Pydantic TenantConfig schema (request.state.tenant)
-│   └── report.py         Pydantic ReportSummary / ReportListResponse schemas
+│   ├── tenant.py               Pydantic TenantConfig schema (request.state.tenant)
+│   ├── report.py               Pydantic schemas for compliance report data structures
+│   └── compliance_report.py    Pydantic schemas for compliance report API responses
+├── celery_app.py               Celery application factory (broker, beat schedule)
 ├── services/
-│   └── audit.py          AuditService: HMAC-signed scan event persistence + SIEM forwarding
+│   ├── audit.py                AuditService: HMAC-signed scan event persistence + SIEM forwarding
+│   ├── reports.py              ReportService + Celery tasks for compliance report generation
+│   └── compliance_report.py    ComplianceReportService: read-only report listing and retrieval
 └── db/
     ├── base.py         Declarative base shared by all ORM models
     └── session.py      SQLAlchemy async session factory
@@ -151,11 +157,13 @@ tests/
 ├── conftest.py         Shared fixtures (env vars, DB session)
 ├── test_smoke.py       Smoke tests for FastAPI skeleton, config, Redis, DB session
 ├── unit/
-│   ├── test_auth_middleware.py       Unit tests for auth middleware & schemas
-│   ├── test_rate_limit.py            Unit tests for Redis rate limiting middleware
-│   ├── test_clamav_adapter.py        Unit tests for ClamAV clamd adapter
-│   ├── test_audit_service.py         Unit tests for AuditService (HMAC, SIEM, DB mock)
-│   └── test_document_extractor.py    Unit tests for DocumentExtractor
+│   ├── test_auth_middleware.py         Unit tests for auth middleware & schemas
+│   ├── test_rate_limit.py              Unit tests for Redis rate limiting middleware
+│   ├── test_clamav_adapter.py          Unit tests for ClamAV clamd adapter
+│   ├── test_audit_service.py           Unit tests for AuditService (HMAC, SIEM, DB mock)
+│   ├── test_document_extractor.py      Unit tests for DocumentExtractor
+│   ├── test_report_service.py          Unit tests for ReportService and Celery tasks
+│   └── test_compliance_report_api.py   Unit tests for compliance report API handlers and service
 └── integration/
     ├── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
     └── test_reports_api.py               Integration tests for reports list + download API
@@ -166,69 +174,45 @@ alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
 ```
 
-## Compliance Reports API
+## Compliance Reports
 
-`fileguard/api/handlers/reports.py` exposes two endpoints for retrieving stored compliance reports.
+`fileguard/services/reports.py` implements scheduled compliance report generation.
+See [`compliance-reports.md`](compliance-reports.md) for the full reference.
 
-### GET /v1/reports
+### Overview
 
-Returns a paginated list of compliance report metadata records scoped to the authenticated tenant.
+| Component | Description |
+|---|---|
+| `fileguard/schemas/report.py` | Pydantic schemas: `VerdictBreakdown`, `ReportPayload`, `ComplianceReportCreate`, `ComplianceReportRead` |
+| `fileguard/celery_app.py` | Celery app factory; Redis broker + result backend; configurable beat schedule |
+| `fileguard/services/reports.py` | `ReportService` for aggregation + generation; Celery tasks for scheduling |
 
-**Query parameters**
+### Quick start
 
-| Parameter    | Type   | Default | Description |
-|---|---|---|---|
-| `page`       | int    | 1       | 1-based page number (min 1) |
-| `page_size`  | int    | 20      | Records per page (min 1, max 100) |
-| `format`     | string | —       | Filter by report format: `pdf` or `json` |
-| `start_date` | string | —       | ISO-8601 lower bound on `period_start` |
-| `end_date`   | string | —       | ISO-8601 upper bound on `period_end` |
+```python
+from fileguard.services.reports import generate_compliance_report
 
-**Response (200)**
-
-```json
-{
-  "items": [
-    {
-      "id": "uuid",
-      "tenant_id": "uuid",
-      "period_start": "2026-01-01T00:00:00+00:00",
-      "period_end": "2026-01-31T23:59:59+00:00",
-      "format": "pdf",
-      "file_uri": "/reports/2026-01.pdf",
-      "generated_at": "2026-02-01T00:05:00+00:00"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "page_size": 20
-}
+# Trigger report generation for a single tenant asynchronously
+generate_compliance_report.delay(
+    tenant_id="<tenant-uuid>",
+    period_start="2026-01-01T00:00:00+00:00",
+    period_end="2026-02-01T00:00:00+00:00",
+    fmt="json",  # or "pdf"
+)
 ```
 
-### GET /v1/reports/{id}/download
-
-Downloads the stored report artifact.  The response Content-Type is resolved in
-priority order:
-
-1. `format` query parameter (`pdf` or `json`)
-2. `Accept` request header (`application/pdf` or `application/json`)
-3. The `format` column stored on the `ComplianceReport` row
-
-Returns `404` when the report ID does not exist **or** belongs to a different tenant
-(cross-tenant isolation).
+### Starting the Celery worker and beat scheduler
 
 ```bash
-# Download as PDF (forced via query param)
-curl -H "Authorization: Bearer <token>" \
-     "http://localhost:8000/v1/reports/<id>/download?format=pdf" \
-     -o report.pdf
+# Start the worker
+celery -A fileguard.celery_app worker --loglevel=info -Q fileguard
 
-# Download using Accept header
-curl -H "Authorization: Bearer <token>" \
-     -H "Accept: application/json" \
-     "http://localhost:8000/v1/reports/<id>/download" \
-     -o report.json
+# Start the beat scheduler (in a separate process)
+celery -A fileguard.celery_app beat --loglevel=info
 ```
+
+---
+
 
 ## AV Engine Adapter
 
@@ -316,6 +300,95 @@ for entry in result.offsets:
 `ExtractionError` is raised for unsupported MIME types or corrupt/malformed
 files.  ZIP members that fail extraction are skipped with a warning log — one
 corrupt member does not abort the whole archive.
+
+## Compliance Reports API
+
+Compliance reports are pre-generated periodic summaries (PDF and/or JSON) of all scan
+activity within a reporting period.  The API exposes two read-only endpoints:
+
+### List reports
+
+```
+GET /v1/reports
+Authorization: Bearer <token>
+```
+
+Query parameters:
+
+| Parameter | Type   | Description |
+|-----------|--------|-------------|
+| `period`  | string | Calendar month in `YYYY-MM` format (e.g. `2026-01`). When supplied, only reports whose `period_start` falls within that month are returned. |
+| `format`  | string | Filter by report format: `pdf` or `json`. |
+| `limit`   | int    | Page size (1–100, default 50). |
+| `offset`  | int    | Zero-based page offset (default 0). |
+
+Response (200 OK):
+
+```json
+{
+  "reports": [
+    {
+      "id": "uuid",
+      "tenant_id": "uuid",
+      "period_start": "2026-01-01T00:00:00Z",
+      "period_end": "2026-01-31T23:59:59Z",
+      "format": "pdf",
+      "file_uri": "s3://fileguard-reports/tenant/.../2026-01.pdf",
+      "generated_at": "2026-02-01T08:00:00Z"
+    }
+  ],
+  "total": 1,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+### Download / access a report
+
+```
+GET /v1/reports/{report_id}/download
+Authorization: Bearer <token>
+```
+
+- For **HTTP/HTTPS** `file_uri` values, the endpoint returns a `302 Found` redirect to
+  the file URL (e.g. a pre-signed S3 or GCS URL).
+- For **cloud storage URIs** (`s3://`, `gs://`), the endpoint returns a `200 OK` JSON
+  body containing the `file_uri` and report metadata so that the caller can exchange
+  the URI for temporary access credentials independently.
+
+Returns `404 Not Found` if the report does not exist for the authenticated tenant.
+
+### Tenant isolation
+
+All queries are automatically scoped to the authenticated tenant.  Callers cannot
+access reports belonging to other tenants.
+
+### Service layer
+
+`fileguard/services/compliance_report.py` exposes `ComplianceReportService` with two
+async methods:
+
+```python
+from fileguard.services.compliance_report import ComplianceReportService
+
+service = ComplianceReportService()
+
+# List reports with optional filters
+reports, total = await service.list_reports(
+    session,
+    tenant_id=tenant.id,
+    period_start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    period_end=datetime(2026, 1, 31, 23, 59, 59, tzinfo=timezone.utc),
+    format_="pdf",
+    limit=50,
+    offset=0,
+)
+
+# Retrieve a single report (returns None if not found or wrong tenant)
+report = await service.get_report(session, tenant_id=tenant.id, report_id=report_id)
+```
+
+---
 
 ## AuditService
 

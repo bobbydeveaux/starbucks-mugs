@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 3,
-  "summary": "Resolved three conflicts: (1) cmd/agent/main.go — kept the 'queue' import from HEAD and removed the duplicate transport creation block that origin/main introduced, preserving the sprint-4 queue-drain implementation; (2) agent-core.md — kept HEAD's startup steps 7-9 that accurately describe wiring the SQLite queue and transport into the agent; (3) .claude-output.json — accepted our branch's deletion since the file is no longer needed.",
-  "strategyUsed": "preserved both changes where complementary; for semantic conflicts (duplicate transport creation, renumbered doc steps) chose HEAD because the feature branch implements the queue-drain capability that the entire sprint is built around"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in docs/concepts/fileguard/README.md (3 conflict regions) and fileguard/schemas/report.py (3 conflict regions). For the README, chose origin/main in all regions: it correctly reflects the actual file structure (routes/ vs handlers/), includes the compliance_report.py and celery_app.py files that exist, and provides Celery quick-start content that complements the detailed API docs already present lower in the document. For report.py, chose origin/main to preserve the richer report-generation schemas (VerdictBreakdown, ReportPayload, ComplianceReportCreate, ComplianceReportRead); the HEAD-only ReportSummary/ReportListResponse schemas were superseded by fileguard/schemas/compliance_report.py (ComplianceReportOut/ComplianceReportListResponse) which the routes already import.",
+  "strategyUsed": "chose origin/main for all conflicts: routes/ directory structure matches actual files; compliance_report.py and celery_app.py genuinely exist; report.py richer generation schemas are used by services while API response schemas live in compliance_report.py"
 }
