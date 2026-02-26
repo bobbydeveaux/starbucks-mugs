@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 1 conflict in fileguard/core/__init__.py: merged two different module-level descriptions into a single docstring that captures the intent of both sides.",
-  "strategyUsed": "Preserved both changes: HEAD used a proper Python module docstring ('Core scan engine components for FileGuard.') and origin/main used a comment ('fileguard.core — pipeline components'). Combined them into a single docstring that covers both descriptions, preferring the docstring form as the more Pythonic and tooling-friendly approach."
+  "filesResolved": 2,
+  "summary": "Resolved 2 conflicts in metadata files (.claude-resolution.json and .conflict-info.json). Both files were modified independently in two previous resolution sessions: one session resolved 4 conflicts across cmd/agent/main.go, internal/config/config.go, and agent-core.md (adopting origin/main's unconditional NetworkWatcher creation, variable naming, and protocol defaults); another session resolved 1 conflict in fileguard/core/__init__.py (merging module docstring descriptions). The .conflict-info.json had no conflict markers and was staged as-is.",
+  "strategyUsed": "Preserved both prior resolution summaries by merging them into a combined description; chose the current branch's .conflict-info.json content (no markers present) as the authoritative state for conflict metadata."
 }
