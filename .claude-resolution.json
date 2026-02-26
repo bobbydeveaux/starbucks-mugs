@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in .claude-resolution.json and .conflict-info.json. Both are CI/CD workflow metadata files generated per merge attempt. The .conflict-info.json file had no conflict markers and was staged as-is. The .claude-resolution.json conflict was between two stale AI-generated summaries from prior merge runs; replaced with current resolution metadata reflecting this session.",
-  "strategyUsed": "replaced conflicted metadata files with correct current-context values — .conflict-info.json was already clean and staged as-is; .claude-resolution.json conflict markers were removed and the file was rewritten to reflect this resolution session"
+  "filesResolved": 1,
+  "summary": "Resolved conflict in fileguard/config.py by preserving both sets of configuration additions: Google Cloud DLP and AWS Macie settings from HEAD, and compliance report settings (REPORTS_DIR, REPORT_CADENCE) from origin/main.",
+  "strategyUsed": "preserved both changes — both sides added distinct, non-overlapping configuration blocks for different features, so all settings were kept together"
 }
