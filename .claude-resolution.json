@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by keeping the HEAD (feature branch) version, which contains the correct PR metadata for PR #275 (Prometheus metrics for transport layer). The origin/main version contained metadata for a different PR (protobuf schema, Closes #224) and was not relevant to this branch.",
-  "strategyUsed": "chose ours (HEAD) — the conflicted file is PR metadata and the HEAD version correctly describes this branch's PR #275 changes; the main branch version described an unrelated PR"
+  "filesResolved": 3,
+  "summary": "Resolved three conflicts: (1) cmd/agent/main.go — kept the 'queue' import from HEAD and removed the duplicate transport creation block that origin/main introduced, preserving the sprint-4 queue-drain implementation; (2) agent-core.md — kept HEAD's startup steps 7-9 that accurately describe wiring the SQLite queue and transport into the agent; (3) .claude-output.json — accepted our branch's deletion since the file is no longer needed.",
+  "strategyUsed": "preserved both changes where complementary; for semantic conflicts (duplicate transport creation, renumbered doc steps) chose HEAD because the feature branch implements the queue-drain capability that the entire sprint is built around"
 }
