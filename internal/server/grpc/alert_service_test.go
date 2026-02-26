@@ -34,14 +34,16 @@ type mockStore struct {
 	batchErr     error
 }
 
-func (m *mockStore) UpsertHost(_ context.Context, h storage.Host) error {
+func (m *mockStore) UpsertHost(_ context.Context, h storage.Host) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.upsertErr != nil {
-		return m.upsertErr
+		return "", m.upsertErr
 	}
 	m.hosts = append(m.hosts, h)
-	return nil
+	// Return the candidate host_id unchanged; in real DB the RETURNING clause
+	// resolves conflicts and returns the stable pre-existing UUID.
+	return h.HostID, nil
 }
 
 func (m *mockStore) BatchInsertAlerts(_ context.Context, a storage.Alert) error {

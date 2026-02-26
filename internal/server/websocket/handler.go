@@ -35,6 +35,16 @@ const wsGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 // handler goroutine reads (and discards) any client-to-server frames (clients
 // do not send alerts) and simultaneously writes broadcast messages from the
 // Client.Send() channel as server-to-client text frames.
+//
+// # Authentication
+//
+// The Handler itself does not perform authentication.  It is designed to be
+// deployed behind an auth-aware reverse proxy (e.g. nginx with JWT validation,
+// an API gateway, or a middleware in the router chain) that rejects
+// unauthenticated requests before they reach this handler.  If deployed
+// without such a proxy, any network-reachable client will receive the full
+// real-time alert stream.  Add a token-validation middleware in the router
+// (see [rest.NewRouter]) when running without a proxy.
 type Handler struct {
 	bc     *Broadcaster
 	logger *slog.Logger
