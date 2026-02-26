@@ -1,12 +1,11 @@
 {
-  "prNumber": 246,
+  "prNumber": 267,
   "baseBranch": "main",
-  "headBranch": "feature/176-tripwire-cybersecurity-tool-sprint-3-issue-176",
+  "headBranch": "feature/231-tripwire-cybersecurity-tool-sprint-4-issue-231",
   "conflictedFiles": [
-    "docs/concepts/tripwire-cybersecurity-tool/process-watcher.md",
-    "internal/watcher/process_watcher.go",
-    "internal/watcher/process_watcher_darwin.go",
-    "internal/watcher/process_watcher_other.go"
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md",
+    "internal/server/grpc/alert_service.go",
+    "internal/server/grpc/alert_service_test.go"
   ],
-  "conflictCount": 4
+  "conflictCount": 3
 }

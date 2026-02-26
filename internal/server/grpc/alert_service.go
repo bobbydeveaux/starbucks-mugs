@@ -160,7 +160,17 @@ func (s *AlertService) StreamAlerts(stream alertpb.AlertService_StreamAlertsServ
 			return nil
 		}
 		if err != nil {
-			// Stream closed by the client or network error.
+			// Distinguish between clean close (context cancel) and transport/auth
+			// errors so operators can diagnose connection problems in production.
+			if ctx.Err() != nil {
+				s.logger.Debug("stream_alerts: stream closed by context",
+					slog.Any("context_err", ctx.Err()),
+				)
+			} else {
+				s.logger.Warn("stream_alerts: stream closed with error",
+					slog.Any("error", err),
+				)
+			}
 			return err
 		}
 
@@ -337,6 +347,5 @@ func certCN(ctx context.Context) string {
 	return tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
 }
 
-// Ensure InProcessBroadcaster satisfies the local Broadcaster interface at
-// compile time.
-var _ Broadcaster = (*websocket.InProcessBroadcaster)(nil)
+// Ensure Broadcaster satisfies the local Broadcaster interface at compile time.
+var _ Broadcaster = (*websocket.Broadcaster)(nil)
