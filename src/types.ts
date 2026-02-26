@@ -170,3 +170,34 @@ export interface CarComparisonState {
   ferrari: CarModel | null;
   lamborghini: CarModel | null;
 }
+
+// ---------------------------------------------------------------------------
+// TripWire Cybersecurity Tool — Host model
+// ---------------------------------------------------------------------------
+
+/**
+ * Liveness state of a monitored host as reported by the dashboard server.
+ * Maps to the `HostStatus` enum in the Go storage layer.
+ */
+export type HostStatus = 'ONLINE' | 'OFFLINE' | 'DEGRADED';
+
+/**
+ * A registered agent host as returned by `GET /api/v1/hosts`.
+ * Maps to the `storage.Host` struct in the Go backend.
+ */
+export interface Host {
+  /** Stable UUID assigned on first registration. Preserved across reconnects. */
+  host_id: string;
+  /** Agent hostname (derived from mTLS certificate CN when available). */
+  hostname: string;
+  /** Primary IP address of the agent, may be empty. */
+  ip_address?: string;
+  /** Operating system / platform string reported by the agent. */
+  platform?: string;
+  /** Agent binary version string. */
+  agent_version?: string;
+  /** ISO 8601 timestamp of the most recent heartbeat. May be absent for newly registered hosts. */
+  last_seen?: string;
+  /** Current liveness state of the host. */
+  status: HostStatus;
+}
