@@ -34,7 +34,10 @@ celery_app = Celery(
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
     # Task modules that define @celery_app.task decorators.
-    include=["fileguard.services.reports"],
+    include=[
+        "fileguard.services.reports",
+        "fileguard.workers.scan_worker",
+    ],
 )
 
 celery_app.conf.update(

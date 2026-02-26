@@ -154,6 +154,12 @@ except PipelineError as exc:
 disposition = context.metadata["disposition"]  # "pass", "quarantine", or "block"
 ```
 
+## Async and Batch Execution
+
+For asynchronous and batch invocation of the pipeline via Celery, see the
+[Scan Worker documentation](scan-worker.md).  `scan_file_task` wraps a single
+pipeline run; `scan_batch_task` fans out multiple files in parallel.
+
 ## Tests
 
 Integration tests are in `fileguard/tests/test_pipeline.py` and cover:
