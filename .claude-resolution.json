@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 2,
-  "summary": "Resolved conflicts in .claude-resolution.json and .conflict-info.json. Both files are CI/CD workflow metadata generated per-branch. .conflict-info.json was already resolved in the working tree (correct PR #291 and branch context). .claude-resolution.json had a conflict between two previous AI-written summaries about a prior .claude-output.json resolution; replaced with current resolution metadata.",
-  "strategyUsed": "replaced both conflicted metadata files with correct current-context values — .conflict-info.json already had no markers and was staged as-is; .claude-resolution.json conflict markers were removed and the file was rewritten to reflect this resolution session rather than carrying forward stale summaries from prior merge runs"
+  "summary": "Resolved conflicts in .claude-resolution.json and .conflict-info.json. Both are CI/CD workflow metadata files generated per merge attempt. The .conflict-info.json file had no conflict markers and was staged as-is. The .claude-resolution.json conflict was between two stale AI-generated summaries from prior merge runs; replaced with current resolution metadata reflecting this session.",
+  "strategyUsed": "replaced conflicted metadata files with correct current-context values — .conflict-info.json was already clean and staged as-is; .claude-resolution.json conflict markers were removed and the file was rewritten to reflect this resolution session"
 }

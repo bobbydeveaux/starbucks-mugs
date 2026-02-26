@@ -165,7 +165,8 @@ tests/
 │   ├── test_report_service.py          Unit tests for ReportService and Celery tasks
 │   └── test_compliance_report_api.py   Unit tests for compliance report API handlers and service
 └── integration/
-    └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
+    ├── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
+    └── test_reports_api.py               Integration tests for reports list + download API
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
@@ -211,6 +212,7 @@ celery -A fileguard.celery_app beat --loglevel=info
 ```
 
 ---
+
 
 ## AV Engine Adapter
 
