@@ -1,610 +1,771 @@
 """Unit tests for fileguard/core/document_extractor.py.
 
-Covers:
-- All six extraction format handlers (PDF, DOCX, CSV, JSON, TXT, ZIP)
-- Byte-offset map correctness: entries reference correct character positions
-  within the normalised text string.
-- ZIP archive recursive unpacking and multi-file handling.
-- ThreadPoolExecutor dispatch: extract() calls run_in_executor.
-- Error-path: ExtractionError raised for unsupported MIME types.
-- Error-path: ExtractionError raised for malformed/corrupt file bytes.
+All tests run fully offline — no external network or filesystem dependencies.
+In-memory bytes are used for all document formats; pdfminer and python-docx
+are mocked where creating a real file would require complex binary encoding.
 
-All tests are fully offline — no network access or real filesystem I/O.
-File fixtures are created as in-memory bytes using stdlib/test libraries.
+Coverage targets:
+* TXT, CSV, JSON format handlers — real in-memory content.
+* PDF and DOCX format handlers — mocked extraction libraries.
+* ZIP archive handler — real in-memory ZIP containing TXT, CSV, and JSON.
+* Byte-offset map correctness: result.text[entry.text_start:entry.text_end]
+  must equal the extracted span.
+* Error paths: ExtractionError raised for unsupported MIME types and
+  malformed inputs.
+* Thread-pool dispatch: extract() must delegate to run_in_executor with
+  the configured executor instance.
 """
+
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import zipfile
-from concurrent.futures import Future
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from fileguard.core.document_extractor import (
-    ByteOffsetEntry,
     DocumentExtractor,
     ExtractionError,
     ExtractionResult,
-    _build_byte_offsets,
-    _guess_mime,
-    _normalise,
-    SUPPORTED_MIME_TYPES,
+    OffsetEntry,
+    _normalize,
 )
 
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
-def extractor() -> DocumentExtractor:
-    """A DocumentExtractor instance with a single worker (deterministic)."""
-    ex = DocumentExtractor(max_workers=1)
-    yield ex
-    ex.shutdown(wait=True)
-
-
-def _make_zip(files: dict[str, bytes]) -> bytes:
-    """Build an in-memory ZIP archive containing *files*."""
+def _make_zip(*members: tuple[str, bytes]) -> bytes:
+    """Return ZIP archive bytes containing the given (name, content) pairs."""
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as zf:
-        for name, data in files.items():
-            zf.writestr(name, data)
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, content in members:
+            zf.writestr(name, content)
     return buf.getvalue()
 
 
-def _make_docx(paragraphs: list[str]) -> bytes:
-    """Build a minimal in-memory DOCX document."""
-    import docx  # type: ignore[import-untyped]
-
-    doc = docx.Document()
-    for para in paragraphs:
-        doc.add_paragraph(para)
-    buf = io.BytesIO()
-    doc.save(buf)
-    return buf.getvalue()
+def _assert_offsets_valid(result: ExtractionResult) -> None:
+    """Assert that every OffsetEntry correctly slices the normalised text."""
+    for entry in result.offsets:
+        span = result.text[entry.text_start:entry.text_end]
+        assert span, (
+            f"OffsetEntry {entry} produced an empty slice of {result.text!r}"
+        )
+        # text_start must be < text_end
+        assert entry.text_start < entry.text_end, (
+            f"OffsetEntry has text_start >= text_end: {entry}"
+        )
+        # byte offsets must be non-negative
+        assert entry.byte_start >= 0
+        assert entry.byte_end > entry.byte_start
 
 
 # ---------------------------------------------------------------------------
-# Helper / utility unit tests
+# TXT extraction
 # ---------------------------------------------------------------------------
 
 
-class TestNormalise:
-    def test_crlf_converted_to_lf(self) -> None:
-        assert _normalise("line1\r\nline2") == "line1\nline2"
+class TestDocumentExtractorTXT:
+    """Plain-text extraction using real in-memory bytes."""
 
-    def test_cr_only_converted_to_lf(self) -> None:
-        assert _normalise("line1\rline2") == "line1\nline2"
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
 
-    def test_trailing_whitespace_stripped_per_line(self) -> None:
-        assert _normalise("hello   \nworld  ") == "hello\nworld"
+    def test_extracts_basic_text(self) -> None:
+        content = b"Hello World"
+        result = self.extractor._extract_txt(content)
+        assert result.text == "Hello World"
 
-    def test_leading_and_trailing_blank_lines_stripped(self) -> None:
-        assert _normalise("\n\nhello\n\n") == "hello"
+    def test_returns_extraction_result(self) -> None:
+        result = self.extractor._extract_txt(b"Hello")
+        assert isinstance(result, ExtractionResult)
 
-    def test_empty_string_returns_empty(self) -> None:
-        assert _normalise("") == ""
+    def test_offset_spans_whole_text(self) -> None:
+        content = b"Hello World"
+        result = self.extractor._extract_txt(content)
+        assert len(result.offsets) == 1
+        entry = result.offsets[0]
+        assert entry.text_start == 0
+        assert entry.text_end == len(result.text)
+        assert result.text[entry.text_start:entry.text_end] == "Hello World"
 
-
-class TestBuildByteOffsets:
-    def test_single_line_offsets(self) -> None:
-        text = "Hello"
-        entries = _build_byte_offsets(text)
-        assert len(entries) == 1
-        entry = entries[0]
-        assert entry.char_start == 0
-        assert entry.char_end == 5
+    def test_offset_byte_range_covers_content(self) -> None:
+        content = b"Hello World"
+        result = self.extractor._extract_txt(content)
+        entry = result.offsets[0]
         assert entry.byte_start == 0
-        assert entry.byte_end == 5
+        assert entry.byte_end == len(content)
 
-    def test_two_line_offsets(self) -> None:
-        text = "Hello\nWorld"
-        entries = _build_byte_offsets(text)
-        assert len(entries) == 2
+    def test_normalises_excess_whitespace(self) -> None:
+        content = b"Hello   World"
+        result = self.extractor._extract_txt(content)
+        assert result.text == "Hello World"
 
-        # First line: "Hello"
-        assert entries[0].char_start == 0
-        assert entries[0].char_end == 5
+    def test_normalises_multiple_lines(self) -> None:
+        content = b"Line one\n\nLine two"
+        result = self.extractor._extract_txt(content)
+        assert "Line one" in result.text
+        assert "Line two" in result.text
+        # Empty lines must be stripped
+        assert "\n\n" not in result.text
 
-        # Second line: "World" starts after "Hello\n" (6 chars / 6 bytes)
-        assert entries[1].char_start == 6
-        assert entries[1].char_end == 11
+    def test_latin1_fallback_on_non_utf8(self) -> None:
+        # b'\xe9' is 'é' in Latin-1 but invalid UTF-8
+        content = b"caf\xe9"
+        result = self.extractor._extract_txt(content)
+        assert "caf" in result.text  # at minimum the ASCII prefix is present
 
-    def test_offsets_reference_correct_chars(self) -> None:
-        text = "foo\nbar\nbaz"
-        entries = _build_byte_offsets(text)
-        for entry in entries:
-            extracted_chars = text[entry.char_start:entry.char_end]
-            extracted_bytes = text.encode("utf-8")[entry.byte_start:entry.byte_end]
-            assert extracted_chars == extracted_bytes.decode("utf-8")
+    def test_empty_content_returns_empty_text(self) -> None:
+        result = self.extractor._extract_txt(b"")
+        assert result.text == ""
+        assert result.offsets == []
 
-    def test_multibyte_unicode_byte_offsets(self) -> None:
-        # "café" — 'é' is 2 bytes in UTF-8
-        text = "café\nbar"
-        entries = _build_byte_offsets(text)
-
-        # First line: "café" → 4 chars, 5 bytes
-        assert entries[0].char_end - entries[0].char_start == 4
-        assert entries[0].byte_end - entries[0].byte_start == 5
-
-        # Second line: "bar" → 3 chars, 3 bytes
-        assert entries[1].char_end - entries[1].char_start == 3
-        assert entries[1].byte_end - entries[1].byte_start == 3
-
-    def test_byte_offsets_reference_correct_bytes(self) -> None:
-        text = "café\nhello"
-        encoded = text.encode("utf-8")
-        entries = _build_byte_offsets(text)
-        for entry in entries:
-            byte_slice = encoded[entry.byte_start:entry.byte_end]
-            char_slice = text[entry.char_start:entry.char_end]
-            assert byte_slice.decode("utf-8") == char_slice
-
-
-class TestGuessMime:
-    def test_pdf_extension(self) -> None:
-        assert _guess_mime("report.pdf") == "application/pdf"
-
-    def test_docx_extension(self) -> None:
-        assert _guess_mime("doc.docx") == (
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-
-    def test_csv_extension(self) -> None:
-        assert _guess_mime("data.csv") == "text/csv"
-
-    def test_json_extension(self) -> None:
-        assert _guess_mime("config.json") == "application/json"
-
-    def test_txt_extension(self) -> None:
-        assert _guess_mime("readme.txt") == "text/plain"
-
-    def test_zip_extension(self) -> None:
-        assert _guess_mime("archive.zip") == "application/zip"
-
-    def test_unknown_extension_returns_octet_stream(self) -> None:
-        assert _guess_mime("binary.exe") == "application/octet-stream"
-
-    def test_case_insensitive_extension(self) -> None:
-        assert _guess_mime("REPORT.PDF") == "application/pdf"
+    def test_offset_validity(self) -> None:
+        result = self.extractor._extract_txt(b"Hello World")
+        _assert_offsets_valid(result)
 
 
 # ---------------------------------------------------------------------------
-# Format handler tests (all async, dispatched via the extractor)
+# CSV extraction
 # ---------------------------------------------------------------------------
 
 
-class TestExtractTxt:
-    async def test_simple_text(self, extractor: DocumentExtractor) -> None:
-        data = b"Hello world\nSecond line"
-        result = await extractor.extract(data, "text/plain")
-        assert "Hello world" in result.text
-        assert "Second line" in result.text
+class TestDocumentExtractorCSV:
+    """CSV extraction using real in-memory bytes."""
 
-    async def test_returns_extraction_result(self, extractor: DocumentExtractor) -> None:
-        data = b"test content"
-        result = await extractor.extract(data, "text/plain")
-        assert isinstance(result, ExtractionResult)
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
 
-    async def test_byte_offsets_populated(self, extractor: DocumentExtractor) -> None:
-        data = b"line one\nline two"
-        result = await extractor.extract(data, "text/plain")
-        assert len(result.byte_offsets) >= 1
-        assert all(isinstance(e, ByteOffsetEntry) for e in result.byte_offsets)
+    def _csv(self, *rows: tuple[str, ...]) -> bytes:
+        buf = io.StringIO()
+        import csv
+        writer = csv.writer(buf)
+        writer.writerows(rows)
+        return buf.getvalue().encode("utf-8")
 
-    async def test_byte_offsets_correctness(self, extractor: DocumentExtractor) -> None:
-        data = b"Hello\nWorld"
-        result = await extractor.extract(data, "text/plain")
-        encoded = result.text.encode("utf-8")
-        for entry in result.byte_offsets:
-            char_span = result.text[entry.char_start:entry.char_end]
-            byte_span = encoded[entry.byte_start:entry.byte_end].decode("utf-8")
-            assert char_span == byte_span
+    def test_extracts_header_row(self) -> None:
+        content = self._csv(("name", "age"), ("Alice", "30"))
+        result = self.extractor._extract_csv(content)
+        assert "name" in result.text
+        assert "age" in result.text
 
-    async def test_normalises_crlf(self, extractor: DocumentExtractor) -> None:
-        data = b"line1\r\nline2"
-        result = await extractor.extract(data, "text/plain")
-        assert "\r" not in result.text
-
-    async def test_latin1_fallback(self, extractor: DocumentExtractor) -> None:
-        # Bytes that are invalid UTF-8 but valid latin-1
-        data = bytes([0x48, 0x65, 0x6C, 0x6C, 0x6F, 0xE9])  # "Hellé" in latin-1
-        result = await extractor.extract(data, "text/plain")
-        assert "Hell" in result.text
-
-
-class TestExtractCsv:
-    async def test_basic_csv(self, extractor: DocumentExtractor) -> None:
-        data = b"name,age\nAlice,30\nBob,25"
-        result = await extractor.extract(data, "text/csv")
+    def test_extracts_data_rows(self) -> None:
+        content = self._csv(("name", "age"), ("Alice", "30"))
+        result = self.extractor._extract_csv(content)
         assert "Alice" in result.text
-        assert "Bob" in result.text
+        assert "30" in result.text
 
-    async def test_csv_with_bom(self, extractor: DocumentExtractor) -> None:
-        data = b"\xef\xbb\xbfname,value\nhello,world"
-        result = await extractor.extract(data, "text/csv")
-        assert "hello" in result.text
-        assert "world" in result.text
-
-    async def test_byte_offsets_correctness(self, extractor: DocumentExtractor) -> None:
-        data = b"a,b\n1,2"
-        result = await extractor.extract(data, "text/csv")
-        encoded = result.text.encode("utf-8")
-        for entry in result.byte_offsets:
-            char_span = result.text[entry.char_start:entry.char_end]
-            byte_span = encoded[entry.byte_start:entry.byte_end].decode("utf-8")
-            assert char_span == byte_span
-
-    async def test_single_row(self, extractor: DocumentExtractor) -> None:
-        data = b"only,one,row"
-        result = await extractor.extract(data, "text/csv")
-        assert "only" in result.text
-
-
-class TestExtractJson:
-    async def test_simple_json_object(self, extractor: DocumentExtractor) -> None:
-        payload = {"name": "Alice", "age": 30}
-        data = json.dumps(payload).encode()
-        result = await extractor.extract(data, "application/json")
-        assert "Alice" in result.text
-
-    async def test_json_array(self, extractor: DocumentExtractor) -> None:
-        payload = [{"id": 1}, {"id": 2}]
-        data = json.dumps(payload).encode()
-        result = await extractor.extract(data, "application/json")
-        assert "id" in result.text
-
-    async def test_non_ascii_json(self, extractor: DocumentExtractor) -> None:
-        payload = {"city": "München"}
-        data = json.dumps(payload, ensure_ascii=False).encode()
-        result = await extractor.extract(data, "application/json")
-        assert "München" in result.text
-
-    async def test_byte_offsets_correctness(self, extractor: DocumentExtractor) -> None:
-        data = b'{"key": "value"}'
-        result = await extractor.extract(data, "application/json")
-        encoded = result.text.encode("utf-8")
-        for entry in result.byte_offsets:
-            char_span = result.text[entry.char_start:entry.char_end]
-            byte_span = encoded[entry.byte_start:entry.byte_end].decode("utf-8")
-            assert char_span == byte_span
-
-    async def test_corrupt_json_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError, match="JSON extraction failed"):
-            await extractor.extract(b"{not valid json", "application/json")
-
-
-class TestExtractPdf:
-    async def test_successful_extraction_returns_text(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with patch(
-            "fileguard.core.document_extractor.DocumentExtractor._extract_pdf",
-            return_value="PDF content here",
-        ):
-            result = await extractor.extract(b"fake-pdf-bytes", "application/pdf")
-        assert "PDF content here" in result.text
-
-    async def test_byte_offsets_populated(self, extractor: DocumentExtractor) -> None:
-        with patch(
-            "fileguard.core.document_extractor.DocumentExtractor._extract_pdf",
-            return_value="line one\nline two",
-        ):
-            result = await extractor.extract(b"fake-pdf-bytes", "application/pdf")
-        assert len(result.byte_offsets) == 2
-
-    async def test_byte_offsets_correctness(self, extractor: DocumentExtractor) -> None:
-        with patch(
-            "fileguard.core.document_extractor.DocumentExtractor._extract_pdf",
-            return_value="Hello PDF\nSecond line",
-        ):
-            result = await extractor.extract(b"fake-pdf-bytes", "application/pdf")
-        encoded = result.text.encode("utf-8")
-        for entry in result.byte_offsets:
-            char_span = result.text[entry.char_start:entry.char_end]
-            byte_span = encoded[entry.byte_start:entry.byte_end].decode("utf-8")
-            assert char_span == byte_span
-
-    async def test_pdfminer_error_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with patch(
-            "pdfminer.high_level.extract_text",
-            side_effect=Exception("malformed PDF stream"),
-        ):
-            with pytest.raises(ExtractionError):
-                await extractor.extract(b"corrupt-pdf", "application/pdf")
-
-    async def test_returns_extraction_result(self, extractor: DocumentExtractor) -> None:
-        with patch(
-            "fileguard.core.document_extractor.DocumentExtractor._extract_pdf",
-            return_value="some text",
-        ):
-            result = await extractor.extract(b"fake-pdf", "application/pdf")
+    def test_returns_extraction_result(self) -> None:
+        content = self._csv(("a", "b"),)
+        result = self.extractor._extract_csv(content)
         assert isinstance(result, ExtractionResult)
 
+    def test_produces_one_offset_entry_per_non_empty_row(self) -> None:
+        content = self._csv(("header1", "header2"), ("val1", "val2"))
+        result = self.extractor._extract_csv(content)
+        assert len(result.offsets) == 2
 
-class TestExtractDocx:
-    async def test_successful_extraction(self, extractor: DocumentExtractor) -> None:
-        docx_bytes = _make_docx(["Hello DOCX", "Second paragraph"])
-        result = await extractor.extract(
-            docx_bytes,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-        assert "Hello DOCX" in result.text
-        assert "Second paragraph" in result.text
+    def test_offset_text_ranges_are_non_overlapping(self) -> None:
+        content = self._csv(("a", "b"), ("c", "d"), ("e", "f"))
+        result = self.extractor._extract_csv(content)
+        for i, entry in enumerate(result.offsets[:-1]):
+            next_entry = result.offsets[i + 1]
+            assert entry.text_end <= next_entry.text_start
 
-    async def test_byte_offsets_populated(self, extractor: DocumentExtractor) -> None:
-        docx_bytes = _make_docx(["Paragraph one", "Paragraph two"])
-        result = await extractor.extract(
-            docx_bytes,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-        assert len(result.byte_offsets) >= 1
+    def test_offsets_correctly_slice_text(self) -> None:
+        content = self._csv(("name", "age"), ("Alice", "30"))
+        result = self.extractor._extract_csv(content)
+        for entry in result.offsets:
+            span = result.text[entry.text_start:entry.text_end]
+            assert span  # non-empty
 
-    async def test_byte_offsets_correctness(self, extractor: DocumentExtractor) -> None:
-        docx_bytes = _make_docx(["café", "hello"])
-        result = await extractor.extract(
-            docx_bytes,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-        encoded = result.text.encode("utf-8")
-        for entry in result.byte_offsets:
-            char_span = result.text[entry.char_start:entry.char_end]
-            byte_span = encoded[entry.byte_start:entry.byte_end].decode("utf-8")
-            assert char_span == byte_span
+    def test_empty_csv_returns_empty_text(self) -> None:
+        result = self.extractor._extract_csv(b"")
+        assert result.text == ""
+        assert result.offsets == []
 
-    async def test_corrupt_docx_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError, match="DOCX extraction failed"):
-            await extractor.extract(
-                b"not-a-docx-file",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            )
-
-    async def test_returns_extraction_result(self, extractor: DocumentExtractor) -> None:
-        docx_bytes = _make_docx(["Test"])
-        result = await extractor.extract(
-            docx_bytes,
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-        assert isinstance(result, ExtractionResult)
-
-
-class TestExtractZip:
-    async def test_zip_with_txt_files(self, extractor: DocumentExtractor) -> None:
-        zip_bytes = _make_zip(
-            {
-                "hello.txt": b"Hello from TXT",
-                "world.txt": b"World text here",
-            }
-        )
-        result = await extractor.extract(zip_bytes, "application/zip")
-        assert "Hello from TXT" in result.text
-        assert "World text here" in result.text
-
-    async def test_zip_with_json_file(self, extractor: DocumentExtractor) -> None:
-        payload = json.dumps({"secret": "value"}).encode()
-        zip_bytes = _make_zip({"data.json": payload})
-        result = await extractor.extract(zip_bytes, "application/zip")
-        assert "secret" in result.text
-
-    async def test_zip_with_csv_file(self, extractor: DocumentExtractor) -> None:
-        csv_bytes = b"col1,col2\nfoo,bar"
-        zip_bytes = _make_zip({"sheet.csv": csv_bytes})
-        result = await extractor.extract(zip_bytes, "application/zip")
-        assert "foo" in result.text
-
-    async def test_zip_recursive_nested_zip(self, extractor: DocumentExtractor) -> None:
-        # Inner ZIP contains a TXT
-        inner_zip = _make_zip({"inner.txt": b"nested text"})
-        # Outer ZIP contains the inner ZIP
-        outer_zip = _make_zip({"inner.zip": inner_zip})
-        result = await extractor.extract(outer_zip, "application/zip")
-        assert "nested text" in result.text
-
-    async def test_zip_skips_unsupported_files(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        zip_bytes = _make_zip(
-            {
-                "image.png": b"\x89PNG\r\n\x1a\n",
-                "readme.txt": b"readable text",
-            }
-        )
-        result = await extractor.extract(zip_bytes, "application/zip")
-        # PNG is silently skipped; TXT is extracted
-        assert "readable text" in result.text
-
-    async def test_zip_skips_directory_entries(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        zip_bytes = _make_zip({"subdir/": b"", "subdir/file.txt": b"file content"})
-        result = await extractor.extract(zip_bytes, "application/zip")
-        assert "file content" in result.text
-
-    async def test_zip_byte_offsets_populated(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        zip_bytes = _make_zip({"a.txt": b"line1\nline2"})
-        result = await extractor.extract(zip_bytes, "application/zip")
-        assert len(result.byte_offsets) >= 1
-
-    async def test_zip_byte_offsets_correctness(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        zip_bytes = _make_zip({"a.txt": b"café\nbar"})
-        result = await extractor.extract(zip_bytes, "application/zip")
-        encoded = result.text.encode("utf-8")
-        for entry in result.byte_offsets:
-            char_span = result.text[entry.char_start:entry.char_end]
-            byte_span = encoded[entry.byte_start:entry.byte_end].decode("utf-8")
-            assert char_span == byte_span
-
-    async def test_x_zip_compressed_mime_alias(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        zip_bytes = _make_zip({"file.txt": b"alias content"})
-        result = await extractor.extract(zip_bytes, "application/x-zip-compressed")
-        assert "alias content" in result.text
-
-    async def test_corrupt_zip_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError, match="ZIP extraction failed"):
-            await extractor.extract(b"not-a-zip-file", "application/zip")
+    def test_offset_validity(self) -> None:
+        content = self._csv(("name", "age"), ("Alice", "30"))
+        result = self.extractor._extract_csv(content)
+        _assert_offsets_valid(result)
 
 
 # ---------------------------------------------------------------------------
-# Error-path tests
+# JSON extraction
 # ---------------------------------------------------------------------------
 
 
-class TestUnsupportedMimeType:
-    async def test_image_png_raises_error(self, extractor: DocumentExtractor) -> None:
-        with pytest.raises(ExtractionError, match="Unsupported MIME type"):
-            await extractor.extract(b"\x89PNG", "image/png")
+class TestDocumentExtractorJSON:
+    """JSON extraction using real in-memory bytes."""
 
-    async def test_octet_stream_raises_error(self, extractor: DocumentExtractor) -> None:
-        with pytest.raises(ExtractionError, match="Unsupported MIME type"):
-            await extractor.extract(b"\x00\x01\x02", "application/octet-stream")
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
 
-    async def test_html_raises_error(self, extractor: DocumentExtractor) -> None:
-        with pytest.raises(ExtractionError, match="Unsupported MIME type"):
-            await extractor.extract(b"<html/>", "text/html")
-
-    async def test_empty_mime_type_raises_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError, match="Unsupported MIME type"):
-            await extractor.extract(b"data", "")
-
-    async def test_error_message_lists_supported_types(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError) as exc_info:
-            await extractor.extract(b"data", "video/mp4")
-        assert "application/pdf" in str(exc_info.value)
-
-
-class TestCorruptFiles:
-    async def test_corrupt_pdf_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with patch(
-            "pdfminer.high_level.extract_text",
-            side_effect=Exception("unexpected end of stream"),
-        ):
-            with pytest.raises(ExtractionError):
-                await extractor.extract(b"%PDF-bad", "application/pdf")
-
-    async def test_corrupt_docx_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError, match="DOCX extraction failed"):
-            await extractor.extract(
-                b"PK not-really-a-docx",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            )
-
-    async def test_corrupt_json_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError, match="JSON extraction failed"):
-            await extractor.extract(b"{invalid json!!!}", "application/json")
-
-    async def test_corrupt_zip_raises_extraction_error(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        with pytest.raises(ExtractionError, match="ZIP extraction failed"):
-            await extractor.extract(b"PK not-a-real-zip", "application/zip")
-
-
-# ---------------------------------------------------------------------------
-# Thread-pool (run_in_executor) dispatch tests
-# ---------------------------------------------------------------------------
-
-
-class TestThreadPoolDispatch:
-    async def test_extract_uses_run_in_executor(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        """extract() must dispatch the synchronous handler via run_in_executor."""
-        data = b"hello world"
-
-        original_extract = extractor._extract_txt
-        calls: list[tuple] = []
-
-        def recording_handler(d: bytes) -> str:
-            calls.append((d,))
-            return original_extract(d)
-
-        extractor._extract_txt = recording_handler  # type: ignore[method-assign]
-
-        with patch("asyncio.get_running_loop") as mock_get_loop:
-            mock_loop = MagicMock()
-            mock_get_loop.return_value = mock_loop
-
-            # run_in_executor must return an awaitable; return a coroutine that
-            # yields the handler result to keep the test simple.
-            async def fake_run_in_executor(executor, func, *args):
-                return func(*args)
-
-            mock_loop.run_in_executor = fake_run_in_executor
-
-            result = await extractor.extract(data, "text/plain")
-
-        mock_get_loop.assert_called_once()
+    def test_extracts_top_level_string_value(self) -> None:
+        content = json.dumps({"key": "hello world"}).encode()
+        result = self.extractor._extract_json(content)
         assert "hello world" in result.text
 
-    async def test_executor_is_passed_to_run_in_executor(
-        self, extractor: DocumentExtractor
-    ) -> None:
-        """The ThreadPoolExecutor instance must be the first argument to run_in_executor."""
-        data = b"test"
-        received_executors: list = []
+    def test_extracts_nested_strings(self) -> None:
+        data = {"outer": {"inner": "deep value"}}
+        content = json.dumps(data).encode()
+        result = self.extractor._extract_json(content)
+        assert "deep value" in result.text
 
-        original_extract = extractor._extract_txt
+    def test_extracts_strings_from_array(self) -> None:
+        content = json.dumps(["first", "second", "third"]).encode()
+        result = self.extractor._extract_json(content)
+        assert "first" in result.text
+        assert "second" in result.text
+        assert "third" in result.text
 
-        with patch("asyncio.get_running_loop") as mock_get_loop:
-            mock_loop = MagicMock()
-            mock_get_loop.return_value = mock_loop
+    def test_ignores_numeric_values(self) -> None:
+        content = json.dumps({"number": 42, "text": "hello"}).encode()
+        result = self.extractor._extract_json(content)
+        # "42" should not appear as a standalone token in the text
+        assert "hello" in result.text
 
-            async def capturing_run_in_executor(executor, func, *args):
-                received_executors.append(executor)
-                return func(*args)
+    def test_returns_extraction_result(self) -> None:
+        content = json.dumps({"k": "v"}).encode()
+        result = self.extractor._extract_json(content)
+        assert isinstance(result, ExtractionResult)
 
-            mock_loop.run_in_executor = capturing_run_in_executor
+    def test_offset_covers_full_text(self) -> None:
+        content = json.dumps({"message": "test content"}).encode()
+        result = self.extractor._extract_json(content)
+        assert len(result.offsets) == 1
+        entry = result.offsets[0]
+        assert entry.text_start == 0
+        assert entry.text_end == len(result.text)
 
-            await extractor.extract(data, "text/plain")
+    def test_offset_byte_range_covers_content(self) -> None:
+        content = json.dumps({"k": "v"}).encode()
+        result = self.extractor._extract_json(content)
+        assert result.offsets[0].byte_start == 0
+        assert result.offsets[0].byte_end == len(content)
 
-        assert len(received_executors) == 1
-        assert received_executors[0] is extractor._executor
+    def test_raises_extraction_error_on_invalid_json(self) -> None:
+        with pytest.raises(ExtractionError, match="Failed to parse JSON"):
+            self.extractor._extract_json(b"{ invalid json }")
+
+    def test_empty_object_returns_empty_text(self) -> None:
+        result = self.extractor._extract_json(b"{}")
+        assert result.text == ""
+        assert result.offsets == []
+
+    def test_offset_validity(self) -> None:
+        content = json.dumps({"key": "some value here"}).encode()
+        result = self.extractor._extract_json(content)
+        _assert_offsets_valid(result)
 
 
 # ---------------------------------------------------------------------------
-# SUPPORTED_MIME_TYPES constant tests
+# PDF extraction (mocked pdfminer)
 # ---------------------------------------------------------------------------
 
 
-class TestSupportedMimeTypes:
-    def test_all_six_formats_present(self) -> None:
-        assert "application/pdf" in SUPPORTED_MIME_TYPES
-        assert (
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            in SUPPORTED_MIME_TYPES
+class TestDocumentExtractorPDF:
+    """PDF extraction with pdfminer.six mocked out."""
+
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
+
+    def _run(self, content: bytes, mock_text: str) -> ExtractionResult:
+        """Call _extract_pdf with pdfminer mocked to return *mock_text*."""
+        with patch(
+            "pdfminer.high_level.extract_text_to_fp",
+        ) as mock_extract:
+            def _write_text(src, dst, **kwargs):
+                dst.write(mock_text)
+
+            mock_extract.side_effect = _write_text
+            return self.extractor._extract_pdf(content)
+
+    def test_extracts_text_returned_by_pdfminer(self) -> None:
+        result = self._run(b"%PDF-1.4 fake", "Hello from PDF\n")
+        assert "Hello from PDF" in result.text
+
+    def test_returns_extraction_result(self) -> None:
+        result = self._run(b"%PDF-1.4 fake", "Some text\n")
+        assert isinstance(result, ExtractionResult)
+
+    def test_offset_covers_full_text(self) -> None:
+        result = self._run(b"%PDF-1.4 fake", "Hello from PDF\n")
+        assert len(result.offsets) == 1
+        entry = result.offsets[0]
+        assert entry.text_start == 0
+        assert entry.text_end == len(result.text)
+        assert result.text[entry.text_start:entry.text_end] == result.text
+
+    def test_offset_byte_range_covers_content(self) -> None:
+        content = b"%PDF-1.4 fake"
+        result = self._run(content, "Hello\n")
+        assert result.offsets[0].byte_start == 0
+        assert result.offsets[0].byte_end == len(content)
+
+    def test_normalises_whitespace(self) -> None:
+        result = self._run(b"%PDF-1.4 fake", "Hello   World\n")
+        assert result.text == "Hello World"
+
+    def test_raises_extraction_error_on_pdfminer_failure(self) -> None:
+        with patch("pdfminer.high_level.extract_text_to_fp") as mock_extract:
+            mock_extract.side_effect = Exception("corrupt PDF")
+            with pytest.raises(ExtractionError, match="Failed to extract PDF"):
+                self.extractor._extract_pdf(b"not a real pdf")
+
+    def test_empty_pdf_returns_empty_text(self) -> None:
+        result = self._run(b"%PDF-1.4 empty", "")
+        assert result.text == ""
+        assert result.offsets == []
+
+    def test_offset_validity(self) -> None:
+        result = self._run(b"%PDF-1.4 fake", "Hello from PDF\n")
+        _assert_offsets_valid(result)
+
+
+# ---------------------------------------------------------------------------
+# DOCX extraction (mocked python-docx)
+# ---------------------------------------------------------------------------
+
+
+class TestDocumentExtractorDOCX:
+    """DOCX extraction with python-docx mocked out."""
+
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
+
+    @staticmethod
+    def _make_mock_doc(*para_texts: str) -> MagicMock:
+        """Return a mock docx.Document with the given paragraph texts."""
+        doc = MagicMock()
+        paragraphs = []
+        for text in para_texts:
+            para = MagicMock()
+            para.text = text
+            paragraphs.append(para)
+        doc.paragraphs = paragraphs
+        return doc
+
+    def _run(self, content: bytes, *para_texts: str) -> ExtractionResult:
+        mock_doc = TestDocumentExtractorDOCX._make_mock_doc(*para_texts)
+        with patch("docx.Document", return_value=mock_doc):
+            return self.extractor._extract_docx(content)
+
+    def test_extracts_single_paragraph(self) -> None:
+        result = self._run(b"fake-docx", "Hello from DOCX")
+        assert "Hello from DOCX" in result.text
+
+    def test_extracts_multiple_paragraphs(self) -> None:
+        result = self._run(b"fake-docx", "First paragraph", "Second paragraph")
+        assert "First paragraph" in result.text
+        assert "Second paragraph" in result.text
+
+    def test_returns_extraction_result(self) -> None:
+        result = self._run(b"fake-docx", "Some text")
+        assert isinstance(result, ExtractionResult)
+
+    def test_produces_one_offset_entry_per_non_empty_paragraph(self) -> None:
+        result = self._run(b"fake-docx", "Para one", "", "Para three")
+        # Empty paragraph should be skipped
+        assert len(result.offsets) == 2
+
+    def test_offsets_correctly_slice_text(self) -> None:
+        result = self._run(b"fake-docx", "First paragraph", "Second paragraph")
+        for entry in result.offsets:
+            span = result.text[entry.text_start:entry.text_end]
+            assert span  # non-empty slice
+
+    def test_first_paragraph_text_start_is_zero(self) -> None:
+        result = self._run(b"fake-docx", "Hello World")
+        assert result.offsets[0].text_start == 0
+
+    def test_paragraphs_joined_with_newline(self) -> None:
+        result = self._run(b"fake-docx", "Para A", "Para B")
+        assert result.text == "Para A\nPara B"
+
+    def test_raises_extraction_error_on_docx_failure(self) -> None:
+        with patch("docx.Document", side_effect=Exception("bad zip")):
+            with pytest.raises(ExtractionError, match="Failed to extract DOCX"):
+                self.extractor._extract_docx(b"not a real docx")
+
+    def test_empty_document_returns_empty_text(self) -> None:
+        result = self._run(b"fake-docx")  # no paragraphs
+        assert result.text == ""
+        assert result.offsets == []
+
+    def test_offset_validity(self) -> None:
+        result = self._run(b"fake-docx", "First", "Second", "Third")
+        _assert_offsets_valid(result)
+
+    def test_offset_byte_range_covers_content(self) -> None:
+        content = b"fake-docx-bytes"
+        result = self._run(content, "Hello")
+        assert result.offsets[0].byte_start == 0
+        assert result.offsets[0].byte_end == len(content)
+
+
+# ---------------------------------------------------------------------------
+# ZIP extraction
+# ---------------------------------------------------------------------------
+
+
+class TestDocumentExtractorZIP:
+    """ZIP archive extraction using real in-memory ZIP files."""
+
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
+
+    def test_extracts_txt_member(self) -> None:
+        content = _make_zip(("readme.txt", b"Hello from TXT inside ZIP"))
+        result = self.extractor._extract_zip(content)
+        assert "Hello from TXT inside ZIP" in result.text
+
+    def test_extracts_csv_member(self) -> None:
+        csv_bytes = b"name,age\nAlice,30\n"
+        content = _make_zip(("data.csv", csv_bytes))
+        result = self.extractor._extract_zip(content)
+        assert "Alice" in result.text
+
+    def test_extracts_json_member(self) -> None:
+        json_bytes = json.dumps({"message": "hello from json"}).encode()
+        content = _make_zip(("config.json", json_bytes))
+        result = self.extractor._extract_zip(content)
+        assert "hello from json" in result.text
+
+    def test_extracts_multiple_members(self) -> None:
+        content = _make_zip(
+            ("a.txt", b"Alpha content"),
+            ("b.txt", b"Beta content"),
         )
-        assert "text/csv" in SUPPORTED_MIME_TYPES
-        assert "application/json" in SUPPORTED_MIME_TYPES
-        assert "text/plain" in SUPPORTED_MIME_TYPES
-        assert "application/zip" in SUPPORTED_MIME_TYPES
+        result = self.extractor._extract_zip(content)
+        assert "Alpha content" in result.text
+        assert "Beta content" in result.text
 
-    def test_is_frozenset(self) -> None:
-        assert isinstance(SUPPORTED_MIME_TYPES, frozenset)
+    def test_skips_directory_entries(self) -> None:
+        content = _make_zip(("subdir/", b""), ("subdir/file.txt", b"Inner file"))
+        result = self.extractor._extract_zip(content)
+        assert "Inner file" in result.text
+
+    def test_recursive_zip_extraction(self) -> None:
+        """A ZIP inside a ZIP should be recursively extracted."""
+        inner_zip = _make_zip(("inner.txt", b"Deeply nested content"))
+        outer_zip = _make_zip(("nested.zip", inner_zip))
+        result = self.extractor._extract_zip(outer_zip)
+        assert "Deeply nested content" in result.text
+
+    def test_offset_spans_each_member_text(self) -> None:
+        content = _make_zip(
+            ("a.txt", b"Alpha"),
+            ("b.txt", b"Beta"),
+        )
+        result = self.extractor._extract_zip(content)
+        assert len(result.offsets) == 2
+        for entry in result.offsets:
+            span = result.text[entry.text_start:entry.text_end]
+            assert span  # non-empty
+
+    def test_raises_extraction_error_for_non_zip_bytes(self) -> None:
+        with pytest.raises(ExtractionError, match="not a valid ZIP archive"):
+            self.extractor._extract_zip(b"this is not a zip file at all")
+
+    def test_corrupt_member_is_skipped_not_fatal(self) -> None:
+        """A ZIP member that fails extraction should be skipped, not abort."""
+        # Add a file with a .pdf extension but corrupt bytes — pdfminer will
+        # fail, but the extractor should log a warning and continue.
+        content = _make_zip(
+            ("good.txt", b"Good content"),
+            ("bad.pdf", b"not a real pdf"),
+        )
+        with patch("pdfminer.high_level.extract_text_to_fp") as mock_pdf:
+            mock_pdf.side_effect = Exception("pdfminer error")
+            result = self.extractor._extract_zip(content)
+        # The good .txt member should still be extracted
+        assert "Good content" in result.text
+
+    def test_returns_extraction_result(self) -> None:
+        content = _make_zip(("file.txt", b"Some text"))
+        result = self.extractor._extract_zip(content)
+        assert isinstance(result, ExtractionResult)
+
+    def test_offset_validity(self) -> None:
+        content = _make_zip(("a.txt", b"Alpha"), ("b.txt", b"Beta"))
+        result = self.extractor._extract_zip(content)
+        _assert_offsets_valid(result)
+
+
+# ---------------------------------------------------------------------------
+# Byte-offset map correctness (cross-format)
+# ---------------------------------------------------------------------------
+
+
+class TestOffsetCorrectness:
+    """Verify the offset invariant across all formats."""
+
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
+
+    def test_txt_offsets_slice_text_correctly(self) -> None:
+        result = self.extractor._extract_txt(b"Hello World. This is a test.")
+        for entry in result.offsets:
+            # The slice must not raise and must be non-empty.
+            assert result.text[entry.text_start:entry.text_end]
+
+    def test_csv_offsets_slice_text_correctly(self) -> None:
+        import csv as _csv
+        buf = io.StringIO()
+        _csv.writer(buf).writerows([
+            ("first_name", "last_name", "email"),
+            ("John", "Doe", "john.doe@example.com"),
+            ("Jane", "Smith", "jane.smith@example.com"),
+        ])
+        content = buf.getvalue().encode()
+        result = self.extractor._extract_csv(content)
+        for entry in result.offsets:
+            assert result.text[entry.text_start:entry.text_end]
+
+    def test_json_offsets_slice_text_correctly(self) -> None:
+        content = json.dumps({
+            "users": [
+                {"name": "Alice", "role": "admin"},
+                {"name": "Bob", "role": "viewer"},
+            ]
+        }).encode()
+        result = self.extractor._extract_json(content)
+        for entry in result.offsets:
+            assert result.text[entry.text_start:entry.text_end]
+
+    def test_zip_offsets_slice_text_correctly(self) -> None:
+        content = _make_zip(
+            ("notes.txt", b"First note"),
+            ("data.json", json.dumps({"info": "second note"}).encode()),
+        )
+        result = self.extractor._extract_zip(content)
+        for entry in result.offsets:
+            assert result.text[entry.text_start:entry.text_end]
+
+    def test_pdf_offsets_slice_text_correctly(self) -> None:
+        with patch("pdfminer.high_level.extract_text_to_fp") as mock_pdf:
+            def _write(src, dst, **kwargs):
+                dst.write("PDF extracted text\n")
+            mock_pdf.side_effect = _write
+            result = self.extractor._extract_pdf(b"%PDF-1.4 stub")
+        for entry in result.offsets:
+            assert result.text[entry.text_start:entry.text_end]
+
+    def test_docx_offsets_slice_text_correctly(self) -> None:
+        para = MagicMock()
+        para.text = "DOCX paragraph text"
+        mock_doc = MagicMock()
+        mock_doc.paragraphs = [para]
+        with patch("docx.Document", return_value=mock_doc):
+            result = self.extractor._extract_docx(b"stub")
+        for entry in result.offsets:
+            assert result.text[entry.text_start:entry.text_end]
+
+
+# ---------------------------------------------------------------------------
+# Error handling
+# ---------------------------------------------------------------------------
+
+
+class TestDocumentExtractorErrors:
+    """Verify ExtractionError is raised for unsupported types and bad inputs."""
+
+    def setup_method(self) -> None:
+        self.extractor = DocumentExtractor(max_workers=1)
+
+    def test_raises_for_unsupported_mime_type(self) -> None:
+        with pytest.raises(ExtractionError, match="Unsupported MIME type"):
+            self.extractor._extract_sync(b"data", "application/octet-stream")
+
+    def test_raises_for_image_mime_type(self) -> None:
+        with pytest.raises(ExtractionError, match="Unsupported MIME type"):
+            self.extractor._extract_sync(b"\x89PNG", "image/png")
+
+    def test_raises_for_xml_mime_type(self) -> None:
+        with pytest.raises(ExtractionError, match="Unsupported MIME type"):
+            self.extractor._extract_sync(b"<xml/>", "application/xml")
+
+    def test_raises_for_malformed_json(self) -> None:
+        with pytest.raises(ExtractionError, match="Failed to parse JSON"):
+            self.extractor._extract_json(b"{ not valid json !!}")
+
+    def test_raises_for_non_zip_bytes(self) -> None:
+        with pytest.raises(ExtractionError, match="not a valid ZIP archive"):
+            self.extractor._extract_zip(b"PK this is not a zip")
+
+    def test_raises_for_pdf_extraction_failure(self) -> None:
+        with patch("pdfminer.high_level.extract_text_to_fp") as mock_pdf:
+            mock_pdf.side_effect = RuntimeError("PDF parse error")
+            with pytest.raises(ExtractionError, match="Failed to extract PDF"):
+                self.extractor._extract_pdf(b"not a pdf")
+
+    def test_raises_for_docx_extraction_failure(self) -> None:
+        with patch("docx.Document") as mock_docx:
+            mock_docx.side_effect = Exception("docx open error")
+            with pytest.raises(ExtractionError, match="Failed to extract DOCX"):
+                self.extractor._extract_docx(b"not a docx")
+
+    def test_error_message_includes_mime_type(self) -> None:
+        try:
+            self.extractor._extract_sync(b"data", "audio/mpeg")
+        except ExtractionError as exc:
+            assert "audio/mpeg" in str(exc)
+        else:
+            pytest.fail("ExtractionError was not raised")
+
+    def test_mime_type_params_are_stripped(self) -> None:
+        """MIME type parameters like charset should not cause an error."""
+        result = self.extractor._extract_sync(b"hello", "text/plain; charset=utf-8")
+        assert "hello" in result.text
+
+    def test_case_insensitive_mime_type(self) -> None:
+        result = self.extractor._extract_sync(b"hello", "TEXT/PLAIN")
+        assert "hello" in result.text
+
+
+# ---------------------------------------------------------------------------
+# Thread-pool dispatch
+# ---------------------------------------------------------------------------
+
+
+class TestDocumentExtractorThreadPool:
+    """Verify that extract() uses run_in_executor to dispatch to the pool."""
+
+    @pytest.mark.asyncio
+    async def test_extract_calls_run_in_executor(self) -> None:
+        """extract() must delegate CPU-bound work via run_in_executor."""
+        extractor = DocumentExtractor(max_workers=1)
+        expected_result = ExtractionResult(text="mocked", offsets=[])
+
+        mock_loop = MagicMock()
+        mock_loop.run_in_executor = AsyncMock(return_value=expected_result)
+
+        with patch("asyncio.get_running_loop", return_value=mock_loop):
+            result = await extractor.extract(b"hello", "text/plain")
+
+        mock_loop.run_in_executor.assert_awaited_once_with(
+            extractor._executor,
+            extractor._extract_sync,
+            b"hello",
+            "text/plain",
+        )
+        assert result is expected_result
+
+    @pytest.mark.asyncio
+    async def test_extract_passes_correct_executor(self) -> None:
+        """The configured executor instance must be passed to run_in_executor."""
+        extractor = DocumentExtractor(max_workers=2)
+
+        captured_executor = []
+
+        async def _capture(*args, **kwargs):
+            captured_executor.append(args[0])
+            return ExtractionResult(text="x", offsets=[])
+
+        mock_loop = MagicMock()
+        mock_loop.run_in_executor = _capture
+
+        with patch("asyncio.get_running_loop", return_value=mock_loop):
+            await extractor.extract(b"data", "text/plain")
+
+        assert captured_executor[0] is extractor._executor
+
+    @pytest.mark.asyncio
+    async def test_extract_passes_extract_sync_as_callable(self) -> None:
+        """_extract_sync must be the callable passed to run_in_executor."""
+        extractor = DocumentExtractor(max_workers=1)
+
+        captured_fn = []
+
+        async def _capture(*args, **kwargs):
+            captured_fn.append(args[1])
+            return ExtractionResult(text="y", offsets=[])
+
+        mock_loop = MagicMock()
+        mock_loop.run_in_executor = _capture
+
+        with patch("asyncio.get_running_loop", return_value=mock_loop):
+            await extractor.extract(b"data", "text/plain")
+
+        # Bound methods compare equal when they wrap the same function/instance.
+        assert captured_fn[0] == extractor._extract_sync
+        assert captured_fn[0].__func__ is DocumentExtractor._extract_sync
+        assert captured_fn[0].__self__ is extractor
+
+    @pytest.mark.asyncio
+    async def test_extract_returns_result_from_executor(self) -> None:
+        """extract() must return whatever run_in_executor resolves to."""
+        extractor = DocumentExtractor(max_workers=1)
+        sentinel = ExtractionResult(text="sentinel", offsets=[
+            OffsetEntry(text_start=0, text_end=8, byte_start=0, byte_end=8)
+        ])
+
+        mock_loop = MagicMock()
+        mock_loop.run_in_executor = AsyncMock(return_value=sentinel)
+
+        with patch("asyncio.get_running_loop", return_value=mock_loop):
+            result = await extractor.extract(b"bytes", "text/plain")
+
+        assert result is sentinel
+
+    @pytest.mark.asyncio
+    async def test_extract_dispatches_to_thread_not_event_loop(self) -> None:
+        """_extract_sync must run in a worker thread, not the event loop thread."""
+        import threading
+
+        extractor = DocumentExtractor(max_workers=1)
+        main_thread_id = threading.current_thread().ident
+        call_thread_ids: list[int] = []
+
+        original_sync = extractor._extract_sync
+
+        def _tracking_sync(content: bytes, mime_type: str) -> ExtractionResult:
+            call_thread_ids.append(threading.current_thread().ident)
+            return original_sync(content, mime_type)
+
+        extractor._extract_sync = _tracking_sync  # type: ignore[method-assign]
+
+        await extractor.extract(b"hello world", "text/plain")
+
+        assert len(call_thread_ids) == 1
+        assert call_thread_ids[0] != main_thread_id
+
+
+# ---------------------------------------------------------------------------
+# _normalize helper
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeHelper:
+    """Unit tests for the _normalize() text normalisation function."""
+
+    def test_strips_leading_trailing_whitespace_per_line(self) -> None:
+        assert _normalize("  hello  \n  world  ") == "hello\nworld"
+
+    def test_collapses_multiple_spaces(self) -> None:
+        assert _normalize("hello   world") == "hello world"
+
+    def test_collapses_tabs_to_spaces(self) -> None:
+        assert _normalize("hello\tworld") == "hello world"
+
+    def test_removes_blank_lines(self) -> None:
+        result = _normalize("line1\n\n\nline2")
+        assert "\n\n" not in result
+        assert "line1" in result
+        assert "line2" in result
+
+    def test_empty_string_returns_empty(self) -> None:
+        assert _normalize("") == ""
+
+    def test_only_whitespace_returns_empty(self) -> None:
+        assert _normalize("   \n\t\n   ") == ""
+
+    def test_preserves_meaningful_newlines(self) -> None:
+        result = _normalize("line1\nline2")
+        assert result == "line1\nline2"

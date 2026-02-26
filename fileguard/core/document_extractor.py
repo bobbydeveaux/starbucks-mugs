@@ -1,300 +1,529 @@
-"""Document text extractor with byte-offset mapping.
+"""DocumentExtractor: multi-format text extraction with byte-offset mapping.
 
-Supports PDF, DOCX, CSV, JSON, TXT, and ZIP archives.  ZIP archives are
-recursively unpacked and each contained file is extracted using the
-appropriate format handler.
+Supports PDF (pdfminer.six), DOCX (python-docx), CSV, JSON, TXT, and ZIP
+archives.  ZIP archives are recursively unpacked and each contained file is
+extracted using the appropriate format handler.
 
-CPU-bound extraction calls are dispatched through a ``ThreadPoolExecutor``
-so the caller's asyncio event loop is never blocked.
+Thread-pool execution is used for CPU-bound extraction calls so that the
+asyncio event loop is never blocked.
+
+Usage::
+
+    from fileguard.core.document_extractor import DocumentExtractor
+
+    extractor = DocumentExtractor()
+
+    result = await extractor.extract(file_bytes, "application/pdf")
+    print(result.text)
+    for entry in result.offsets:
+        span = result.text[entry.text_start:entry.text_end]
+        print(f"Span {entry.text_start}:{entry.text_end} -> {span!r}")
 """
+
 from __future__ import annotations
 
 import asyncio
 import csv
 import io
 import json
-import os
+import logging
+import re
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import Any
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Public exception
+# Public types
 # ---------------------------------------------------------------------------
+
+#: MIME types supported by DocumentExtractor.
+SUPPORTED_MIME_TYPES: frozenset[str] = frozenset({
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/csv",
+    "application/json",
+    "text/plain",
+    "application/zip",
+    "application/x-zip-compressed",
+})
 
 
 class ExtractionError(Exception):
-    """Raised when document extraction fails.
+    """Raised when :class:`DocumentExtractor` cannot process a file.
 
-    Possible causes:
+    This exception is raised for:
 
-    * Unsupported MIME type — the caller passed a type not in
-      :data:`SUPPORTED_MIME_TYPES`.
-    * Corrupt or unreadable file bytes — the underlying parser raised an
-      exception while reading *data*.
+    * Unsupported MIME types.
+    * Corrupt or malformed files (e.g. truncated PDF, invalid ZIP).
+    * Unexpected failures inside the extraction library.
+
+    Callers should treat this as a hard error; the scan pipeline must not
+    silently return empty output when extraction fails.
     """
-
-
-# ---------------------------------------------------------------------------
-# Result types
-# ---------------------------------------------------------------------------
 
 
 @dataclass
-class ByteOffsetEntry:
-    """Maps a contiguous span in the normalised text to UTF-8 byte offsets.
+class OffsetEntry:
+    """Maps a span of normalised output text back to the source byte range.
 
-    *char_start* and *char_end* are indices into :attr:`ExtractionResult.text`
-    (i.e. ``text[char_start:char_end]``).
+    Attributes:
+        text_start: Start character index (inclusive) in the normalised text.
+        text_end:   End character index (exclusive) in the normalised text.
+        byte_start: Start byte offset (inclusive) in the original content.
+        byte_end:   End byte offset (exclusive) in the original content.
 
-    *byte_start* and *byte_end* are indices into
-    ``text.encode("utf-8")`` — they allow byte-accurate PII span
-    localisation without re-encoding on every lookup.
+    Invariant::
+
+        normalised_text[text_start:text_end]  # gives the extracted span
     """
 
-    char_start: int  # Inclusive character index in ``ExtractionResult.text``
-    char_end: int    # Exclusive character index in ``ExtractionResult.text``
-    byte_start: int  # Inclusive byte offset in ``text.encode("utf-8")``
-    byte_end: int    # Exclusive byte offset in ``text.encode("utf-8")``
+    text_start: int
+    text_end: int
+    byte_start: int
+    byte_end: int
 
 
 @dataclass
 class ExtractionResult:
-    """Result of a document extraction operation."""
+    """Result of a document extraction operation.
+
+    Attributes:
+        text:    Normalised, flattened text extracted from the document.
+        offsets: Byte-offset map linking spans of *text* back to their
+                 approximate source position in the original content bytes.
+    """
 
     text: str
-    byte_offsets: list[ByteOffsetEntry] = field(default_factory=list)
+    offsets: list[OffsetEntry] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
-# MIME-type constants
-# ---------------------------------------------------------------------------
-
-SUPPORTED_MIME_TYPES: frozenset[str] = frozenset(
-    {
-        "application/pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "text/csv",
-        "application/json",
-        "text/plain",
-        "application/zip",
-        "application/x-zip-compressed",
-    }
-)
-
-
-# ---------------------------------------------------------------------------
-# Main extractor class
+# DocumentExtractor
 # ---------------------------------------------------------------------------
 
 
 class DocumentExtractor:
-    """Extracts normalised text and byte-offset maps from documents.
+    """Extract text and a byte-offset map from multi-format documents.
 
-    Supported formats:
+    CPU-bound extraction is dispatched to a :class:`~concurrent.futures.ThreadPoolExecutor`
+    via :func:`asyncio.get_event_loop().run_in_executor` so that the event
+    loop remains responsive during heavy workloads.
 
-    * **PDF**  — via *pdfminer.six*
-    * **DOCX** — via *python-docx*
-    * **CSV**  — stdlib ``csv`` module
-    * **JSON** — stdlib ``json`` module
-    * **TXT**  — UTF-8 / latin-1 fallback
-    * **ZIP**  — recursive extraction of contained files
+    Args:
+        max_workers: Number of worker threads in the pool.  Defaults to
+            ``settings.THREAD_POOL_WORKERS`` when *None*.
 
-    CPU-bound extraction is dispatched to a ``ThreadPoolExecutor`` so the
-    caller's asyncio event loop is never blocked.
+    Supported formats (by MIME type):
 
-    Parameters
-    ----------
-    max_workers:
-        Maximum number of threads in the pool (default: 4).
+    ============================================================= ==================
+    Format                                                        MIME type
+    ============================================================= ==================
+    PDF                                                           ``application/pdf``
+    DOCX                                                          ``application/vnd.openxmlformats-officedocument.wordprocessingml.document``
+    CSV                                                           ``text/csv``
+    JSON                                                          ``application/json``
+    Plain text                                                    ``text/plain``
+    ZIP archive (recursive)                                       ``application/zip``
+    ============================================================= ==================
     """
 
-    _MIME_TO_HANDLER: ClassVar[dict[str, str]] = {
-        "application/pdf": "_extract_pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "_extract_docx",
-        "text/csv": "_extract_csv",
-        "application/json": "_extract_json",
-        "text/plain": "_extract_txt",
-        "application/zip": "_extract_zip",
-        "application/x-zip-compressed": "_extract_zip",
-    }
+    def __init__(self, max_workers: int | None = None) -> None:
+        if max_workers is None:
+            from fileguard.config import settings
+            max_workers = settings.THREAD_POOL_WORKERS
+        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(
+            max_workers=max_workers,
+            thread_name_prefix="doc-extractor",
+        )
 
-    def __init__(self, max_workers: int = 4) -> None:
-        self._executor = ThreadPoolExecutor(max_workers=max_workers)
+    # ------------------------------------------------------------------
+    # Public async interface
+    # ------------------------------------------------------------------
 
-    async def extract(self, data: bytes, mime_type: str) -> ExtractionResult:
-        """Extract text and build a byte-offset map from *data*.
+    async def extract(self, content: bytes, mime_type: str) -> ExtractionResult:
+        """Extract text from *content* using the configured thread pool.
 
-        Parameters
-        ----------
-        data:
-            Raw file bytes.
-        mime_type:
-            MIME type of the file (e.g. ``"application/pdf"``).
+        The synchronous extraction work is dispatched via
+        :meth:`asyncio.AbstractEventLoop.run_in_executor` so that this
+        coroutine returns immediately to the event loop while the CPU-bound
+        work executes in a background thread.
 
-        Returns
-        -------
-        ExtractionResult
-            Normalised text and a per-line byte-offset map.
+        Args:
+            content:   Raw bytes of the document.
+            mime_type: MIME type string identifying the document format.
+                       Leading/trailing whitespace and charset parameters
+                       (e.g. ``text/plain; charset=utf-8``) are handled
+                       transparently.
 
-        Raises
-        ------
-        ExtractionError
-            If *mime_type* is not in :data:`SUPPORTED_MIME_TYPES` or the
-            file bytes are corrupt / unreadable.
+        Returns:
+            :class:`ExtractionResult` containing normalised text and a
+            byte-offset map.
+
+        Raises:
+            ExtractionError: If the MIME type is unsupported or the file
+                is corrupt / malformed.
         """
-        handler_name = self._MIME_TO_HANDLER.get(mime_type)
-        if handler_name is None:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            self._executor,
+            self._extract_sync,
+            content,
+            mime_type,
+        )
+
+    # ------------------------------------------------------------------
+    # Synchronous dispatcher (runs inside the thread pool)
+    # ------------------------------------------------------------------
+
+    def _extract_sync(self, content: bytes, mime_type: str) -> ExtractionResult:
+        """Route *content* to the correct format handler (thread-pool context).
+
+        Args:
+            content:   Raw bytes of the document.
+            mime_type: MIME type string.
+
+        Returns:
+            :class:`ExtractionResult`.
+
+        Raises:
+            ExtractionError: For unsupported MIME types or malformed files.
+        """
+        # Strip charset and other parameters, normalise case.
+        normalized_mime = mime_type.lower().split(";")[0].strip()
+
+        if normalized_mime == "application/pdf":
+            return self._extract_pdf(content)
+        elif normalized_mime == (
+            "application/vnd.openxmlformats-officedocument"
+            ".wordprocessingml.document"
+        ):
+            return self._extract_docx(content)
+        elif normalized_mime == "text/csv":
+            return self._extract_csv(content)
+        elif normalized_mime == "application/json":
+            return self._extract_json(content)
+        elif normalized_mime == "text/plain":
+            return self._extract_txt(content)
+        elif normalized_mime in ("application/zip", "application/x-zip-compressed"):
+            return self._extract_zip(content)
+        else:
             raise ExtractionError(
                 f"Unsupported MIME type: {mime_type!r}. "
-                f"Supported types: {sorted(self._MIME_TO_HANDLER)}"
+                f"Supported types: {sorted(SUPPORTED_MIME_TYPES)}"
             )
 
-        handler = getattr(self, handler_name)
-        loop = asyncio.get_running_loop()
+    # ------------------------------------------------------------------
+    # Format handlers
+    # ------------------------------------------------------------------
 
+    def _extract_pdf(self, content: bytes) -> ExtractionResult:
+        """Extract text from PDF bytes using *pdfminer.six*."""
         try:
-            raw_text: str = await loop.run_in_executor(self._executor, handler, data)
+            from pdfminer.high_level import extract_text_to_fp
+            from pdfminer.layout import LAParams
+
+            output = io.StringIO()
+            extract_text_to_fp(
+                io.BytesIO(content),
+                output,
+                laparams=LAParams(),
+            )
+            raw_text = output.getvalue()
+            text = _normalize(raw_text)
+            offsets = []
+            if text:
+                offsets.append(
+                    OffsetEntry(
+                        text_start=0,
+                        text_end=len(text),
+                        byte_start=0,
+                        byte_end=len(content),
+                    )
+                )
+            return ExtractionResult(text=text, offsets=offsets)
         except ExtractionError:
             raise
         except Exception as exc:
-            raise ExtractionError(f"Failed to extract {mime_type!r}: {exc}") from exc
+            raise ExtractionError(f"Failed to extract PDF: {exc}") from exc
 
-        normalised = _normalise(raw_text)
-        offsets = _build_byte_offsets(normalised)
-        return ExtractionResult(text=normalised, byte_offsets=offsets)
-
-    # ------------------------------------------------------------------
-    # Format handlers (synchronous — called inside the thread pool)
-    # ------------------------------------------------------------------
-
-    def _extract_pdf(self, data: bytes) -> str:
-        try:
-            from pdfminer.high_level import extract_text  # type: ignore[import-untyped]
-
-            return extract_text(io.BytesIO(data)) or ""
-        except Exception as exc:
-            raise ExtractionError(f"PDF extraction failed: {exc}") from exc
-
-    def _extract_docx(self, data: bytes) -> str:
+    def _extract_docx(self, content: bytes) -> ExtractionResult:
+        """Extract text from DOCX bytes using *python-docx*."""
         try:
             import docx  # type: ignore[import-untyped]
 
-            doc = docx.Document(io.BytesIO(data))
-            return "\n".join(para.text for para in doc.paragraphs)
-        except Exception as exc:
-            raise ExtractionError(f"DOCX extraction failed: {exc}") from exc
-
-    def _extract_csv(self, data: bytes) -> str:
-        try:
-            text = data.decode("utf-8-sig")
-            reader = csv.reader(io.StringIO(text))
-            rows = [" ".join(cell for cell in row) for row in reader]
-            return "\n".join(rows)
-        except Exception as exc:
-            raise ExtractionError(f"CSV extraction failed: {exc}") from exc
-
-    def _extract_json(self, data: bytes) -> str:
-        try:
-            obj = json.loads(data)
-            return json.dumps(obj, ensure_ascii=False, indent=2)
-        except json.JSONDecodeError as exc:
-            raise ExtractionError(f"JSON extraction failed: {exc}") from exc
-
-    def _extract_txt(self, data: bytes) -> str:
-        try:
-            return data.decode("utf-8")
-        except UnicodeDecodeError:
-            # latin-1 decoding never fails; use it as a safe fallback
-            return data.decode("latin-1")
-
-    def _extract_zip(self, data: bytes) -> str:
-        try:
+            doc = docx.Document(io.BytesIO(content))
             texts: list[str] = []
-            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            offsets: list[OffsetEntry] = []
+            text_pos = 0
+
+            for para in doc.paragraphs:
+                para_text = _normalize(para.text)
+                if not para_text:
+                    continue
+                offsets.append(
+                    OffsetEntry(
+                        text_start=text_pos,
+                        text_end=text_pos + len(para_text),
+                        byte_start=0,
+                        byte_end=len(content),
+                    )
+                )
+                texts.append(para_text)
+                text_pos += len(para_text) + 1  # +1 for the "\n" separator
+
+            full_text = "\n".join(texts)
+            return ExtractionResult(text=full_text, offsets=offsets)
+        except ExtractionError:
+            raise
+        except Exception as exc:
+            raise ExtractionError(f"Failed to extract DOCX: {exc}") from exc
+
+    def _extract_csv(self, content: bytes) -> ExtractionResult:
+        """Extract text from CSV bytes using the stdlib *csv* module."""
+        try:
+            text_content = content.decode("utf-8", errors="replace")
+            reader = csv.reader(io.StringIO(text_content))
+
+            row_texts: list[str] = []
+            offsets: list[OffsetEntry] = []
+            text_pos = 0
+            byte_pos = 0
+
+            for raw_row in reader:
+                # Represent each row as space-separated non-empty cell values.
+                row_text = " ".join(cell.strip() for cell in raw_row if cell.strip())
+                if not row_text:
+                    continue
+                # Approximate byte span using the original CSV row bytes.
+                row_bytes_len = len((",".join(raw_row) + "\n").encode("utf-8"))
+                offsets.append(
+                    OffsetEntry(
+                        text_start=text_pos,
+                        text_end=text_pos + len(row_text),
+                        byte_start=byte_pos,
+                        byte_end=byte_pos + row_bytes_len,
+                    )
+                )
+                row_texts.append(row_text)
+                text_pos += len(row_text) + 1  # +1 for "\n"
+                byte_pos += row_bytes_len
+
+            full_text = "\n".join(row_texts)
+            return ExtractionResult(text=full_text, offsets=offsets)
+        except ExtractionError:
+            raise
+        except Exception as exc:
+            raise ExtractionError(f"Failed to extract CSV: {exc}") from exc
+
+    def _extract_json(self, content: bytes) -> ExtractionResult:
+        """Extract all string values from JSON bytes."""
+        try:
+            text_content = content.decode("utf-8", errors="replace")
+            data = json.loads(text_content)
+
+            strings: list[str] = []
+            _collect_strings(data, strings)
+
+            full_text = " ".join(strings)
+            offsets = []
+            if full_text:
+                offsets.append(
+                    OffsetEntry(
+                        text_start=0,
+                        text_end=len(full_text),
+                        byte_start=0,
+                        byte_end=len(content),
+                    )
+                )
+            return ExtractionResult(text=full_text, offsets=offsets)
+        except json.JSONDecodeError as exc:
+            raise ExtractionError(f"Failed to parse JSON: {exc}") from exc
+        except ExtractionError:
+            raise
+        except Exception as exc:
+            raise ExtractionError(f"Failed to extract JSON: {exc}") from exc
+
+    def _extract_txt(self, content: bytes) -> ExtractionResult:
+        """Extract text from plain-text bytes (UTF-8 with Latin-1 fallback)."""
+        try:
+            try:
+                raw = content.decode("utf-8")
+            except UnicodeDecodeError:
+                raw = content.decode("latin-1")
+
+            text = _normalize(raw)
+            offsets = []
+            if text:
+                offsets.append(
+                    OffsetEntry(
+                        text_start=0,
+                        text_end=len(text),
+                        byte_start=0,
+                        byte_end=len(content),
+                    )
+                )
+            return ExtractionResult(text=text, offsets=offsets)
+        except ExtractionError:
+            raise
+        except Exception as exc:
+            raise ExtractionError(f"Failed to extract TXT: {exc}") from exc
+
+    def _extract_zip(self, content: bytes) -> ExtractionResult:
+        """Recursively extract text from all files inside a ZIP archive.
+
+        Files with unrecognised extensions are treated as plain text.
+        Entries that fail extraction are logged and skipped so that one
+        corrupt member does not abort the whole archive.
+
+        Args:
+            content: Raw ZIP archive bytes.
+
+        Raises:
+            ExtractionError: If *content* is not a valid ZIP archive.
+        """
+        try:
+            buf = io.BytesIO(content)
+            if not zipfile.is_zipfile(buf):
+                raise ExtractionError("Content is not a valid ZIP archive")
+
+            chunks: list[str] = []
+            offsets: list[OffsetEntry] = []
+            text_pos = 0
+
+            buf.seek(0)
+            with zipfile.ZipFile(buf) as zf:
                 for name in zf.namelist():
                     if name.endswith("/"):
-                        continue  # skip directory entries
-                    file_bytes = zf.read(name)
-                    mime = _guess_mime(name)
-                    handler_name = self._MIME_TO_HANDLER.get(mime)
-                    if handler_name is None:
-                        continue  # silently skip unsupported contained files
-                    handler = getattr(self, handler_name)
-                    texts.append(handler(file_bytes))
-            return "\n".join(texts)
-        except zipfile.BadZipFile as exc:
-            raise ExtractionError(f"ZIP extraction failed: {exc}") from exc
+                        # Directory entry — skip.
+                        continue
 
-    def shutdown(self, wait: bool = True) -> None:
-        """Shut down the underlying :class:`~concurrent.futures.ThreadPoolExecutor`."""
-        self._executor.shutdown(wait=wait)
+                    member_bytes = zf.read(name)
+                    mime = _guess_mime_from_name(name)
+
+                    try:
+                        member_result = self._extract_sync(member_bytes, mime)
+                    except ExtractionError as exc:
+                        logger.warning(
+                            "ZIP member %r skipped — extraction failed: %s",
+                            name,
+                            exc,
+                        )
+                        continue
+
+                    if not member_result.text.strip():
+                        continue
+
+                    offsets.append(
+                        OffsetEntry(
+                            text_start=text_pos,
+                            text_end=text_pos + len(member_result.text),
+                            byte_start=0,
+                            byte_end=len(content),
+                        )
+                    )
+                    chunks.append(member_result.text)
+                    text_pos += len(member_result.text) + 1  # +1 for "\n"
+
+            full_text = "\n".join(chunks)
+            return ExtractionResult(text=full_text, offsets=offsets)
+        except ExtractionError:
+            raise
+        except Exception as exc:
+            raise ExtractionError(f"Failed to extract ZIP: {exc}") from exc
+
+    # ------------------------------------------------------------------
+    # Resource management
+    # ------------------------------------------------------------------
+
+    def close(self) -> None:
+        """Shut down the thread-pool executor.
+
+        Call this when the extractor is no longer needed to release worker
+        threads promptly.
+        """
+        self._executor.shutdown(wait=True)
+
+    def __enter__(self) -> "DocumentExtractor":
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.close()
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Private helpers
 # ---------------------------------------------------------------------------
 
-
-def _normalise(text: str) -> str:
-    """Collapse CR/CRLF line endings and strip trailing whitespace per line."""
-    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    return "\n".join(line.rstrip() for line in lines).strip()
+_WHITESPACE_RE = re.compile(r"[ \t]+")
 
 
-def _build_byte_offsets(text: str) -> list[ByteOffsetEntry]:
-    """Build a per-line byte-offset map for *text*.
+def _normalize(text: str) -> str:
+    """Normalise extracted text for consistent downstream processing.
 
-    Each :class:`ByteOffsetEntry` records the character span and the
-    corresponding UTF-8 byte span of one line in the normalised text.
-    Callers can use this map to convert character-level PII findings
-    to byte-accurate positions without re-encoding the full text.
+    Steps applied (in order):
+
+    1. Collapse runs of horizontal whitespace (spaces and tabs) to a single
+       space on each line.
+    2. Strip leading and trailing whitespace from each line.
+    3. Remove lines that are empty after stripping.
+    4. Join remaining lines with ``\\n``.
+
+    Args:
+        text: Raw text as returned by an extraction library.
+
+    Returns:
+        Normalised text string.
     """
-    entries: list[ByteOffsetEntry] = []
-    char_pos = 0
-    byte_pos = 0
+    lines = (_WHITESPACE_RE.sub(" ", line).strip() for line in text.splitlines())
+    return "\n".join(line for line in lines if line)
 
-    for line in text.split("\n"):
-        char_start = char_pos
-        byte_start = byte_pos
 
-        char_end = char_start + len(line)
-        line_bytes = line.encode("utf-8")
-        byte_end = byte_start + len(line_bytes)
+def _collect_strings(obj: Any, result: list[str]) -> None:
+    """Recursively collect all string leaf values from a JSON structure.
 
-        entries.append(
-            ByteOffsetEntry(
-                char_start=char_start,
-                char_end=char_end,
-                byte_start=byte_start,
-                byte_end=byte_end,
-            )
+    Args:
+        obj:    Any JSON-deserialisable Python value.
+        result: Accumulator list; string values are appended in-place.
+    """
+    if isinstance(obj, str):
+        result.append(obj)
+    elif isinstance(obj, dict):
+        for value in obj.values():
+            _collect_strings(value, result)
+    elif isinstance(obj, list):
+        for item in obj:
+            _collect_strings(item, result)
+    # Numbers, booleans, and None are intentionally skipped.
+
+
+def _guess_mime_from_name(filename: str) -> str:
+    """Infer a MIME type from the file extension of *filename*.
+
+    Used when extracting members from a ZIP archive.  Unknown extensions
+    default to ``text/plain`` so that extraction is always attempted.
+
+    Args:
+        filename: File name (may include path components).
+
+    Returns:
+        A MIME type string supported by :meth:`DocumentExtractor._extract_sync`.
+    """
+    lower = filename.lower()
+    if lower.endswith(".pdf"):
+        return "application/pdf"
+    if lower.endswith(".docx"):
+        return (
+            "application/vnd.openxmlformats-officedocument"
+            ".wordprocessingml.document"
         )
-
-        # Account for the "\n" separator between lines (1 byte in UTF-8)
-        char_pos = char_end + 1
-        byte_pos = byte_end + 1
-
-    return entries
-
-
-# ---------------------------------------------------------------------------
-# MIME-type guessing (used for ZIP member files)
-# ---------------------------------------------------------------------------
-
-_EXTENSION_TO_MIME: dict[str, str] = {
-    ".pdf": "application/pdf",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ".csv": "text/csv",
-    ".json": "application/json",
-    ".txt": "text/plain",
-    ".zip": "application/zip",
-}
-
-
-def _guess_mime(filename: str) -> str:
-    """Return a MIME type based on *filename*'s extension, or ``'application/octet-stream'``."""
-    ext = os.path.splitext(filename)[1].lower()
-    return _EXTENSION_TO_MIME.get(ext, "application/octet-stream")
+    if lower.endswith(".csv"):
+        return "text/csv"
+    if lower.endswith(".json"):
+        return "application/json"
+    if lower.endswith(".zip"):
+        return "application/zip"
+    # Default: attempt plain-text extraction for all other types.
+    return "text/plain"
