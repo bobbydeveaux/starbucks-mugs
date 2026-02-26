@@ -1,51 +1,42 @@
-GeneratedAt: "2026-02-26T08:19:45Z"
+GeneratedAt: "2026-02-26T10:37:26Z"
 Issues:
-- IssueNumber: 216
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/216
-  TaskID: task-tripwire-cybersecurity-tool-feat-process-watcher-1
-- IssueNumber: 217
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/217
-  TaskID: task-tripwire-cybersecurity-tool-feat-process-watcher-2
-- IssueNumber: 218
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/218
-  TaskID: task-tripwire-cybersecurity-tool-feat-process-watcher-3
-- IssueNumber: 219
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/219
-  TaskID: task-tripwire-cybersecurity-tool-feat-grpc-server-1
-- IssueNumber: 220
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/220
-  TaskID: task-tripwire-cybersecurity-tool-feat-grpc-server-2
-- IssueNumber: 221
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/221
-  TaskID: task-tripwire-cybersecurity-tool-feat-grpc-server-3
-- IssueNumber: 222
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/222
-  TaskID: task-tripwire-cybersecurity-tool-feat-rest-api-1
-- IssueNumber: 223
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/223
-  TaskID: task-tripwire-cybersecurity-tool-feat-rest-api-2
-- IssueNumber: 224
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/224
+- IssueNumber: 248
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/248
   TaskID: task-tripwire-cybersecurity-tool-feat-agent-transport-1
-- IssueNumber: 225
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/225
+- IssueNumber: 249
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/249
   TaskID: task-tripwire-cybersecurity-tool-feat-agent-transport-2
-- IssueNumber: 226
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/226
+- IssueNumber: 250
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/250
   TaskID: task-tripwire-cybersecurity-tool-feat-agent-transport-3
-- IssueNumber: 227
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/227
+- IssueNumber: 251
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/251
   TaskID: task-tripwire-cybersecurity-tool-feat-websocket-1
-- IssueNumber: 228
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/228
+- IssueNumber: 252
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/252
   TaskID: task-tripwire-cybersecurity-tool-feat-websocket-2
-- IssueNumber: 229
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/229
+- IssueNumber: 253
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/253
   TaskID: task-tripwire-cybersecurity-tool-feat-deployment-1
-- IssueNumber: 230
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/230
+- IssueNumber: 254
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/254
   TaskID: task-tripwire-cybersecurity-tool-feat-deployment-2
-- IssueNumber: 231
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/231
+- IssueNumber: 255
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/255
   TaskID: task-tripwire-cybersecurity-tool-feat-deployment-3
+- IssueNumber: 256
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/256
+  TaskID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-1
+- IssueNumber: 257
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/257
+  TaskID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-2
+- IssueNumber: 258
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/258
+  TaskID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-3
+- IssueNumber: 259
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/259
+  TaskID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-4
+- IssueNumber: 260
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/260
+  TaskID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-5
 Plan: tripwire-cybersecurity-tool-plan
