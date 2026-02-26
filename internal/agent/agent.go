@@ -13,35 +13,18 @@ import (
 	"time"
 
 	"github.com/tripwire/agent/internal/config"
+	"github.com/tripwire/agent/internal/watcher"
 )
 
-// AlertEvent is a generic event emitted by a watcher component.
-type AlertEvent struct {
-	// TripwireType is one of "FILE", "NETWORK", or "PROCESS".
-	TripwireType string
-	// RuleName is the name of the rule that triggered this event.
-	RuleName string
-	// Severity is one of "INFO", "WARN", or "CRITICAL".
-	Severity string
-	// Timestamp is when the event occurred on the agent host.
-	Timestamp time.Time
-	// Detail holds type-specific metadata (file path, port, pid, etc.).
-	Detail map[string]any
-}
+// AlertEvent is an alias for [watcher.AlertEvent]. It is re-exported here so
+// that code which imports only the agent package can refer to the event type
+// without an additional import of the watcher package.
+type AlertEvent = watcher.AlertEvent
 
-// Watcher is the common interface implemented by file, network, and process
-// watcher components. Implementations must be safe for concurrent use.
-type Watcher interface {
-	// Start begins monitoring and sends events to the channel returned by
-	// Events. It returns an error if initialisation fails.
-	Start(ctx context.Context) error
-	// Stop signals the watcher to cease monitoring and release resources.
-	// It blocks until all internal goroutines have exited.
-	Stop()
-	// Events returns a read-only channel from which callers receive alert
-	// events. The channel is closed when the watcher stops.
-	Events() <-chan AlertEvent
-}
+// Watcher is an alias for [watcher.Watcher]. It is re-exported here so that
+// code which imports only the agent package can satisfy the interface without
+// an additional import of the watcher package.
+type Watcher = watcher.Watcher
 
 // Queue is the interface for the local SQLite-backed alert queue.
 type Queue interface {

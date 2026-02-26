@@ -116,12 +116,23 @@ fileguard/              Python package (FastAPI application)
 ├── config.py           Pydantic Settings configuration
 ├── api/
 │   └── middleware/
-│       └── auth.py     Bearer-token authentication middleware
+│       ├── auth.py     Bearer-token authentication middleware
+│       └── rate_limit.py Redis-backed sliding-window rate limiter
+├── core/
+│   ├── av_engine.py    Abstract AVEngineAdapter interface + ScanResult/Finding types
+│   ├── clamav_adapter.py ClamAV clamd TCP socket adapter (fail-secure)
+│   └── document_extractor.py  Multi-format text extractor with thread-pool execution
 ├── models/
-│   └── tenant_config.py SQLAlchemy ORM model for tenant_config table
+│   ├── tenant_config.py  SQLAlchemy ORM model for tenant_config table
+│   ├── scan_event.py     SQLAlchemy ORM model for scan_event table (append-only)
+│   ├── batch_job.py      SQLAlchemy ORM model for batch_job table
+│   └── compliance_report.py  SQLAlchemy ORM model for compliance_report table
 ├── schemas/
-│   └── tenant.py       Pydantic TenantConfig schema (request.state.tenant)
+│   └── tenant.py         Pydantic TenantConfig schema (request.state.tenant)
+├── services/
+│   └── audit.py          AuditService: HMAC-signed scan event persistence + SIEM forwarding
 └── db/
+    ├── base.py         Declarative base shared by all ORM models
     └── session.py      SQLAlchemy async session factory
 
 docker/
@@ -134,11 +145,135 @@ migrations/             Alembic migration environment
 └── versions/           Migration scripts
 
 tests/
-└── unit/
-    └── test_auth_middleware.py  Unit tests for auth middleware & schemas
+├── conftest.py         Shared fixtures (env vars, DB session)
+├── test_smoke.py       Smoke tests for FastAPI skeleton, config, Redis, DB session
+├── unit/
+│   ├── test_auth_middleware.py       Unit tests for auth middleware & schemas
+│   ├── test_rate_limit.py            Unit tests for Redis rate limiting middleware
+│   ├── test_clamav_adapter.py        Unit tests for ClamAV clamd adapter
+│   ├── test_audit_service.py         Unit tests for AuditService (HMAC, SIEM, DB mock)
+│   └── test_document_extractor.py    Unit tests for DocumentExtractor
+└── integration/
+    └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
 alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
+```
+
+## AV Engine Adapter
+
+FileGuard uses a plugin-based AV engine interface defined in `fileguard/core/av_engine.py`.
+The default implementation is `ClamAVAdapter` (`fileguard/core/clamav_adapter.py`), which
+communicates with a running `clamd` daemon over a TCP socket.
+
+### Fail-Secure Behavior
+
+Per ADR-06, the adapter implements **fail-secure** semantics: if the clamd daemon is
+unreachable, times out, or returns an error, the scan result is `status: "rejected"` —
+the file is **blocked**, not passed through.  This ensures a crashed or unavailable
+AV engine cannot become a silent bypass.
+
+### Usage
+
+```python
+from fileguard.core.clamav_adapter import ClamAVAdapter
+from fileguard.config import settings
+
+adapter = ClamAVAdapter(
+    host=settings.CLAMAV_HOST,  # default: "clamav"
+    port=settings.CLAMAV_PORT,  # default: 3310
+)
+
+# Scan a file on disk (requires shared filesystem between app and clamd)
+result = await adapter.scan("/tmp/upload.pdf")
+
+# Scan raw bytes (no shared filesystem required — preferred for containers)
+result = await adapter.scan_bytes(file_bytes)
+
+# Health check
+is_available = await adapter.ping()
+
+print(result.status)    # "clean" | "flagged" | "rejected"
+print(result.findings)  # tuple of Finding(type, category, severity, match)
+```
+
+### Extending with Commercial Engines
+
+To integrate a commercial AV engine (Sophos, CrowdStrike, etc.), subclass
+`AVEngineAdapter` from `fileguard.core.av_engine` and implement the three abstract
+methods (`scan`, `scan_bytes`, `ping`).  The fail-secure contract must be preserved:
+all error paths must return `ScanResult(status="rejected", ...)` rather than raising.
+
+## Document Extraction
+
+`fileguard/core/document_extractor.py` provides the `DocumentExtractor` class
+for multi-format text extraction used during the file scan pipeline.
+
+### Supported formats
+
+| Format        | MIME type                                                                    |
+|---------------|------------------------------------------------------------------------------|
+| PDF           | `application/pdf`                                                            |
+| DOCX          | `application/vnd.openxmlformats-officedocument.wordprocessingml.document`    |
+| CSV           | `text/csv`                                                                   |
+| JSON          | `application/json`                                                           |
+| Plain text    | `text/plain`                                                                 |
+| ZIP (recursive) | `application/zip`                                                          |
+
+### Thread-pool execution
+
+All CPU-bound extraction is dispatched to a `ThreadPoolExecutor` via
+`asyncio.get_running_loop().run_in_executor()`, keeping the asyncio event loop
+unblocked.  The pool size is controlled by `THREAD_POOL_WORKERS` (default: 4).
+
+### Usage
+
+```python
+from fileguard.core.document_extractor import DocumentExtractor
+
+extractor = DocumentExtractor()          # uses settings.THREAD_POOL_WORKERS
+
+result = await extractor.extract(file_bytes, "application/pdf")
+print(result.text)                       # normalised text
+
+for entry in result.offsets:
+    span = result.text[entry.text_start:entry.text_end]
+    print(f"bytes {entry.byte_start}–{entry.byte_end}: {span!r}")
+```
+
+### Error handling
+
+`ExtractionError` is raised for unsupported MIME types or corrupt/malformed
+files.  ZIP members that fail extraction are skipped with a warning log — one
+corrupt member does not abort the whole archive.
+
+## AuditService
+
+`fileguard/services/audit.py` implements tamper-evident scan event logging:
+
+- **HMAC-SHA256 signing** over canonical fields `(id, file_hash, status, action_taken, created_at)` using `SECRET_KEY`
+- **Append-only persistence** — the `ScanEvent` model enforces no-UPDATE / no-DELETE at the application layer via SQLAlchemy event hooks
+- **Best-effort SIEM forwarding** to Splunk (HEC) or RiverSafe WatchTower; delivery failures are logged and suppressed so they never block the scan pipeline
+
+```python
+from fileguard.services.audit import AuditService
+
+service = AuditService(signing_key=settings.SECRET_KEY)
+event = await service.log_scan_event(
+    session=db_session,
+    tenant_id=tenant.id,
+    file_hash="abc123...",
+    file_name="report.pdf",
+    file_size_bytes=102400,
+    mime_type="application/pdf",
+    status="flagged",
+    action_taken="quarantine",
+    findings=[{"type": "pii", "category": "NHS_NUMBER", "severity": "high"}],
+    scan_duration_ms=1240,
+    siem_config=tenant.siem_config,  # optional
+)
+# Verify integrity later
+assert service.verify_hmac(event)
 ```
