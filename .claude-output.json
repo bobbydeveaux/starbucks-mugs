@@ -1,0 +1,24 @@
+{
+  "prTitle": "feat: implement WAL-mode SQLite alert queue",
+  "prBody": "## Summary\n\nImplements the local SQLite-backed alert queue for the TripWire agent as specified in task `task-tripwire-cybersecurity-tool-feat-agent-queue-audit-1`.\n\n### Changes\n\n**New files:**\n- `internal/queue/schema.sql` — DDL for the `alerts` table with `PRAGMA journal_mode=WAL` and `PRAGMA synchronous=NORMAL`; includes a covering index on `(delivered, id)` for efficient pending-event scans\n- `internal/queue/sqlite_queue.go` — `SQLiteQueue` implementing `agent.Queue` (`Enqueue`, `Depth`, `Close`) plus extended `Dequeue` and `Ack` operations for at-least-once delivery; uses `modernc.org/sqlite` (pure-Go, CGO-free)\n- `internal/queue/sqlite_queue_test.go` — 12 unit tests covering enqueue, dequeue, ack, crash-recovery, and compile-time interface compliance\n- `docs/concepts/tripwire-cybersecurity-tool/alert-queue.md` — full package documentation\n\n**Modified files:**\n- `go.mod` — add `modernc.org/sqlite v1.33.1`; fix broken indirect dependencies (`jackc/pgservicefile`, `marusama/semaphore`) that referenced git revisions no longer present on the module proxy\n- `go.sum` — regenerated to match actual module checksums\n- `docs/concepts/tripwire-cybersecurity-tool/agent-core.md` — document the `internal/queue` package and link to `alert-queue.md`\n\n### Acceptance criteria\n\n- ✅ SQLite database initialises with WAL mode enabled (`PRAGMA journal_mode=WAL`) and schema applied\n- ✅ `Enqueue` persists alerts durably; `Dequeue` returns unacknowledged rows in insertion order\n- ✅ Acknowledged entries are marked `delivered=1` and not re-delivered on restart\n- ✅ Unit tests cover enqueue, dequeue, ack, and crash-recovery scenarios (12 tests, all pass)\n\nCloses #124",
+  "testsPass": true,
+  "filesChanged": [
+    "internal/queue/schema.sql",
+    "internal/queue/sqlite_queue.go",
+    "internal/queue/sqlite_queue_test.go",
+    "go.mod",
+    "go.sum"
+  ],
+  "docsUpdated": [
+    "docs/concepts/tripwire-cybersecurity-tool/alert-queue.md",
+    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/PRD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/audit-logger.md",
+    "docs/concepts/tripwire-cybersecurity-tool/file-watcher.md",
+    "docs/concepts/tripwire-cybersecurity-tool/tasks.yaml"
+  ],
+  "completedTasks": [1]
+}
