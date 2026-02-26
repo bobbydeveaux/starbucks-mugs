@@ -14,9 +14,8 @@ filesystem monitoring implementations that satisfy the
 
 ## FileWatcher — Cross-Platform Polling
 
-### FileWatcher (cross-platform polling)
-
-The `FileWatcher` is a polling-based filesystem monitor. It scans configured
+The `FileWatcher` is a polling-based filesystem monitor that satisfies the
+[`watcher.Watcher`](#watcher-interface) interface. It scans configured
 directory and file targets every **100 ms** (default), detects creates,
 writes, and deletes, and forwards `AlertEvent`s to the agent orchestrator.
 
@@ -62,7 +61,53 @@ sentinel values (`-1` and `"unknown"` respectively).
 
 ## Package: `internal/watcher`
 
-### FileWatcher
+The `internal/watcher` package contains two files:
+
+| File | Contents |
+|------|----------|
+| `internal/watcher/watcher.go` | `AlertEvent` type and `Watcher` interface |
+| `internal/watcher/file.go`   | `FileWatcher` implementation |
+
+---
+
+## Watcher interface
+
+**File:** `internal/watcher/watcher.go`
+
+```go
+// AlertEvent is emitted by a Watcher when a monitored resource changes.
+type AlertEvent struct {
+    TripwireType string         // "FILE" | "NETWORK" | "PROCESS"
+    RuleName     string
+    Severity     string         // "INFO" | "WARN" | "CRITICAL"
+    Timestamp    time.Time
+    Detail       map[string]any // type-specific metadata
+}
+
+// Watcher is the common interface for all watcher implementations.
+type Watcher interface {
+    Start(ctx context.Context) error
+    Stop()
+    Events() <-chan AlertEvent
+}
+```
+
+All concrete watcher types (`FileWatcher`, `NetworkWatcher`, and the planned
+`ProcessWatcher`) implement this interface. The agent orchestrator depends on
+`watcher.Watcher` and `watcher.AlertEvent`; the `agent` package re-exports
+both as type aliases for backward compatibility:
+
+```go
+// In internal/agent/agent.go:
+type AlertEvent = watcher.AlertEvent
+type Watcher    = watcher.Watcher
+```
+
+---
+
+## FileWatcher
+
+**File:** `internal/watcher/file.go`
 
 **File:** `internal/watcher/file.go` (all platforms)
 
@@ -72,11 +117,11 @@ type FileWatcher struct { /* unexported */ }
 func NewFileWatcher(rules []config.TripwireRule, logger *slog.Logger, interval time.Duration) *FileWatcher
 func (fw *FileWatcher) Start(ctx context.Context) error
 func (fw *FileWatcher) Stop()
-func (fw *FileWatcher) Events() <-chan agent.AlertEvent
+func (fw *FileWatcher) Events() <-chan watcher.AlertEvent
 func (fw *FileWatcher) Ready() <-chan struct{}
 ```
 
-#### `NewFileWatcher`
+### `NewFileWatcher`
 
 | Parameter  | Description |
 |------------|-------------|
