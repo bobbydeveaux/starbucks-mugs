@@ -1,0 +1,24 @@
+{
+  "prTitle": "feat: define protobuf schema for StreamAlerts and RegisterAgent RPCs",
+  "prBody": "## Summary\n\nDefines the gRPC protobuf schema for the TripWire AlertService with two RPCs:\n\n### Proto Schema (`proto/alert.proto`)\n\n- **`RegisterAgent(RegisterRequest) returns (RegisterResponse)`** — called once per agent connection to register the host and receive a stable `host_id` UUID\n- **`StreamAlerts(stream AgentEvent) returns (stream ServerCommand)`** — bidirectional streaming RPC for continuous alert ingestion with per-event ACK/ERROR responses\n\n### Messages defined\n- `AgentEvent` — alert payload with `alert_id`, `host_id`, `timestamp_us`, `tripwire_type`, `rule_name`, `event_detail_json`, `severity`\n- `RegisterRequest` — agent registration payload with `hostname`, `platform`, `agent_version`\n- `RegisterResponse` — registration reply with stable `host_id` UUID and `server_time_us` for clock-skew detection\n- `ServerCommand` — per-event server response with `type` (ACK/ERROR) and optional `payload`\n\n### Hand-written Go stubs (`proto/alert/`)\nGenerated-compatible Go structs and gRPC service interfaces that compile without protoc, matching the proto definition exactly.\n\n### AlertService implementation (`internal/server/grpc/alert_service.go`)\n- `RegisterAgent` uses `ON CONFLICT (hostname) DO UPDATE … RETURNING host_id` to return a **stable host_id across reconnects**\n- `StreamAlerts` properly distinguishes `io.EOF` (clean close), context cancellation (Debug log), and transport errors (Warn log + non-nil return)\n- Non-blocking `Broadcaster.Publish` ensures slow WebSocket clients never back-pressure the gRPC stream\n\n### WebSocket handler fixes (`internal/server/websocket/handler.go`)\n- Added `maxFrameSize` (64 KiB) guard to prevent int64 overflow from malicious 8-byte extended-length frames\n- `readLoop` goroutine wrapped in `recover()` so any future panic cannot crash the server\n- Uses `io.CopyN(io.Discard, buf, length)` instead of allocating a full payload buffer\n- Authentication model documented in godoc (reverse-proxy deployment)\n\n### Test fix (`internal/watcher/process_watcher_test.go`)\n- Added `noopLogger()` directly to the internal test file (`package watcher`) to fix compilation failure — the symbol was previously only available in the external test file (`package watcher_test`)\n\nCloses #224",
+  "testsPass": true,
+  "filesChanged": [
+    "proto/alert.proto",
+    "proto/alert/alert.pb.go",
+    "proto/alert/alert_grpc.pb.go",
+    "internal/server/grpc/alert_service.go",
+    "internal/server/storage/postgres.go",
+    "internal/server/websocket/handler.go",
+    "internal/watcher/process_watcher_test.go",
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md"
+  ],
+  "docsUpdated": [
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/README.md"
+  ],
+  "completedTasks": [1, 2, 3, 4, 5]
+}
