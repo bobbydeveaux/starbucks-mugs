@@ -42,6 +42,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import httpx
+from prometheus_client import Counter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fileguard.config import settings
@@ -55,6 +56,19 @@ _SIEM_TYPE_WATCHTOWER = "watchtower"
 
 # HTTP timeout for SIEM forwarding (seconds) — short so it never blocks scans
 _SIEM_HTTP_TIMEOUT = 5.0
+
+# Prometheus counters for SIEM delivery observability.
+# fileguard_siem_delivery_attempts_total — incremented on every forward attempt.
+# fileguard_siem_delivery_errors_total   — incremented on every delivery failure.
+# The ratio errors/attempts gives the SIEM failure rate used by the alert rule.
+_SIEM_ATTEMPTS = Counter(
+    "fileguard_siem_delivery_attempts_total",
+    "Total number of SIEM event delivery attempts",
+)
+_SIEM_ERRORS = Counter(
+    "fileguard_siem_delivery_errors_total",
+    "Total number of failed SIEM event delivery attempts",
+)
 
 # Fields included in HMAC computation (order matters — never reorder).
 _HMAC_FIELDS = ("id", "file_hash", "status", "action_taken", "created_at")
@@ -318,6 +332,7 @@ class AuditService:
         payload = self._build_siem_payload(event, siem_type)
         headers = self._build_siem_headers(siem_type, token)
 
+        _SIEM_ATTEMPTS.inc()
         try:
             if self._http_client is not None:
                 response = await self._http_client.post(
@@ -344,6 +359,7 @@ class AuditService:
             )
 
         except httpx.HTTPStatusError as exc:
+            _SIEM_ERRORS.inc()
             logger.warning(
                 "SIEM delivery failed (HTTP %d) for scan_id=%s: %s",
                 exc.response.status_code,
@@ -351,6 +367,7 @@ class AuditService:
                 exc,
             )
         except (httpx.RequestError, Exception) as exc:
+            _SIEM_ERRORS.inc()
             logger.warning(
                 "SIEM delivery error for scan_id=%s: %s",
                 event.id,
