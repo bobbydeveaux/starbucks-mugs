@@ -1,0 +1,33 @@
+# Prometheus alerting rules for FileGuard SIEM event forwarding.
+#
+# Metrics emitted by fileguard.services.audit.AuditService:
+#   fileguard_siem_delivery_attempts_total — incremented on every SIEM POST attempt
+#   fileguard_siem_delivery_errors_total   — incremented on every delivery failure
+#
+# Load this file via the Prometheus rule_files configuration, e.g.:
+#   rule_files:
+#     - /etc/prometheus/rules/siem.yaml
+
+groups:
+  - name: fileguard.siem
+    rules:
+      - alert: SIEMHighDeliveryErrorRate
+        expr: |
+          (
+            rate(fileguard_siem_delivery_errors_total[5m])
+            /
+            rate(fileguard_siem_delivery_attempts_total[5m])
+          ) > 0.005
+        for: 5m
+        labels:
+          severity: warning
+          service: fileguard
+          component: siem
+        annotations:
+          summary: "FileGuard SIEM delivery error rate is above 0.5%"
+          description: >
+            SIEM delivery error rate is {{ printf "%.2f" (mul $value 100.0) }}%
+            over the past 5 minutes, exceeding the 0.5% threshold.
+            Check the SIEM endpoint connectivity, authentication tokens, and
+            network policies for the FileGuard pods.
+          runbook_url: "https://runbooks.internal/fileguard/siem-delivery-errors"
