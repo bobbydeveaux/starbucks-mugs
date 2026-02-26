@@ -1,0 +1,23 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-24T16:04:13Z
+  totalSprints: 1
+  totalDuration: 7 days
+
+sprints:
+  - number: 1
+    startDate: 2026-02-24
+    endDate: 2026-03-03
+    duration: 7 days
+    features:
+      - id: costa-mugs-feat-catalog-data
+        name: Mug Catalog Data
+        type: enabler
+      - id: costa-mugs-feat-site-ui
+        name: Catalog UI with Search and Detail Modal
+        type: feature
+
+criticalPath:
+  - costa-mugs-feat-catalog-data
+  - costa-mugs-feat-site-ui

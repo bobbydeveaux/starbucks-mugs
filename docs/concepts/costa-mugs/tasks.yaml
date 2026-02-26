@@ -1,0 +1,84 @@
+GeneratedAt: "2026-02-24T16:04:49Z"
+Plan: costa-mugs-plan
+Sprints:
+- Features:
+  - FeatureID: costa-mugs-feat-catalog-data
+    FeatureTitle: Mug Catalog Data
+    Tasks:
+    - AcceptanceCriteria:
+      - data/mugs.json exists and is valid JSON with top-level fields 'version' and
+        'mugs'
+      - 'Each mug entry contains all required fields: id, name, series, region, material,
+        price_usd, image_url, description'
+      - File can be fetched via fetch('data/mugs.json') and parsed without errors
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: 'Create data/mugs.json with the versioned envelope structure {version,
+        mugs[]} containing mug entries with fields: id, name, series, region, material,
+        price_usd, image_url, description. Populate with an initial set of Costa mugs
+        representing different series and regions.'
+      EstimatedEffort: S
+      Files:
+      - data/mugs.json
+      ID: task-costa-mugs-feat-catalog-data-1
+      Title: Create versioned mugs.json catalog file
+  - FeatureID: costa-mugs-feat-site-ui
+    FeatureTitle: Catalog UI with Search and Detail Modal
+    Tasks:
+    - AcceptanceCriteria:
+      - index.html renders the filter controls, grid container, and modal structure
+        without JS
+      - styles.css produces a responsive card grid and a hidden/visible modal overlay
+      - images/placeholder.svg is a valid SVG rendering a neutral placeholder image
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create index.html with the full DOM structure — header, search
+        input, series dropdown, mug grid (#grid), and modal overlay (#modal). Write
+        styles.css for card grid layout, modal overlay, and responsive design. Add
+        images/placeholder.svg for image fallback.
+      EstimatedEffort: S
+      Files:
+      - index.html
+      - styles.css
+      - images/placeholder.svg
+      ID: task-costa-mugs-feat-site-ui-1
+      Title: Build page shell, layout, and styles
+    - AcceptanceCriteria:
+      - 'Page loads and displays all mugs from data/mugs.json in the #grid on startup'
+      - 'A fetch failure renders a user-visible error message in #grid instead of
+        crashing'
+      - A broken image URL falls back to images/placeholder.svg without a broken-image
+        icon
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-costa-mugs-feat-site-ui-1
+      Description: 'Implement loadMugs (fetch data/mugs.json with error fallback to
+        #grid message), createCard (builds a card DOM element with image onerror fallback
+        to placeholder.svg), and renderCards (clears and repopulates #grid). Wire
+        DOMContentLoaded to call loadMugs and renderCards.'
+      EstimatedEffort: S
+      Files:
+      - app.js
+      ID: task-costa-mugs-feat-site-ui-2
+      Title: Implement data loading and card rendering
+    - AcceptanceCriteria:
+      - Typing in the search box filters displayed cards in real time by name, series,
+        and region
+      - Selecting a series from the dropdown further narrows results; combined filter
+        uses AND logic
+      - Clicking a card opens the modal with the correct mug name, image, and description
+      - Clicking the modal close button or backdrop dismisses the modal
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-costa-mugs-feat-site-ui-2
+      Description: 'Implement filterMugs (pure function: AND-combines case-insensitive
+        text search on name/series/region with series dropdown selection) and applyFilters
+        (reads input values, calls filterMugs, calls renderCards). Implement openModal
+        and closeModal to populate and toggle the #modal with mug details on card
+        click.'
+      EstimatedEffort: M
+      Files:
+      - app.js
+      ID: task-costa-mugs-feat-site-ui-3
+      Title: Implement search/filter and detail modal
+  Sprint: 1
