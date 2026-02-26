@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved two conflict sections in agent/README.md. First conflict: dropped the redundant macOS arm64 cross-compile example from HEAD (already covered in the cross-compile table above it) and kept origin/main's additions: version-string embedding example and the CI/CD GitHub Actions section. Second conflict: merged sprint status tables by keeping HEAD's accurate implemented-feature rows (Sprint 1-4 features) and adding origin/main's new GitHub Actions build matrix entry.",
-  "strategyUsed": "preserved both changes — dropped HEAD's redundant macOS arm64 snippet while keeping origin/main's new documentation sections; merged sprint tables by combining HEAD's detailed implemented rows with origin/main's GitHub Actions build matrix entry"
+  "summary": "Resolved conflict in internal/server/grpc/alert_service.go. The conflict was between HEAD adding an unused hostIDFromHostname placeholder function and using *websocket.Broadcaster for the compile-time interface check, vs origin/main using *websocket.InProcessBroadcaster (a type that does not exist in the codebase). Kept HEAD's correct type (*websocket.Broadcaster) and dropped the dead hostIDFromHostname placeholder.",
+  "strategyUsed": "chose HEAD's compile-time assertion (*websocket.Broadcaster, the actual type defined in the codebase) over origin/main's reference to a non-existent type (*websocket.InProcessBroadcaster); dropped HEAD's unused hostIDFromHostname placeholder function as it was dead code not called anywhere"
 }

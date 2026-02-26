@@ -1,9 +1,9 @@
 {
-  "prNumber": 263,
+  "prNumber": 265,
   "baseBranch": "main",
-  "headBranch": "feature/254-tripwire-cybersecurity-tool-sprint-4-issue-254",
+  "headBranch": "feature/251-tripwire-cybersecurity-tool-sprint-4-issue-251",
   "conflictedFiles": [
-    "agent/README.md"
+    "internal/server/grpc/alert_service.go"
   ],
   "conflictCount": 1
 }

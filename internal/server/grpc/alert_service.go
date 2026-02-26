@@ -343,6 +343,5 @@ func certCN(ctx context.Context) string {
 	return tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
 }
 
-// Ensure InProcessBroadcaster satisfies the local Broadcaster interface at
-// compile time.
-var _ Broadcaster = (*websocket.InProcessBroadcaster)(nil)
+// Ensure Broadcaster satisfies the local Broadcaster interface at compile time.
+var _ Broadcaster = (*websocket.Broadcaster)(nil)
