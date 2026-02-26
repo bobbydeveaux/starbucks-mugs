@@ -35,9 +35,10 @@ import (
 // Store is the subset of the storage layer used by AlertService.
 type Store interface {
 	// UpsertHost inserts or updates a host record and returns the effective
-	// host_id persisted in the database.  On a first insert this equals h.HostID;
-	// on a hostname conflict the pre-existing stable UUID is returned so that
-	// alert correlation survives agent reconnects.
+	// host_id persisted in the database.  On a first insert the supplied
+	// h.HostID is stored and returned; on a hostname conflict the pre-existing
+	// host_id is returned unchanged, giving callers a stable identifier across
+	// agent reconnects.
 	UpsertHost(ctx context.Context, h storage.Host) (string, error)
 	BatchInsertAlerts(ctx context.Context, a storage.Alert) error
 }
@@ -102,12 +103,15 @@ func (s *AlertService) RegisterAgent(ctx context.Context, req *alertpb.RegisterR
 	}
 
 	now := time.Now().UTC()
+	// Generate a candidate UUID for new registrations.  UpsertHost uses
+	// ON CONFLICT (hostname) DO UPDATE … RETURNING host_id, so if a host
+	// with the same hostname already exists the DB returns the pre-existing
+	// UUID and candidateID is discarded.  This guarantees that every agent
+	// reconnect receives the same stable host_id, preserving alert correlation
+	// across disconnects.
+	candidateID := uuid.NewString()
 	host := storage.Host{
-		// Generate a fresh UUID as a candidate host_id.  On the first registration
-		// this value is stored; on subsequent reconnects UpsertHost returns the
-		// pre-existing stable UUID via RETURNING host_id so the agent always
-		// receives the same ID across reconnects.
-		HostID:       uuid.NewString(),
+		HostID:       candidateID,
 		Hostname:     hostname,
 		Platform:     req.GetPlatform(),
 		AgentVersion: req.GetAgentVersion(),

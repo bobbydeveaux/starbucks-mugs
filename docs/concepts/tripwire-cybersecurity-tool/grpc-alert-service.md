@@ -83,11 +83,12 @@ clock for skew compensation.
 | `agent_version` | no    | Stored for diagnostic purposes            |
 
 Returns a `RegisterResponse` with:
-- `host_id` — a **stable** UUID that is consistent across reconnects.  The
-  first registration generates a new UUID which is stored in PostgreSQL.
-  Subsequent calls for the same hostname return the pre-existing UUID via
-  `ON CONFLICT (hostname) DO UPDATE … RETURNING host_id` so that all
-  historical alerts remain correlated to a single identifier.
+- `host_id` — the server-assigned UUID for this host.  The UUID is **stable
+  across reconnects**: `RegisterAgent` generates a fresh candidate UUID on
+  every call, but the database `ON CONFLICT (hostname) DO UPDATE … RETURNING
+  host_id` clause returns the *pre-existing* UUID when the hostname is already
+  known.  Agents always receive the same `host_id` regardless of how many times
+  they reconnect, preserving alert correlation with historical records.
 - `server_time_us` — server clock in Unix microseconds (clock-skew detection)
 
 ### StreamAlerts
