@@ -353,8 +353,12 @@ If no NETWORK rules are configured the goroutine exits immediately after
    the agent via `WithWatchers`.
 4. Build one `FileWatcher` per FILE-type rule via `buildFileWatchers` and
    register them with the agent via `WithWatchers`.
-5. Start the agent orchestrator.
-6. Serve `/healthz` on `Config.HealthAddr`.
+5. Create a `transport.GRPCTransport` from the TLS configuration and register
+   it with the agent via `WithTransport`. The transport connects to the
+   dashboard using mTLS and reconnects automatically with exponential backoff.
+   See [`agent-transport.md`](agent-transport.md) for full details.
+6. Start the agent orchestrator.
+7. Serve `/healthz` on `Config.HealthAddr`.
 
 ### Logging
 

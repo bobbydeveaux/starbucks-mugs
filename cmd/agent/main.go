@@ -17,6 +17,7 @@ import (
 
 	"github.com/tripwire/agent/internal/agent"
 	"github.com/tripwire/agent/internal/config"
+	"github.com/tripwire/agent/internal/transport"
 	"github.com/tripwire/agent/internal/watcher"
 )
 
@@ -61,6 +62,16 @@ func main() {
 	if fileWatchers := buildFileWatchers(cfg, logger); len(fileWatchers) > 0 {
 		agentOpts = append(agentOpts, agent.WithWatchers(fileWatchers...))
 	}
+
+	// Create and register the mTLS gRPC transport.
+	grpcTransport := transport.New(transport.Config{
+		DashboardAddr: cfg.DashboardAddr,
+		CertPath:      cfg.TLS.CertPath,
+		KeyPath:       cfg.TLS.KeyPath,
+		CAPath:        cfg.TLS.CAPath,
+		AgentVersion:  cfg.AgentVersion,
+	}, logger)
+	agentOpts = append(agentOpts, agent.WithTransport(grpcTransport))
 
 	ag := agent.New(cfg, logger, agentOpts...)
 
