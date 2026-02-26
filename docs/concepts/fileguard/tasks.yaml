@@ -1,285 +1,288 @@
-GeneratedAt: "2026-02-25T22:39:06Z"
+GeneratedAt: "2026-02-26T11:29:35Z"
 Plan: fileguard-plan
 Sprints:
-- Features:
-  - FeatureID: fileguard-feat-document-extractor
-    FeatureTitle: Document Text Extractor
-    Tasks:
-    - AcceptanceCriteria:
-      - DocumentExtractor.extract() returns normalised text with byte-offset map for
-        all six supported formats (PDF, DOCX, CSV, JSON, TXT, ZIP)
-      - ZIP archives are recursively unpacked and each contained file is extracted
-        using the appropriate format handler
-      - Thread-pool executor is used for CPU-bound extraction calls, preventing event-loop
-        blocking
-      - Unsupported or corrupt files raise a documented exception rather than silently
-        returning empty output
-      AgentType: backend-engineer
-      Dependencies: []
-      Description: Implement the DocumentExtractor class in fileguard/core/document_extractor.py
-        supporting PDF (pdfminer.six), DOCX (python-docx), CSV, JSON, TXT, and ZIP
-        archives. Include byte-offset mapping for PII span localisation and thread-pool
-        execution for CPU-bound extraction using concurrent.futures.ThreadPoolExecutor.
-        Normalise extracted text consistently across all formats.
-      EstimatedEffort: M
-      Files:
-      - fileguard/core/document_extractor.py
-      ID: task-fileguard-feat-document-extractor-1
-      Title: Implement DocumentExtractor with multi-format support and thread-pool
-        execution
-    - AcceptanceCriteria:
-      - All six format handlers have at least one passing test verifying extracted
-        text content and offset structure
-      - Test asserts byte-offset map entries correctly reference character positions
-        within the normalised text
-      - Error-path tests confirm the documented exception is raised for unsupported
-        MIME types and malformed files
-      - All tests pass with pytest and no external network or filesystem dependencies
-      AgentType: qa-engineer
-      Dependencies:
-      - task-fileguard-feat-document-extractor-1
-      Description: Write pytest unit tests covering all six extraction formats, byte-offset
-        correctness, ZIP recursion, thread-pool invocation, and error handling for
-        unsupported/corrupt inputs. Use fixture files or in-memory bytes for each
-        format; mock ThreadPoolExecutor where needed to assert concurrent dispatch.
-      EstimatedEffort: S
-      Files:
-      - tests/unit/test_document_extractor.py
-      ID: task-fileguard-feat-document-extractor-2
-      Title: Write unit tests for DocumentExtractor
-  - FeatureID: fileguard-feat-av-engine
-    FeatureTitle: Antivirus Engine Adapter
-    Tasks:
-    - AcceptanceCriteria:
-      - AVEngineAdapter abstract base class defines scan(), is_available(), and engine_name()
-        with correct type signatures
-      - ScanResult and AVEngineError types are defined and usable by concrete adapters
-      - Interface is importable and passes static type checking with no errors
-      AgentType: backend-engineer
-      Dependencies: []
-      Description: Implement the abstract plugin interface in av_adapter.py that all
-        AV engine adapters must satisfy. Define the base class with abstract methods
-        for scan, health-check, and engine metadata, along with shared result types
-        and exception hierarchy used by the pipeline.
-      EstimatedEffort: S
-      Files:
-      - fileguard/core/av_adapter.py
-      ID: task-fileguard-feat-av-engine-1
-      Title: Define AVEngineAdapter abstract interface
-    - AcceptanceCriteria:
-      - ClamAVAdapter implements all abstract methods from AVEngineAdapter and passes
-        socket path via constructor
-      - scan() correctly parses clamd INSTREAM responses for FOUND, OK, and ERROR
-        states
-      - is_available() returns False (not raises) when clamd socket is unreachable;
-        scan() raises AVEngineError in the same scenario
-      - Unit tests mock the Unix socket and cover clean, infected, and daemon-down
-        paths
-      AgentType: backend-engineer
-      Dependencies:
-      - task-fileguard-feat-av-engine-1
-      Description: 'Implement ClamAVAdapter in clamav_adapter.py that connects to
-        the clamd daemon over a Unix socket, performs signature-based and heuristic
-        scans, and returns structured ScanResult objects. Must implement fail-secure:
-        if the daemon is unreachable or returns an unexpected response, raise a well-typed
-        exception rather than returning a clean result.'
-      EstimatedEffort: M
-      Files:
-      - fileguard/core/adapters/clamav_adapter.py
-      ID: task-fileguard-feat-av-engine-2
-      Title: Implement ClamAV clamd socket adapter with fail-secure behavior
-  - FeatureID: fileguard-feat-audit-service
-    FeatureTitle: Tamper-Evident Audit Logging
-    Tasks:
-    - AcceptanceCriteria:
-      - AuditService.log_scan_event() computes and stores a valid HMAC-SHA256 signature
-        verifiable with the configured secret key
-      - No update or delete code paths exist in the service; all writes use INSERT
-        only
-      - Every log emission includes correlation_id, tenant_id, and scan_id as structured
-        JSON fields
-      - Service raises an explicit exception and does not silently swallow errors
-        on DB write failure
-      AgentType: backend-engineer
-      Dependencies: []
-      Description: Build the AuditService class in fileguard/services/audit.py. Implement
-        HMAC-SHA256 signature computation over (id, file_hash, status, action_taken,
-        created_at) fields of each ScanEvent. Persist records to PostgreSQL with append-only
-        enforcement at the application layer (no update/delete paths). Emit structured
-        JSON log entries carrying correlation_id, tenant_id, and scan_id on every
-        audit call.
-      EstimatedEffort: M
-      Files:
-      - fileguard/services/audit.py
-      ID: task-fileguard-feat-audit-service-1
-      Title: Implement AuditService with HMAC-SHA256 signing and append-only PostgreSQL
-        persistence
-    - AcceptanceCriteria:
-      - Tampered record (any field mutated post-insert) fails HMAC verification in
-        the test
-      - Integration test asserts only INSERT statements reach the DB during audit
-        logging
-      - Structured log output test confirms correlation_id, tenant_id, and scan_id
-        are present in every emitted entry
-      AgentType: qa-engineer
-      Dependencies:
-      - task-fileguard-feat-audit-service-1
-      Description: Create tests covering HMAC signature correctness, append-only enforcement,
-        and structured log output. Include a unit test that tampers with a stored
-        record and asserts signature verification fails, and an integration test that
-        confirms no DELETE or UPDATE statements are issued against the scan_event
-        table.
-      EstimatedEffort: S
-      Files:
-      - fileguard/tests/test_audit_service.py
-      ID: task-fileguard-feat-audit-service-2
-      Title: Write unit and integration tests for AuditService
-  Sprint: 2
 - Features:
   - FeatureID: fileguard-feat-pii-detector
     FeatureTitle: PII Detection Engine
     Tasks:
     - AcceptanceCriteria:
-      - All five UK PII pattern types match valid examples and reject invalid ones
-        in unit tests
-      - Each pattern entry exposes category and severity fields
-      - Patterns are pre-compiled (re.compile) and not re-compiled on each scan call
+      - All five UK pattern types match valid examples and reject invalid ones
+      - Custom patterns from a JSON config file are loaded and merged at startup without
+        restart
+      - All patterns are pre-compiled on load; no re-compilation occurs at scan time
       AgentType: backend-engineer
       Dependencies: []
-      Description: Implement the built-in UK PII pattern library covering NI numbers,
-        NHS numbers, email addresses, phone numbers, and postcodes. Each pattern must
-        carry metadata (category, severity) and be pre-compiled at import time for
-        performance. Patterns should be exportable as a registry for use by the detector.
-      EstimatedEffort: S
+      Description: Build the built-in UK PII pattern library covering NI numbers,
+        NHS numbers, email, phone, and postcode. Support loading additional custom
+        patterns from a JSON config file at startup, merging them with the built-in
+        set. Pre-compile all regex patterns for performance.
+      EstimatedEffort: M
       Files:
       - fileguard/core/patterns/uk_patterns.py
       ID: task-fileguard-feat-pii-detector-1
-      Title: Build UK regex pattern library
+      Title: Implement UK regex pattern library with JSON config loading
     - AcceptanceCriteria:
-      - Custom patterns JSON is loaded once at startup and merged with UK patterns
-        without duplicates
-      - scan() returns findings with category, severity, and correct byte offsets
-        for all matched patterns
-      - Invalid or missing JSON config path raises a clear ConfigurationError at startup,
-        not at scan time
-      - Unit tests cover built-in detection, custom pattern injection, and overlapping
-        match handling
+      - Findings include category, severity level, matched value, and byte offset
+        for every match
+      - PIIDetector integrates with ScanContext and appends findings to the pipeline
+        result
+      - Unit tests cover multi-pattern documents, overlapping matches, and empty input
       AgentType: backend-engineer
       Dependencies:
       - task-fileguard-feat-pii-detector-1
-      Description: Implement the PIIDetector class that merges built-in UK patterns
-        with custom patterns loaded from a JSON config file at startup. The detector
-        scans raw bytes/text, returning a list of findings each containing category,
-        severity, matched value, and byte offset. Wire the detector into the ScanContext
-        pipeline step.
+      Description: Implement the PIIDetector class that runs the compiled pattern
+        set against extracted text and returns structured findings with category,
+        severity, and byte offset. Integrate with ScanContext so findings are attached
+        to the pipeline result. Depend on the pattern library from task 1.
       EstimatedEffort: M
       Files:
       - fileguard/core/pii_detector.py
       ID: task-fileguard-feat-pii-detector-2
-      Title: Implement PIIDetector engine with config loading
+      Title: Implement PIIDetector core engine
     - AcceptanceCriteria:
-      - Both adapters implement the same PIIBackendAdapter interface as local detection
-      - Findings returned by cloud adapters are normalised to the same Finding schema
-        as UK pattern results
-      - A cloud API failure raises a BackendUnavailableError and is handled fail-secure
-        (local results still returned)
-      - Adapters are disabled by default and only active when explicitly configured
-        in tenant config
+      - Both adapters implement the same interface and are selectable via tenant config
+      - Cloud findings are normalised to the same category/severity/byte-offset schema
+        as local findings
+      - A cloud backend failure triggers fail-secure behaviour and surfaces an error
+        code rather than returning partial results silently
       AgentType: backend-engineer
       Dependencies:
       - task-fileguard-feat-pii-detector-2
-      Description: Implement configurable adapter classes for Google Cloud DLP and
-        AWS Macie that conform to a shared PIIBackendAdapter interface. Adapters are
-        only invoked when enabled via tenant config, receive the document bytes from
-        ScanContext, and translate cloud findings back into the common Finding schema
-        (category, severity, byte offset). Include retry and error handling so a cloud
-        backend failure does not block local detection results.
-      EstimatedEffort: M
+      Description: Implement configurable cloud adapter backends for Google DLP and
+        AWS Macie that conform to a common adapter interface. Adapters are selected
+        via tenant config at runtime and supplement or replace local regex scanning.
+        Include error handling so a cloud backend failure falls back securely.
+      EstimatedEffort: L
       Files:
       - fileguard/core/adapters/dlp_adapter.py
       - fileguard/core/adapters/macie_adapter.py
       ID: task-fileguard-feat-pii-detector-3
-      Title: Implement Google DLP and AWS Macie cloud backend adapters
+      Title: Implement Google DLP and AWS Macie cloud adapter backends
   - FeatureID: fileguard-feat-siem-forwarding
     FeatureTitle: SIEM Event Forwarding
     Tasks:
     - AcceptanceCriteria:
-      - ScanEvent records are forwarded asynchronously to both Splunk HEC and RiverSafe
-        WatchTower without blocking scan pipeline completion
-      - Delivery failures are captured in a Prometheus counter labeled by destination
-        (splunk, watchtower)
-      - Unit tests cover successful delivery, network timeout, and non-2xx response
-        for each destination
-      - Service accepts dependency injection of HTTP client for testability
+      - ScanEvent records are forwarded asynchronously to Splunk HEC endpoint without
+        blocking scan response
+      - ScanEvent records are forwarded asynchronously to RiverSafe WatchTower REST
+        API without blocking scan response
+      - Prometheus counter `siem_delivery_errors_total` is incremented on any failed
+        delivery attempt
+      - Unit tests cover successful delivery, network failure retry, and error counter
+        increment for both destinations
       AgentType: backend-engineer
       Dependencies: []
-      Description: Implement fileguard/services/siem.py with async ScanEvent forwarding
-        to Splunk HTTP Event Collector and RiverSafe WatchTower REST API. Use a Celery
-        task to decouple delivery from the scan critical path. Include a Prometheus
-        counter tracking delivery errors per destination.
+      Description: Implement SIEMService in fileguard/services/siem.py with async
+        forwarding of ScanEvent records to both Splunk HEC and RiverSafe WatchTower
+        REST API. The service must be fully decoupled from the scan critical path
+        (fire-and-forget via asyncio or Celery task), include retry logic, and increment
+        a Prometheus counter on delivery errors.
       EstimatedEffort: M
       Files:
       - fileguard/services/siem.py
+      - fileguard/tests/test_siem.py
       ID: task-fileguard-feat-siem-forwarding-1
-      Title: Implement SIEM forwarding service with Splunk HEC and RiverSafe WatchTower
+      Title: Implement async SIEM forwarding service
     - AcceptanceCriteria:
-      - Alert fires when siem_delivery_errors / total forwarding attempts > 0.005
-        over a 5-minute window
-      - Alert is silent when failure rate is at or below threshold
-      - Rule file passes promtool lint with no errors
+      - Alert rule `SIEMHighDeliveryErrorRate` fires when error rate > 0.5% over a
+        5-minute window
+      - Alert configuration is valid and loads without errors in Prometheus
       AgentType: devops-engineer
       Dependencies:
       - task-fileguard-feat-siem-forwarding-1
-      Description: Define a Prometheus alerting rule that fires when the SIEM delivery
-        error rate exceeds 0.5% over a rolling window. Wire the rule into the existing
-        alerting configuration and validate it evaluates correctly against the counter
-        emitted by the SIEM service.
+      Description: Add a Prometheus alerting rule that fires when the SIEM delivery
+        error rate exceeds 0.5% over a sliding window. Wire the rule into the existing
+        alert configuration and validate it against the counter emitted by the SIEM
+        service.
       EstimatedEffort: S
       Files:
       - deploy/prometheus/alerts/siem.yaml
       ID: task-fileguard-feat-siem-forwarding-2
-      Title: Add Prometheus alerting rule for SIEM delivery failure rate
+      Title: Add Prometheus alert rule for SIEM failure rate
   - FeatureID: fileguard-feat-compliance-reports
     FeatureTitle: Scheduled Compliance Report Generation
     Tasks:
     - AcceptanceCriteria:
-      - Celery task runs on configurable daily/weekly schedule and produces a compliance_report
-        row with status='completed'
-      - Generated report contains file_count, verdict_breakdown dict, and pii_hits_by_category
-        dict covering the target period
-      - PDF and JSON output are stored/retrievable and match the schema-defined structure
-      - Unit tests cover aggregation logic with mocked audit data for both cadences
+      - ReportSchema Pydantic models validate report payloads including file_count,
+        verdict_breakdown dict, and pii_hits_by_category dict
+      - Celery beat task runs on configurable daily/weekly cadence and writes a compliance_report
+        row with status=completed
+      - Generated JSON report contains correct aggregated metrics for the report period
+        drawn from scan_event records
+      - PDF report is produced without error and stored to the configured output location
       AgentType: backend-engineer
       Dependencies: []
-      Description: Define Pydantic schemas for compliance report data (file count,
-        verdict breakdown, PII hit counts by category). Implement the ReportService
-        with a Celery scheduled task supporting daily/weekly cadence that queries
-        audit events, aggregates metrics per period, and persists reports as both
-        PDF and JSON to the compliance_report table.
+      Description: Define Pydantic schemas for compliance report data structures and
+        implement the reports service with Celery tasks for configurable daily/weekly
+        scheduling. The service queries scan_event and compliance_report tables to
+        aggregate file counts, verdict breakdowns, and PII hit counts by category,
+        then persists both PDF and JSON output.
       EstimatedEffort: L
       Files:
       - fileguard/schemas/report.py
       - fileguard/services/reports.py
       ID: task-fileguard-feat-compliance-reports-1
-      Title: Implement report schema and Celery-based generation service
+      Title: Implement compliance report schema and Celery generation service
     - AcceptanceCriteria:
-      - GET /v1/reports returns paginated list of reports scoped to the authenticated
-        tenant
-      - GET /v1/reports/{id}/download returns 200 with correct Content-Type for PDF
-        and JSON formats, 404 for unknown id
-      - Integration tests cover list pagination, format selection, and cross-tenant
-        isolation
+      - GET /v1/reports returns 200 with paginated list of compliance_report metadata
+        records for the authenticated tenant
+      - 'GET /v1/reports/{id}/download returns the PDF file with Content-Type: application/pdf
+        or JSON body depending on Accept header'
+      - GET /v1/reports/{id}/download returns 404 when the report ID does not exist
+        or belongs to another tenant
+      - Both endpoints are covered by integration tests that exercise the happy path
+        and error cases
       AgentType: backend-engineer
       Dependencies:
       - task-fileguard-feat-compliance-reports-1
-      Description: Implement GET /v1/reports to list compliance reports with pagination
-        and optional cadence/date filters, and GET /v1/reports/{id}/download to stream
-        the PDF or JSON artifact. Handlers validate tenant scope, return appropriate
-        404 on missing report, and support an Accept header or query param to select
-        output format.
+      Description: Implement the GET /v1/reports list endpoint and GET /v1/reports/{id}/download
+        endpoint in the FastAPI handler. The list endpoint returns paginated report
+        metadata; the download endpoint streams the stored PDF or returns JSON based
+        on Accept header, with appropriate 404 handling for unknown report IDs.
       EstimatedEffort: M
       Files:
       - fileguard/api/handlers/reports.py
       ID: task-fileguard-feat-compliance-reports-2
-      Title: Implement report retrieval and download API handlers
+      Title: Implement report retrieval API handlers
   Sprint: 3
+- Features:
+  - FeatureID: fileguard-feat-redaction
+    FeatureTitle: PII Redaction Engine
+    Tasks:
+    - AcceptanceCriteria:
+      - RedactionEngine.redact() accepts ScanContext with PIIDetector findings and
+        returns redacted content string
+      - Overlapping or adjacent spans are merged before substitution to avoid double-redaction
+        or index drift
+      - Redacted output preserves non-PII content exactly (character-level diff excluding
+        replaced spans)
+      - Unit tests cover zero findings, single span, multiple non-overlapping spans,
+        and overlapping spans
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Implement the RedactionEngine class in fileguard/core/redaction.py.
+        Accept PIIDetector findings (span offsets and labels), replace each matched
+        span with a [REDACTED] token using offset-safe in-place substitution, and
+        reconstruct the output document preserving original format and structure.
+      EstimatedEffort: M
+      Files:
+      - fileguard/core/redaction.py
+      - tests/unit/test_redaction.py
+      ID: task-fileguard-feat-redaction-1
+      Title: Implement RedactionEngine span replacement and file reconstruction
+    - AcceptanceCriteria:
+      - Signed URL is generated with configurable TTL and points to the redacted file
+        in object storage
+      - Signed URL is only produced when the caller explicitly requests redaction
+        in the scan request
+      - Integration test confirms URL resolves to content where all PII spans are
+        replaced with [REDACTED]
+      AgentType: backend-engineer
+      Dependencies:
+      - task-fileguard-feat-redaction-1
+      Description: Extend RedactionEngine (or a thin service wrapper) to write the
+        redacted content to object storage and return a time-limited signed URL. Wire
+        this into the scan pipeline so callers receive the URL in the ScanContext
+        response payload when redaction is requested.
+      EstimatedEffort: S
+      Files:
+      - fileguard/core/redaction.py
+      - fileguard/services/storage.py
+      ID: task-fileguard-feat-redaction-2
+      Title: Expose redacted file via signed URL
+  - FeatureID: fileguard-feat-disposition
+    FeatureTitle: Disposition Engine
+    Tasks:
+    - AcceptanceCriteria:
+      - Files written to quarantine are AES-256 encrypted and decryptable with the
+        correct key
+      - Quarantined objects are automatically expired after the configured TTL
+      - Unit tests cover encrypt/store, retrieve/decrypt, and TTL expiry paths
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Implement the quarantine store service that writes AES-256 encrypted
+        objects with configurable TTL. Service must support storing, retrieving, and
+        expiring quarantined files. Expose a clean interface for the DispositionEngine
+        to invoke on quarantine decisions.
+      EstimatedEffort: M
+      Files:
+      - fileguard/services/quarantine.py
+      ID: task-fileguard-feat-disposition-1
+      Title: Implement QuarantineService with AES-256 encryption and TTL
+    - AcceptanceCriteria:
+      - Block, quarantine, and pass-with-flags actions are correctly resolved from
+        tenant and file-type rules
+      - Quarantine action invokes QuarantineService and records the quarantine reference
+      - Any unhandled exception results in a reject/block outcome with no file passing
+        through
+      - Unit tests cover all three disposition outcomes and the fail-secure exception
+        path
+      AgentType: backend-engineer
+      Dependencies:
+      - task-fileguard-feat-disposition-1
+      Description: Implement the DispositionEngine that evaluates AV and PII findings
+        against per-tenant, per-file-type disposition rules to produce a final action
+        of block, quarantine, or pass-with-flags. On quarantine decisions, delegate
+        to QuarantineService. Any unhandled exception must trigger the fail-secure
+        path and reject the file.
+      EstimatedEffort: M
+      Files:
+      - fileguard/core/disposition.py
+      ID: task-fileguard-feat-disposition-2
+      Title: Implement DispositionEngine rule evaluation with fail-secure default
+  - FeatureID: fileguard-feat-pipeline-orchestrator
+    FeatureTitle: Scan Pipeline Orchestrator
+    Tasks:
+    - AcceptanceCriteria:
+      - ScanContext instantiates with required file metadata and optional step-result
+        fields
+      - All pipeline-step result fields are typed and documented with defaults
+      - Unit tests confirm field assignment and serialisation round-trip
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Define the ScanContext dataclass in fileguard/core/context.py as
+        the shared state object passed across all pipeline steps. Include fields for
+        file metadata, extracted content, AV results, PII findings, redaction output,
+        disposition decision, and audit trail entries.
+      EstimatedEffort: S
+      Files:
+      - fileguard/core/context.py
+      ID: task-fileguard-feat-pipeline-orchestrator-1
+      Title: Implement ScanContext shared dataclass
+    - AcceptanceCriteria:
+      - Pipeline executes all six steps in order and populates ScanContext correctly
+      - Each step is wrapped in a named OTel span visible in trace output
+      - Any step raising an exception halts the pipeline and marks context with a
+        failed disposition
+      - Integration test covers a happy-path run and a mid-pipeline failure scenario
+      AgentType: backend-engineer
+      Dependencies:
+      - task-fileguard-feat-pipeline-orchestrator-1
+      Description: 'Implement ScanPipeline in fileguard/core/pipeline.py that executes
+        the ordered steps: extract → AV scan → PII detect → redact → disposition →
+        audit. Each step mutates ScanContext in place. Wrap each step in an OpenTelemetry
+        trace span and enforce fail-secure behaviour on any step failure.'
+      EstimatedEffort: L
+      Files:
+      - fileguard/core/pipeline.py
+      ID: task-fileguard-feat-pipeline-orchestrator-2
+      Title: Implement ScanPipeline orchestration with OpenTelemetry spans
+    - AcceptanceCriteria:
+      - Celery task accepts a file reference and returns a structured disposition
+        result
+      - Batch submission fans out individual scan tasks and aggregates results
+      - Transient failures trigger configured retries with exponential back-off
+      - Worker integration test passes against a local Celery broker in eager mode
+      AgentType: backend-engineer
+      Dependencies:
+      - task-fileguard-feat-pipeline-orchestrator-2
+      Description: Wrap ScanPipeline in a Celery task in fileguard/workers/scan_worker.py
+        to support single-file async invocation and batch fan-out. The worker should
+        accept a file reference, instantiate ScanContext, run the pipeline, and return
+        the disposition result. Configure retry policy and task routing.
+      EstimatedEffort: M
+      Files:
+      - fileguard/workers/scan_worker.py
+      ID: task-fileguard-feat-pipeline-orchestrator-3
+      Title: Implement Celery scan worker for async and batch execution
+  Sprint: 4
