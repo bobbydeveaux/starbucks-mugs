@@ -31,6 +31,8 @@ import pytest
 from fileguard.services.audit import (
     AuditError,
     AuditService,
+    _SIEM_ATTEMPTS,
+    _SIEM_ERRORS,
     _SIEM_TYPE_SPLUNK,
     _SIEM_TYPE_WATCHTOWER,
 )
@@ -938,3 +940,135 @@ class TestAuditServiceInit:
     def test_http_client_none_by_default(self) -> None:
         service = AuditService(signing_key="key")
         assert service._http_client is None
+
+
+# ---------------------------------------------------------------------------
+# TestSiemPrometheusCounters — _SIEM_ATTEMPTS and _SIEM_ERRORS counter behaviour
+# ---------------------------------------------------------------------------
+
+
+class TestSiemPrometheusCounters:
+    """Verify that Prometheus counters are incremented correctly during SIEM forwarding.
+
+    Each test reads the counter value before the operation, performs the operation,
+    and asserts the delta equals the expected increment.  Using deltas (rather than
+    absolute values) makes tests independent of execution order.
+    """
+
+    async def test_attempts_counter_incremented_on_success(self) -> None:
+        mock_client = AsyncMock()
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.raise_for_status = MagicMock()
+        mock_client.post = AsyncMock(return_value=resp)
+
+        service = _make_service(http_client=mock_client)
+        event = _make_scan_event()
+
+        before = _SIEM_ATTEMPTS._value.get()
+        await service._forward_to_siem(
+            event,
+            {"type": "splunk", "endpoint": "https://splunk.example.com/hec", "token": "tok"},
+        )
+        after = _SIEM_ATTEMPTS._value.get()
+
+        assert after - before == 1.0
+
+    async def test_attempts_counter_incremented_on_http_error(self) -> None:
+        import httpx
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "HTTP 503",
+                request=MagicMock(),
+                response=MagicMock(status_code=503),
+            )
+        )
+
+        service = _make_service(http_client=mock_client)
+        event = _make_scan_event()
+
+        before = _SIEM_ATTEMPTS._value.get()
+        await service._forward_to_siem(
+            event,
+            {"type": "splunk", "endpoint": "https://splunk.example.com/hec", "token": "tok"},
+        )
+        after = _SIEM_ATTEMPTS._value.get()
+
+        assert after - before == 1.0
+
+    async def test_errors_counter_incremented_on_http_error(self) -> None:
+        import httpx
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "HTTP 500",
+                request=MagicMock(),
+                response=MagicMock(status_code=500),
+            )
+        )
+
+        service = _make_service(http_client=mock_client)
+        event = _make_scan_event()
+
+        before = _SIEM_ERRORS._value.get()
+        await service._forward_to_siem(
+            event,
+            {"type": "splunk", "endpoint": "https://splunk.example.com/hec", "token": "tok"},
+        )
+        after = _SIEM_ERRORS._value.get()
+
+        assert after - before == 1.0
+
+    async def test_errors_counter_incremented_on_network_error(self) -> None:
+        import httpx
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
+
+        service = _make_service(http_client=mock_client)
+        event = _make_scan_event()
+
+        before = _SIEM_ERRORS._value.get()
+        await service._forward_to_siem(
+            event,
+            {"type": "watchtower", "endpoint": "https://wt.example.com/events"},
+        )
+        after = _SIEM_ERRORS._value.get()
+
+        assert after - before == 1.0
+
+    async def test_errors_counter_not_incremented_on_success(self) -> None:
+        mock_client = AsyncMock()
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.raise_for_status = MagicMock()
+        mock_client.post = AsyncMock(return_value=resp)
+
+        service = _make_service(http_client=mock_client)
+        event = _make_scan_event()
+
+        before = _SIEM_ERRORS._value.get()
+        await service._forward_to_siem(
+            event,
+            {"type": "watchtower", "endpoint": "https://wt.example.com/events"},
+        )
+        after = _SIEM_ERRORS._value.get()
+
+        assert after - before == 0.0
+
+    async def test_no_counters_incremented_when_endpoint_missing(self) -> None:
+        """Missing endpoint causes an early return before any counter is touched."""
+        mock_client = AsyncMock()
+        service = _make_service(http_client=mock_client)
+        event = _make_scan_event()
+
+        attempts_before = _SIEM_ATTEMPTS._value.get()
+        errors_before = _SIEM_ERRORS._value.get()
+
+        await service._forward_to_siem(event, {"type": "splunk"})
+
+        assert _SIEM_ATTEMPTS._value.get() - attempts_before == 0.0
+        assert _SIEM_ERRORS._value.get() - errors_before == 0.0
