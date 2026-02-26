@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	grpcserver "github.com/tripwire/agent/internal/server/grpc"
-	alertpb "github.com/tripwire/agent/proto"
+	alertpb "github.com/tripwire/agent/proto/alert"
 )
 
 // ─── In-memory test PKI ───────────────────────────────────────────────────────
@@ -155,13 +155,13 @@ type echoService struct {
 	lastCN string
 }
 
-func (s *echoService) RegisterAgent(ctx context.Context, _ *alertpb.AgentRegistration) (*alertpb.ServerAck, error) {
+func (s *echoService) RegisterAgent(ctx context.Context, _ *alertpb.RegisterRequest) (*alertpb.RegisterResponse, error) {
 	cn, ok := grpcserver.AgentCNFromContext(ctx)
 	if !ok {
 		return nil, status.Error(3 /* codes.InvalidArgument */, "no agent CN")
 	}
 	s.lastCN = cn
-	return &alertpb.ServerAck{Ok: true, AlertId: "test-ack"}, nil
+	return &alertpb.RegisterResponse{HostId: "test-ack"}, nil
 }
 
 // ─── Server launch helper ─────────────────────────────────────────────────────
@@ -251,12 +251,12 @@ func TestMTLSAcceptsValidClientCert(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	ack, err := client.RegisterAgent(ctx, &alertpb.AgentRegistration{Hostname: "node-42"})
+	ack, err := client.RegisterAgent(ctx, &alertpb.RegisterRequest{Hostname: "node-42"})
 	if err != nil {
 		t.Fatalf("RegisterAgent: %v", err)
 	}
-	if !ack.Ok {
-		t.Errorf("ack.Ok = false; want true")
+	if ack.HostId == "" {
+		t.Errorf("ack.HostId is empty; want non-empty")
 	}
 	if svc.lastCN != "agent-node-42" {
 		t.Errorf("lastCN = %q; want %q", svc.lastCN, "agent-node-42")
@@ -283,7 +283,7 @@ func TestMTLSRejectsNoClientCert(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err = alertpb.NewAlertServiceClient(conn).RegisterAgent(ctx, &alertpb.AgentRegistration{})
+	_, err = alertpb.NewAlertServiceClient(conn).RegisterAgent(ctx, &alertpb.RegisterRequest{})
 	if err == nil {
 		t.Fatal("expected error for connection without client cert; got nil")
 	}
@@ -315,7 +315,7 @@ func TestMTLSRejectsUnknownCAClientCert(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err = alertpb.NewAlertServiceClient(conn).RegisterAgent(ctx, &alertpb.AgentRegistration{})
+	_, err = alertpb.NewAlertServiceClient(conn).RegisterAgent(ctx, &alertpb.RegisterRequest{})
 	if err == nil {
 		t.Fatal("expected error for rogue CA client cert; got nil")
 	}
@@ -345,12 +345,12 @@ func TestCNExtraction(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			ack, err := client.RegisterAgent(ctx, &alertpb.AgentRegistration{})
+			ack, err := client.RegisterAgent(ctx, &alertpb.RegisterRequest{})
 			if err != nil {
 				t.Fatalf("RegisterAgent(%q): %v", tc.cn, err)
 			}
-			if !ack.Ok {
-				t.Errorf("ack.Ok = false for CN %q", tc.cn)
+			if ack.HostId == "" {
+				t.Errorf("ack.HostId is empty for CN %q", tc.cn)
 			}
 			if svc.lastCN != tc.cn {
 				t.Errorf("lastCN = %q; want %q", svc.lastCN, tc.cn)
