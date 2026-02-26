@@ -3,9 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/141-fileguard-sprint-2-issue-141",
   "conflictedFiles": [
-    ".claude-output.json",
-    "fileguard/core/__init__.py",
-    "fileguard/core/av_adapter.py"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 3
+  "conflictCount": 2
 }

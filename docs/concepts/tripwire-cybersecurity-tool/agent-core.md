@@ -300,17 +300,17 @@ If no NETWORK rules are configured the goroutine exits immediately after
 |------|---------|-------------|
 | `-config` | `/etc/tripwire/config.yaml` | Path to the YAML configuration file |
 
-### Component wiring
+### Startup sequence
 
-After loading configuration the binary:
-
-1. Creates a single `NetworkWatcher` with all NETWORK-type rules from the
-   config (polls `/proc/net/tcp*` and `/proc/net/udp*` every second).
-2. Passes the watcher to `agent.New` via `WithWatchers`.
-3. Starts the agent — the NetworkWatcher goroutine begins polling immediately.
-
-Additional watcher/queue/transport components are registered in later sprints
-by appending further `agent.Option` values to `agentOpts`.
+1. Load and validate configuration via `config.LoadConfig`.
+2. Initialise the structured logger from `Config.LogLevel`.
+3. Create a single `NetworkWatcher` for all NETWORK-type rules (polls
+   `/proc/net/tcp*` and `/proc/net/udp*` every second) and register it with
+   the agent via `WithWatchers`.
+4. Build one `FileWatcher` per FILE-type rule via `buildFileWatchers` and
+   register them with the agent via `WithWatchers`.
+5. Start the agent orchestrator.
+6. Serve `/healthz` on `Config.HealthAddr`.
 
 ### Logging
 
