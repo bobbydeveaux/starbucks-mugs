@@ -1,28 +1,32 @@
 // Linux implementation of ProcessWatcher using the NETLINK_CONNECTOR process
 // connector. This mechanism delivers PROC_EVENT_EXEC notifications from the
 // kernel with zero polling overhead — semantically equivalent to the eBPF
-// tracepoint program in bpf/execve.c but without requiring a BPF compiler at
-// build time.
+// tracepoint program in internal/watcher/ebpf/process.bpf.c but without
+// requiring a BPF compiler at build time.
 //
 // Privilege requirement: opening a NETLINK_CONNECTOR socket and subscribing
-// to process events requires CAP_NET_ADMIN (or uid 0).
+// to process events requires CAP_NET_ADMIN (or uid 0). If the agent lacks
+// these privileges, Start returns a descriptive error via the backendStarter
+// interface before any background goroutine is launched.
 //
 //go:build linux
 
 package watcher
 
 import (
+	"bufio"
 	"context"
 	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 )
 
 // ─── Netlink Connector kernel ABI constants ──────────────────────────────────
-// Values from <linux/netlink.h> and <linux/connector.h>.  Never change.
+// Values from <linux/netlink.h> and <linux/connector.h>. Never change.
 
 const (
 	// netlinkConnector is the NETLINK_CONNECTOR protocol family (11).
@@ -56,24 +60,29 @@ const (
 	minProcEventLen = cnMsgSize + procEvtHdrSize + execInfoSize
 )
 
-// ─── Start ───────────────────────────────────────────────────────────────────
+// ─── Backend ─────────────────────────────────────────────────────────────────
 
-// Start opens a NETLINK_CONNECTOR socket, subscribes to kernel process events,
-// and begins delivering AlertEvents for execve calls that match any configured
-// PROCESS rule. It returns immediately after launching the background loop.
+// newProcessBackend returns a NETLINK_CONNECTOR-based process monitoring
+// backend. The returned backend implements backendStarter; its start method
+// opens and binds the socket, returning an error if insufficient privilege.
+func newProcessBackend(logger *slog.Logger) processBackend {
+	return &netlinkBackend{logger: logger}
+}
+
+// netlinkBackend implements processBackend (run) and backendStarter (start).
+// It uses the Linux NETLINK_CONNECTOR process connector to receive
+// PROC_EVENT_EXEC notifications from the kernel.
+type netlinkBackend struct {
+	logger *slog.Logger
+	sock   int // set by start(), used and closed by run()
+}
+
+// start implements backendStarter. It opens and binds the NETLINK_CONNECTOR
+// socket and subscribes to kernel process events. Returns an error if the
+// caller lacks CAP_NET_ADMIN or root privilege.
 //
-// The caller must hold CAP_NET_ADMIN or be uid 0; otherwise Start returns a
-// descriptive error.
-//
-// Calling Start on an already-running watcher is a no-op (returns nil).
-func (w *ProcessWatcher) Start(ctx context.Context) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if w.cancel != nil {
-		return nil // already running
-	}
-
+// The opened socket is stored in b.sock for use by run().
+func (b *netlinkBackend) start(_ context.Context) error {
 	sock, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_DGRAM, netlinkConnector)
 	if err != nil {
 		return fmt.Errorf("process watcher: open NETLINK_CONNECTOR socket: %w "+
@@ -96,54 +105,21 @@ func (w *ProcessWatcher) Start(ctx context.Context) error {
 		return fmt.Errorf("process watcher: subscribe to proc events: %w", err)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	w.cancel = cancel
-
-	w.wg.Add(1)
-	go w.readLoop(ctx, sock)
-
-	w.logger.Info("process watcher started",
-		slog.Int("rules", len(w.rules)),
-		slog.String("mechanism", "NETLINK_CONNECTOR/PROC_EVENT_EXEC"),
-	)
+	b.sock = sock
+	b.logger.Info("process watcher: NETLINK_CONNECTOR socket ready")
 	return nil
 }
 
-// ─── Stop ────────────────────────────────────────────────────────────────────
+// run implements processBackend. It reads PROC_EVENT_EXEC netlink messages
+// from the socket opened by start() and emits a ProcessEvent for each exec
+// event that can be enriched from /proc. Runs until done is closed.
+func (b *netlinkBackend) run(done <-chan struct{}, events chan<- ProcessEvent) error {
+	defer func() { _ = syscall.Close(b.sock) }()
 
-// Stop signals the watcher to cease monitoring, waits for the background loop
-// to exit, and closes the Events channel. Stop is safe to call multiple times
-// (idempotent).
-func (w *ProcessWatcher) Stop() {
-	w.stopOnce.Do(func() {
-		w.mu.Lock()
-		cancel := w.cancel
-		w.cancel = nil
-		w.mu.Unlock()
-
-		if cancel != nil {
-			cancel()
-		}
-		w.wg.Wait()
-
-		close(w.events)
-		w.logger.Info("process watcher stopped")
-	})
-}
-
-// ─── Background loop ─────────────────────────────────────────────────────────
-
-// readLoop runs in a goroutine started by Start. It reads netlink messages
-// from sock and dispatches PROC_EVENT_EXEC events. It exits when ctx is
-// cancelled, after which it unsubscribes and closes the socket.
-func (w *ProcessWatcher) readLoop(ctx context.Context, sock int) {
-	defer w.wg.Done()
-	defer func() { _ = syscall.Close(sock) }()
-
-	// Set a per-read timeout so we can check ctx.Done() periodically without
+	// Set a per-read timeout so we can check done periodically without
 	// blocking indefinitely in Recvfrom.
 	tv := syscall.Timeval{Sec: 1, Usec: 0}
-	_ = syscall.SetsockoptTimeval(sock, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
+	_ = syscall.SetsockoptTimeval(b.sock, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
 
 	// Buffer large enough for several proc_event messages.
 	buf := make([]byte, 8*1024)
@@ -151,32 +127,32 @@ func (w *ProcessWatcher) readLoop(ctx context.Context, sock int) {
 	for {
 		// Check for shutdown before blocking.
 		select {
-		case <-ctx.Done():
-			_ = sendProcCNMsg(sock, procCNMcastIgnore) // best-effort unsubscribe
-			return
+		case <-done:
+			_ = sendProcCNMsg(b.sock, procCNMcastIgnore) // best-effort unsubscribe
+			return nil
 		default:
 		}
 
-		n, _, err := syscall.Recvfrom(sock, buf, 0)
+		n, _, err := syscall.Recvfrom(b.sock, buf, 0)
 		if err != nil {
 			// EAGAIN / EWOULDBLOCK mean the 1-second read timeout expired;
-			// loop back to check ctx.Done().
+			// loop back to check done.
 			if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK || err == syscall.EINTR {
 				continue
 			}
 			// On a genuine read error check whether we are shutting down.
 			select {
-			case <-ctx.Done():
-				return
+			case <-done:
+				return nil
 			default:
 			}
-			w.logger.Warn("process watcher: recvfrom error",
+			b.logger.Warn("process watcher: recvfrom error",
 				slog.Any("error", err),
 			)
-			return
+			return err
 		}
 
-		w.parseNetlinkMessages(buf[:n])
+		b.parseNetlinkMessages(buf[:n], done, events)
 	}
 }
 
@@ -184,24 +160,24 @@ func (w *ProcessWatcher) readLoop(ctx context.Context, sock int) {
 
 // parseNetlinkMessages splits buf into individual netlink messages and handles
 // each PROC_EVENT_EXEC event it contains.
-func (w *ProcessWatcher) parseNetlinkMessages(buf []byte) {
+func (b *netlinkBackend) parseNetlinkMessages(buf []byte, done <-chan struct{}, events chan<- ProcessEvent) {
 	msgs, err := syscall.ParseNetlinkMessage(buf)
 	if err != nil {
-		w.logger.Warn("process watcher: parse netlink message",
+		b.logger.Warn("process watcher: parse netlink message",
 			slog.Any("error", err),
 		)
 		return
 	}
 
 	for i := range msgs {
-		w.handleNetlinkMessage(&msgs[i])
+		b.handleNetlinkMessage(&msgs[i], done, events)
 	}
 }
 
 // handleNetlinkMessage processes one netlink message. It extracts the cn_msg
 // and proc_event payload, ignoring anything that is not a PROC_EVENT_EXEC
 // addressed to CN_IDX_PROC / CN_VAL_PROC.
-func (w *ProcessWatcher) handleNetlinkMessage(msg *syscall.NetlinkMessage) {
+func (b *netlinkBackend) handleNetlinkMessage(msg *syscall.NetlinkMessage, done <-chan struct{}, events chan<- ProcessEvent) {
 	if msg.Header.Type == syscall.NLMSG_ERROR {
 		return
 	}
@@ -239,31 +215,76 @@ func (w *ProcessWatcher) handleNetlinkMessage(msg *syscall.NetlinkMessage) {
 	pid := int(binary.NativeEndian.Uint32(payload[procEvtHdrSize : procEvtHdrSize+4]))
 
 	// Enrich with data from /proc before the short-lived process can exit.
-	comm, exe, cmdline := readProcInfo(pid)
+	pe, err := readProcEntry(pid)
+	if err != nil {
+		// Process already exited between the exec event and our /proc read;
+		// silently skip rather than emitting an incomplete event.
+		return
+	}
 
-	w.emitExecEvent(pid, comm, exe, cmdline)
+	select {
+	case events <- pe:
+	case <-done:
+	default:
+		b.logger.Warn("process watcher: backend event channel full; dropping event",
+			slog.Int("pid", pid),
+			slog.String("command", pe.Command),
+		)
+	}
 }
 
 // ─── /proc enrichment ────────────────────────────────────────────────────────
 
-// readProcInfo reads the short comm name, resolved exe path, and space-joined
-// cmdline from /proc/<pid>. Empty strings are returned for any field that
-// cannot be read (e.g. the process has already exited).
-func readProcInfo(pid int) (comm, exe, cmdline string) {
-	if b, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid)); err == nil {
-		comm = strings.TrimRight(string(b), "\n\r")
+// readProcEntry parses /proc/<pid>/status to extract the process name (Name),
+// parent PID (PPid), and real UID (Uid). It also reads /proc/<pid>/cmdline for
+// the full command line. Returns an error if the process has exited or the
+// status file is unreadable.
+func readProcEntry(pid int) (ProcessEvent, error) {
+	statusPath := fmt.Sprintf("/proc/%d/status", pid)
+	f, err := os.Open(statusPath)
+	if err != nil {
+		return ProcessEvent{}, err
 	}
-	if link, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid)); err == nil {
-		exe = link
+	defer f.Close()
+
+	var pe ProcessEvent
+	pe.PID = pid
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		switch {
+		case strings.HasPrefix(line, "Name:\t"):
+			pe.Command = strings.TrimPrefix(line, "Name:\t")
+		case strings.HasPrefix(line, "PPid:\t"):
+			pe.PPID, _ = strconv.Atoi(strings.TrimPrefix(line, "PPid:\t"))
+		case strings.HasPrefix(line, "Uid:\t"):
+			// Format: "Uid:\treal\teffective\tsaved\tfs"
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				pe.UID, _ = strconv.Atoi(fields[1])
+			}
+		}
 	}
-	if b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err == nil {
-		// Args are NUL-separated; replace with spaces for readability.
-		cmdline = strings.TrimRight(
-			strings.ReplaceAll(string(b), "\x00", " "),
+	if err := scanner.Err(); err != nil {
+		return ProcessEvent{}, err
+	}
+
+	pe.Username = resolveUsername(pe.UID)
+
+	// Read the full argv from /proc/<pid>/cmdline (NUL-separated args).
+	// The file may be empty for kernel threads; that is not an error.
+	cmdlinePath := fmt.Sprintf("/proc/%d/cmdline", pid)
+	cmdlineBytes, err := os.ReadFile(cmdlinePath)
+	if err == nil && len(cmdlineBytes) > 0 {
+		// NUL separators between argv entries → replace with spaces and trim.
+		pe.CmdLine = strings.TrimRight(
+			strings.ReplaceAll(string(cmdlineBytes), "\x00", " "),
 			" ",
 		)
 	}
-	return comm, exe, cmdline
+
+	return pe, nil
 }
 
 // ─── Netlink send helper ─────────────────────────────────────────────────────
@@ -281,11 +302,11 @@ func sendProcCNMsg(sock int, op uint32) error {
 	buf := make([]byte, totalSize)
 
 	// ── nlmsghdr ──────────────────────────────────────────────────────────
-	binary.NativeEndian.PutUint32(buf[0:4], uint32(totalSize))      // Len
-	binary.NativeEndian.PutUint16(buf[4:6], syscall.NLMSG_DONE)     // Type
-	binary.NativeEndian.PutUint16(buf[6:8], 0)                      // Flags
-	binary.NativeEndian.PutUint32(buf[8:12], 0)                     // Seq
-	binary.NativeEndian.PutUint32(buf[12:16], uint32(os.Getpid()))  // Pid
+	binary.NativeEndian.PutUint32(buf[0:4], uint32(totalSize))     // Len
+	binary.NativeEndian.PutUint16(buf[4:6], syscall.NLMSG_DONE)    // Type
+	binary.NativeEndian.PutUint16(buf[6:8], 0)                     // Flags
+	binary.NativeEndian.PutUint32(buf[8:12], 0)                    // Seq
+	binary.NativeEndian.PutUint32(buf[12:16], uint32(os.Getpid())) // Pid
 
 	// ── cn_msg ────────────────────────────────────────────────────────────
 	off := nlMsgHdrSize

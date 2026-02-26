@@ -1,32 +1,29 @@
-// Package ebpf implements a Go eBPF loader and userspace event consumer for
-// TripWire execve tracing.
+// SPDX-License-Identifier: Apache-2.0
 //
-// The companion eBPF kernel program (process.bpf.c) attaches to the
-// sys_enter_execve and sys_enter_execveat tracepoints and writes exec_event
-// records to a BPF ring buffer.  This package loads that pre-compiled program,
-// reads events from the ring buffer, and converts them into AlertEvents that
-// satisfy the watcher.Watcher interface.
+// internal/watcher/ebpf/process.go — eBPF Go userspace loader and event pump.
 //
-// # Kernel requirements
+// This file is the companion to internal/watcher/ebpf/process.bpf.c. It:
+//   1. Embeds the pre-compiled BPF object (process.bpf.o).
+//   2. Checks that the running kernel is ≥ 5.8 (BPF ring buffer was added in
+//      5.8; earlier kernels are not supported).
+//   3. Loads the BPF collection, attaches it to the execve/execveat tracepoints.
+//   4. Reads raw ring-buffer records in a goroutine and converts them to typed
+//      ExecEvent values that are delivered on a buffered channel.
 //
-//   - Linux ≥ 5.8 (BPF ring buffer: BPF_MAP_TYPE_RINGBUF)
-//   - CAP_BPF (Linux ≥ 5.8) or CAP_SYS_ADMIN (older kernels)
-//   - CONFIG_BPF_SYSCALL=y, CONFIG_DEBUG_INFO_BTF=y (for CO-RE)
+// Build the BPF object before using this package:
 //
-// # Build variants
+//	apt-get install -y clang llvm libbpf-dev linux-headers-$(uname -r)
+//	bpftool btf dump file /sys/kernel/btf/vmlinux format c \
+//	    > internal/watcher/ebpf/vmlinux.h
+//	make -C internal/watcher/ebpf
 //
-// Standard build — no embedded BPF object (Start returns an informative error):
+// The placeholder process.bpf.o checked into the repository causes
+// LoadCollectionSpecFromReader to return an error on any attempt to Load()
+// before the real object is compiled. Callers should treat this as equivalent
+// to ErrNotSupported and fall back to the NETLINK_CONNECTOR implementation.
 //
-//	go build ./internal/watcher/ebpf/...
-//
-// Embedded build — bundles the compiled BPF object into the binary:
-//
-//	make -C internal/watcher/ebpf   # compile process.bpf.c → process.bpf.o
-//	go build -tags bpf_embedded ./internal/watcher/ebpf/...
-//
-// When built with -tags bpf_embedded, the BPF object is embedded at link time
-// and no runtime file access is needed.
-//
+//go:generate make -C . process.bpf.o
+
 //go:build linux
 
 package ebpf
@@ -34,37 +31,41 @@ package ebpf
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
+	"os"
+	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
-	"github.com/tripwire/agent/internal/config"
-	"github.com/tripwire/agent/internal/watcher"
+	ciliumebpf "github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/link"
+	"github.com/cilium/ebpf/ringbuf"
 )
 
-// bpfObjectBytes holds the pre-compiled eBPF program object.
+// processObjBytes holds the compiled BPF object embedded at build time.
+// Replace internal/watcher/ebpf/process.bpf.o with the output of
+// 'make -C internal/watcher/ebpf' before shipping.
 //
-// In a standard build this is nil; Start() returns a descriptive error.
-// When built with -tags bpf_embedded (after running make in the ebpf
-// directory), bpfobject_embed_linux.go sets this variable via //go:embed.
-var bpfObjectBytes []byte
+//go:embed process.bpf.o
+var processObjBytes []byte
 
-// ─── Kernel struct mirror ─────────────────────────────────────────────────────
+// ErrNotSupported is returned by NewLoader when the running kernel does not
+// meet the minimum requirements for eBPF-based execve tracing:
+//   - Linux ≥ 5.8 (BPF_MAP_TYPE_RINGBUF, introduced in 5.8)
+//   - CONFIG_BPF_SYSCALL=y, CONFIG_DEBUG_INFO_BTF=y
+//   - CAP_BPF or CAP_SYS_ADMIN
+var ErrNotSupported = errors.New("ebpf: kernel ≥ 5.8 required for eBPF execve tracing")
 
-// execEvent mirrors the C exec_event struct defined in process.h.
+// execEvent is the Go mirror of the C struct exec_event defined in process.h.
+// Field order, sizes, and alignment MUST match the kernel ABI exactly so that
+// encoding/binary can deserialise ring-buffer payloads without unsafe casts.
 //
-// Layout (total 544 bytes, matching the C definition exactly):
-//
-//	PID      uint32    4 B  — tgid (matches getpid(2))
-//	PPID     uint32    4 B  — parent tgid
-//	UID      uint32    4 B  — real UID
-//	GID      uint32    4 B  — real GID
-//	Comm     [16]byte  16 B — short task name (TASK_COMM_LEN)
-//	Filename [256]byte 256 B — execve filename argument
-//	Argv     [256]byte 256 B — space-joined argv[0..N]
+//	Total size: 4+4+4+4+16+256+256 = 544 bytes.
 type execEvent struct {
 	PID      uint32
 	PPID     uint32
@@ -75,286 +76,307 @@ type execEvent struct {
 	Argv     [256]byte
 }
 
-// ExecEventSize is the expected on-wire size of an exec_event ring-buffer
-// record (544 bytes). It is validated at readLoop time against the raw sample
-// length and exported so that tests can guard against layout drift between the
-// C exec_event struct (process.h) and the Go mirror (execEvent).
-const ExecEventSize = 4 + 4 + 4 + 4 + 16 + 256 + 256
+// execEventSize is the expected on-wire size of execEvent. Used to validate
+// ring-buffer records and in tests as a regression guard.
+const execEventSize = int(unsafe.Sizeof(execEvent{})) // 544
 
-// execEventSize is the internal alias used within this package.
-const execEventSize = ExecEventSize
+// ExecEvent is the parsed, human-readable form of a kernel execve ring-buffer
+// record. String fields are NUL-stripped and trimmed of trailing spaces.
+type ExecEvent struct {
+	// PID is the tgid of the process that called execve/execveat.
+	PID uint32
+	// PPID is the tgid of the calling process's parent.
+	PPID uint32
+	// UID is the real user ID of the calling process.
+	UID uint32
+	// GID is the real group ID of the calling process.
+	GID uint32
+	// Comm is the short task-name (≤ 15 bytes) at the time of execve.
+	Comm string
+	// Filename is the path argument supplied to execve/execveat.
+	Filename string
+	// Argv is the space-joined argument list (argv[0..N]), truncated at
+	// TRIPWIRE_ARGV_LEN (256) bytes by the BPF program.
+	Argv string
+}
 
-// ─── ProcessWatcher ───────────────────────────────────────────────────────────
-
-// ProcessWatcher loads the eBPF execve-tracing program and delivers
-// AlertEvents for exec events that match configured PROCESS rules.
+// Loader loads the compiled eBPF object into the kernel, attaches it to the
+// execve and execveat tracepoints, and pumps kernel events to the Events
+// channel.
 //
-// It implements [watcher.Watcher] and is safe for concurrent use.
+// Lifecycle:
 //
-// Unlike the NETLINK_CONNECTOR-based ProcessWatcher in the parent watcher
-// package, this implementation captures argv, UID, GID, and PPID directly
-// in the kernel, avoiding the TOCTOU window between the exec event and the
-// subsequent /proc reads.
+//  1. Create with NewLoader; the constructor checks the kernel version.
+//  2. Call Load(ctx) to attach the BPF programs and start the event goroutine.
+//  3. Read typed ExecEvents from Events().
+//  4. Call Close() to detach, free all kernel objects, and close the channel.
 //
-// Requires either the -tags bpf_embedded build or a bpfObjPath passed to
-// SetBPFObject before calling Start.
-type ProcessWatcher struct {
-	rules     []config.TripwireRule
-	logger    *slog.Logger
-	objBytes  []byte // BPF object bytes; falls back to package-level bpfObjectBytes
+// Loader is safe for concurrent use after Load returns.
+type Loader struct {
+	events chan ExecEvent
+	logger *slog.Logger
 
-	events   chan watcher.AlertEvent
 	mu       sync.Mutex
-	cancel   func()
+	coll     *ciliumebpf.Collection
+	links    []link.Link
+	rd       *ringbuf.Reader
 	stopOnce sync.Once
 	wg       sync.WaitGroup
 }
 
-// NewProcessWatcher creates an eBPF-backed ProcessWatcher from the provided
-// rules. Non-PROCESS rules are silently ignored. If logger is nil,
-// slog.Default() is used. The returned watcher is not yet started; call Start
-// to begin monitoring.
+// NewLoader creates a new Loader after verifying that the running kernel
+// supports eBPF ring buffers (Linux ≥ 5.8). It returns ErrNotSupported when
+// the kernel is too old.
 //
-// When built with -tags bpf_embedded the BPF object is used automatically.
-// Otherwise, call SetBPFObject to provide the compiled BPF object bytes before
-// calling Start.
-func NewProcessWatcher(rules []config.TripwireRule, logger *slog.Logger) *ProcessWatcher {
+// The caller must call Close() when done, even if Load is never called.
+func NewLoader(logger *slog.Logger) (*Loader, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
-
-	var procRules []config.TripwireRule
-	for _, r := range rules {
-		if r.Type == "PROCESS" {
-			procRules = append(procRules, r)
-		}
+	if err := requireKernelVersion(5, 8); err != nil {
+		return nil, err
 	}
-
-	return &ProcessWatcher{
-		rules:  procRules,
+	return &Loader{
+		events: make(chan ExecEvent, 1024),
 		logger: logger,
-		events: make(chan watcher.AlertEvent, 64),
-	}
+	}, nil
 }
 
-// SetBPFObject supplies the compiled BPF object bytes to use when Start is
-// called. This is typically used in tests or when the binary is not built with
-// -tags bpf_embedded. The bytes must represent a valid 64-bit little-endian BPF
-// ELF object compiled from process.bpf.c.
+// Load parses the embedded BPF object, loads all programs and maps into the
+// kernel, attaches the programs to the execve and execveat tracepoints, and
+// starts the ring-buffer event pump in a background goroutine.
 //
-// SetBPFObject must be called before Start.
-func (w *ProcessWatcher) SetBPFObject(obj []byte) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.objBytes = obj
-}
-
-// Events returns a read-only channel from which callers receive AlertEvents.
-// The channel is closed when the watcher stops (after Stop returns).
-func (w *ProcessWatcher) Events() <-chan watcher.AlertEvent {
-	return w.events
-}
-
-// Start loads the eBPF object into the kernel, attaches the execve and
-// execveat tracepoints, and begins delivering AlertEvents for exec calls that
-// match any configured PROCESS rule. It returns immediately after launching
-// the background ring-buffer reader loop.
+// The context controls the lifetime of the event pump: cancelling ctx causes
+// the goroutine to exit within one second (the ring-buffer read deadline).
+// Load must be called at most once; subsequent calls return an error.
 //
-// Requires CAP_BPF (Linux ≥ 5.8) or CAP_SYS_ADMIN; returns a descriptive
-// error otherwise. Also requires Linux ≥ 5.8 for BPF_MAP_TYPE_RINGBUF.
-//
-// Calling Start on an already-running watcher is a no-op (returns nil).
-func (w *ProcessWatcher) Start(ctx context.Context) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+// Privilege: loading BPF programs requires CAP_BPF (Linux ≥ 5.8) or
+// CAP_SYS_ADMIN on older kernels.
+func (l *Loader) Load(ctx context.Context) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-	if w.cancel != nil {
-		return nil // already running
+	if l.coll != nil {
+		return errors.New("ebpf loader: already loaded")
 	}
 
-	// Resolve BPF object bytes: instance-level override → package-level embed.
-	objBytes := w.objBytes
-	if len(objBytes) == 0 {
-		objBytes = bpfObjectBytes
-	}
-	if len(objBytes) == 0 {
-		return fmt.Errorf("ebpf process watcher: no BPF object available; " +
-			"either build with -tags bpf_embedded (after running " +
-			"\"make -C internal/watcher/ebpf\") or call SetBPFObject before Start")
-	}
-
-	obj, err := loadBPFObject(bytes.NewReader(objBytes))
+	// Parse the embedded BPF ELF object.
+	spec, err := ciliumebpf.LoadCollectionSpecFromReader(bytes.NewReader(processObjBytes))
 	if err != nil {
-		return fmt.Errorf("ebpf process watcher: load BPF object: %w", err)
+		return fmt.Errorf("ebpf loader: parse BPF object: %w "+
+			"(compile with 'make -C internal/watcher/ebpf')", err)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	w.cancel = cancel
+	// Load (verify + JIT-compile) all programs and create all maps.
+	coll, err := ciliumebpf.NewCollection(spec)
+	if err != nil {
+		var ve *ciliumebpf.VerifierError
+		if errors.As(err, &ve) {
+			return fmt.Errorf("%w: BPF verifier: %v", ErrNotSupported, ve)
+		}
+		return fmt.Errorf("ebpf loader: load BPF collection: %w", err)
+	}
+	l.coll = coll
 
-	w.wg.Add(1)
-	go w.readLoop(ctx, obj)
+	// Attach to sys_enter_execve.
+	lnExecve, err := link.Tracepoint(
+		"syscalls", "sys_enter_execve",
+		coll.Programs["trace_execve"], nil,
+	)
+	if err != nil {
+		coll.Close()
+		return fmt.Errorf("ebpf loader: attach execve tracepoint: %w", err)
+	}
+	l.links = append(l.links, lnExecve)
 
-	w.logger.Info("ebpf process watcher started",
-		slog.Int("rules", len(w.rules)),
-		slog.String("mechanism", "eBPF/tracepoint+ringbuf"),
+	// Attach to sys_enter_execveat.
+	lnExecveat, err := link.Tracepoint(
+		"syscalls", "sys_enter_execveat",
+		coll.Programs["trace_execveat"], nil,
+	)
+	if err != nil {
+		lnExecve.Close()
+		coll.Close()
+		return fmt.Errorf("ebpf loader: attach execveat tracepoint: %w", err)
+	}
+	l.links = append(l.links, lnExecveat)
+
+	// Open the ring-buffer reader for the execve_events map.
+	rd, err := ringbuf.NewReader(coll.Maps["execve_events"])
+	if err != nil {
+		lnExecve.Close()
+		lnExecveat.Close()
+		coll.Close()
+		return fmt.Errorf("ebpf loader: open ring buffer: %w", err)
+	}
+	l.rd = rd
+
+	l.wg.Add(1)
+	go l.readLoop(ctx)
+
+	l.logger.Info("ebpf loader: execve tracing active",
+		slog.String("mechanism", "BPF ring buffer / tracepoint"),
 	)
 	return nil
 }
 
-// Stop signals the watcher to cease monitoring, waits for the background loop
-// to exit, and closes the Events channel. Stop is safe to call multiple times
-// (idempotent).
-func (w *ProcessWatcher) Stop() {
-	w.stopOnce.Do(func() {
-		w.mu.Lock()
-		cancel := w.cancel
-		w.cancel = nil
-		w.mu.Unlock()
+// Events returns the read-only channel on which ExecEvents are delivered.
+// The channel is closed when Close is called and the background goroutine
+// has exited. Callers should range over this channel until it is closed.
+func (l *Loader) Events() <-chan ExecEvent {
+	return l.events
+}
 
-		if cancel != nil {
-			cancel()
+// Close detaches the BPF programs, waits for the event-pump goroutine to
+// exit, frees all kernel objects (maps, programs, links), and closes the
+// Events channel. Close is safe to call multiple times (idempotent) and may
+// be called concurrently with Load and Events.
+func (l *Loader) Close() {
+	l.stopOnce.Do(func() {
+		l.mu.Lock()
+		rd := l.rd
+		links := l.links
+		coll := l.coll
+		l.mu.Unlock()
+
+		// Closing the ring-buffer reader unblocks any pending rd.Read()
+		// call in the goroutine, causing it to return ringbuf.ErrClosed
+		// and exit cleanly.
+		if rd != nil {
+			_ = rd.Close()
 		}
-		w.wg.Wait()
 
-		close(w.events)
-		w.logger.Info("ebpf process watcher stopped")
+		// Wait for the event-pump goroutine to exit before releasing
+		// kernel objects to prevent use-after-free.
+		l.wg.Wait()
+
+		// Detach tracepoints first, then free the collection.
+		for _, ln := range links {
+			_ = ln.Close()
+		}
+		if coll != nil {
+			coll.Close()
+		}
+
+		close(l.events)
+		l.logger.Info("ebpf loader: stopped")
 	})
 }
 
-// ─── Background loop ──────────────────────────────────────────────────────────
+// ─── Event pump ──────────────────────────────────────────────────────────────
 
-// readLoop is the background goroutine started by Start. It reads raw samples
-// from the BPF ring buffer, decodes them into execEvent structs, and
-// dispatches matching events. It exits when ctx is cancelled or the ring
-// buffer returns an unrecoverable error.
-func (w *ProcessWatcher) readLoop(ctx context.Context, obj *bpfObject) {
-	defer w.wg.Done()
-	defer obj.Close()
+// readLoop runs in the goroutine started by Load. It reads raw ring-buffer
+// records, converts them to ExecEvent values, and sends them on the events
+// channel. It exits when:
+//   - Close() is called (rd.Read() returns ringbuf.ErrClosed), or
+//   - ctx is cancelled (detected via the 1-second read deadline).
+func (l *Loader) readLoop(ctx context.Context) {
+	defer l.wg.Done()
 
 	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
+		// Set a short read deadline so we can detect context cancellation
+		// without blocking indefinitely when the ring buffer is quiet.
+		l.rd.SetDeadline(time.Now().Add(time.Second))
 
-		sample, err := obj.ringbuf.readSample(ctx)
+		rec, err := l.rd.Read()
 		if err != nil {
-			// Context cancellation is normal shutdown.
-			select {
-			case <-ctx.Done():
-				return
-			default:
+			if errors.Is(err, ringbuf.ErrClosed) {
+				return // Close() was called
 			}
-			w.logger.Warn("ebpf process watcher: ring buffer read error",
+			if errors.Is(err, os.ErrDeadlineExceeded) {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					continue // deadline expired; loop for another second
+				}
+			}
+			l.logger.Warn("ebpf loader: ring buffer read error",
 				slog.Any("error", err),
 			)
 			return
 		}
 
-		if len(sample) != execEventSize {
-			w.logger.Warn("ebpf process watcher: unexpected event size",
-				slog.Int("got", len(sample)),
+		if len(rec.RawSample) < execEventSize {
+			l.logger.Warn("ebpf loader: short ring-buffer record",
+				slog.Int("got", len(rec.RawSample)),
 				slog.Int("want", execEventSize),
 			)
 			continue
 		}
 
-		var evt execEvent
-		if err := binary.Read(bytes.NewReader(sample), binary.NativeEndian, &evt); err != nil {
-			w.logger.Warn("ebpf process watcher: decode event", slog.Any("error", err))
-			continue
+		evt := parseExecEvent(rec.RawSample)
+		select {
+		case l.events <- evt:
+		default:
+			l.logger.Warn("ebpf loader: event channel full, dropping execve event",
+				slog.String("filename", evt.Filename),
+				slog.Uint64("pid", uint64(evt.PID)),
+			)
 		}
-
-		w.handleEvent(&evt)
 	}
 }
 
-// ─── Event handling ───────────────────────────────────────────────────────────
+// ─── Parsing helpers ─────────────────────────────────────────────────────────
 
-// handleEvent converts an execEvent into an AlertEvent and, if the event
-// matches a configured PROCESS rule, delivers it via the events channel.
-func (w *ProcessWatcher) handleEvent(evt *execEvent) {
-	comm := nullTerminated(evt.Comm[:])
-	filename := nullTerminated(evt.Filename[:])
-	argv := nullTerminated(evt.Argv[:])
-
-	// Try matching against the full filename first, then the comm name.
-	rule := w.matchingRule(filename)
-	if rule == nil {
-		rule = w.matchingRule(comm)
+// parseExecEvent deserialises the raw ring-buffer bytes into an ExecEvent.
+// The byte layout is determined by the C struct exec_event in process.h:
+//
+//	PID(4) PPID(4) UID(4) GID(4) Comm(16) Filename(256) Argv(256) = 544 B
+//
+// All integer fields are in the native byte order of the kernel (little-endian
+// on x86/arm64). Only the first execEventSize bytes of b are consumed.
+func parseExecEvent(b []byte) ExecEvent {
+	var raw execEvent
+	r := bytes.NewReader(b[:execEventSize])
+	// encoding/binary.Read handles each field in declaration order.
+	// For uint32 fields it applies the given byte order; for [n]byte fields
+	// it copies bytes directly (no byte-order conversion).
+	if err := binary.Read(r, binary.LittleEndian, &raw); err != nil {
+		// Should not happen: we already validated len(b) >= execEventSize.
+		return ExecEvent{}
 	}
-	if rule == nil {
-		return // no configured rule matches this process
+	return ExecEvent{
+		PID:      raw.PID,
+		PPID:     raw.PPID,
+		UID:      raw.UID,
+		GID:      raw.GID,
+		Comm:     cString(raw.Comm[:]),
+		Filename: cString(raw.Filename[:]),
+		Argv:     cString(raw.Argv[:]),
 	}
-
-	detail := map[string]any{
-		"pid":  int(evt.PID),
-		"ppid": int(evt.PPID),
-		"uid":  int(evt.UID),
-		"gid":  int(evt.GID),
-		"comm": comm,
-		"exe":  filename,
-	}
-	if argv != "" {
-		detail["cmdline"] = argv
-	}
-
-	alert := watcher.AlertEvent{
-		TripwireType: "PROCESS",
-		RuleName:     rule.Name,
-		Severity:     rule.Severity,
-		Timestamp:    time.Now().UTC(),
-		Detail:       detail,
-	}
-
-	select {
-	case w.events <- alert:
-	default:
-		w.logger.Warn("ebpf process watcher: event channel full, dropping event",
-			slog.String("rule", rule.Name),
-			slog.Time("ts", alert.Timestamp),
-		)
-	}
-
-	w.logger.Info("ebpf process watcher: execve alert",
-		slog.String("rule", rule.Name),
-		slog.Int("pid", int(evt.PID)),
-		slog.String("exe", filename),
-		slog.String("comm", comm),
-	)
 }
 
-// matchingRule returns the first PROCESS rule whose Target glob pattern
-// matches procName. The match is attempted against the base name first, then
-// against the full path. An empty Target matches every process. Returns nil
-// when no rule matches.
-func (w *ProcessWatcher) matchingRule(procName string) *config.TripwireRule {
-	base := filepath.Base(procName)
-	for i := range w.rules {
-		r := &w.rules[i]
-		pat := r.Target
-		if pat == "" {
-			return r // wildcard
-		}
-		if ok, _ := filepath.Match(pat, base); ok {
-			return r
-		}
-		if ok, _ := filepath.Match(pat, procName); ok {
-			return r
-		}
+// cString converts a NUL-terminated C string (stored in a byte slice) to a
+// Go string, stripping the NUL byte and any trailing spaces.
+func cString(b []byte) string {
+	if i := bytes.IndexByte(b, 0); i >= 0 {
+		b = b[:i]
+	}
+	return strings.TrimRight(string(b), " ")
+}
+
+// ─── Kernel version check ────────────────────────────────────────────────────
+
+// requireKernelVersion reads the kernel release string from
+// /proc/sys/kernel/osrelease and returns ErrNotSupported if the running
+// kernel is older than major.minor.
+func requireKernelVersion(major, minor int) error {
+	b, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	if err != nil {
+		return fmt.Errorf("ebpf: read kernel version: %w", err)
+	}
+
+	release := strings.TrimSpace(string(b))
+
+	var maj, min int
+	if _, err := fmt.Sscanf(release, "%d.%d", &maj, &min); err != nil {
+		return fmt.Errorf("ebpf: parse kernel release %q: %w", release, err)
+	}
+
+	if maj < major || (maj == major && min < minor) {
+		return fmt.Errorf("%w: running kernel %d.%d < required %d.%d",
+			ErrNotSupported, maj, min, major, minor)
 	}
 	return nil
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// nullTerminated returns the string content of buf up to and excluding the
-// first NUL byte. If no NUL is present, the entire slice is returned as a
-// string (this should not happen for well-formed kernel events).
-func nullTerminated(buf []byte) string {
-	if i := bytes.IndexByte(buf, 0); i >= 0 {
-		return string(buf[:i])
-	}
-	return string(buf)
 }
