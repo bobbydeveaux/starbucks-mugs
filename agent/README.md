@@ -25,17 +25,36 @@ agent/
 go build -o tripwire ./cmd/tripwire
 ```
 
-Cross-compile for Linux amd64:
+Cross-compile for a specific platform (static binary, no CGo):
 
 ```bash
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o tripwire-linux-amd64 ./cmd/tripwire
+GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o tripwire-linux-amd64   ./cmd/tripwire
+GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o tripwire-linux-arm64   ./cmd/tripwire
+GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o tripwire-darwin-amd64  ./cmd/tripwire
+GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o tripwire-darwin-arm64  ./cmd/tripwire
 ```
 
-Cross-compile for macOS arm64 (Apple Silicon):
+Set the embedded version string at build time:
 
 ```bash
-GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o tripwire-darwin-arm64 ./cmd/tripwire
+CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=v1.2.3" -o tripwire ./cmd/tripwire
 ```
+
+## CI/CD — GitHub Actions
+
+The workflow at `.github/workflows/build.yml` runs automatically:
+
+| Trigger | Behaviour |
+|---|---|
+| Push to `main` | Compiles all four binaries and uploads them as workflow artifacts (retained for 7 days) |
+| Push of `v*.*.*` tag | Same build, then creates a GitHub Release with all four binaries attached |
+
+Binaries are compiled with `CGO_ENABLED=0` and `-s -w` so every Linux target is
+statically linked (`ldd` reports *not a dynamic executable*).
+
+Download the latest release binary for your platform from the
+[GitHub Releases](../../releases) page.
+
 
 ## Usage
 
@@ -109,3 +128,4 @@ go test ./...
 | 3 | Process watcher (eBPF/ptrace/kqueue) | ✓ implemented |
 | 3 | gRPC alert transport + WebSocket fan-out | ✓ implemented |
 | 4 | Agent lifecycle unit files (systemd + launchd) | ✓ implemented |
+| 4 | **GitHub Actions build matrix for cross-platform binaries** | ✓ implemented |
