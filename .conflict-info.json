@@ -1,9 +1,9 @@
 {
-  "prNumber": 237,
+  "prNumber": 241,
   "baseBranch": "main",
-  "headBranch": "feature/219-tripwire-cybersecurity-tool-sprint-3-issue-219",
+  "headBranch": "feature/216-tripwire-cybersecurity-tool-sprint-3-issue-216",
   "conflictedFiles": [
-    "proto/alert.proto"
+    ".claude-output.json"
   ],
   "conflictCount": 1
 }
