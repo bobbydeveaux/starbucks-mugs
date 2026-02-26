@@ -117,6 +117,31 @@ logrotate, upgrade and uninstall procedures) see
 go test ./...
 ```
 
+## Prometheus metrics
+
+The transport layer exposes Prometheus-compatible counters and a connection gauge
+via `transport.Metrics`.  Wire the metrics into your HTTP mux and Prometheus will
+scrape them from the `/metrics` endpoint:
+
+```go
+m := transport.NewMetrics()
+client := transport.New(cfg, logger, transport.WithMetrics(m))
+
+http.Handle("/metrics", m.Handler())
+go http.ListenAndServe(cfg.Health.Address, nil) // e.g. 127.0.0.1:9090
+```
+
+Key metrics:
+
+| Metric | Type | Description |
+|---|---|---|
+| `transport_alerts_sent_total` | counter | Alerts delivered to the dashboard |
+| `transport_reconnect_attempts_total` | counter | Reconnect cycles after errors |
+| `transport_connected` | gauge | 1 when a stream is active |
+
+See `docs/concepts/tripwire-cybersecurity-tool/transport-metrics.md` for the full
+metric catalogue, example scrape output, and suggested alerting rules.
+
 ## Sprint status
 
 | Sprint | Features | Status |
@@ -129,3 +154,4 @@ go test ./...
 | 3 | gRPC alert transport + WebSocket fan-out | ✓ implemented |
 | 4 | Agent lifecycle unit files (systemd + launchd) | ✓ implemented |
 | 4 | **GitHub Actions build matrix for cross-platform binaries** | ✓ implemented |
+| 4 | **Prometheus metrics for transport layer** | ✓ implemented |
