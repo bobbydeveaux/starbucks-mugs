@@ -69,6 +69,8 @@ docker compose down -v
 | `ENVIRONMENT` | No | `development` | Deployment environment label |
 | `MAX_FILE_SIZE_MB` | No | `50` | Maximum synchronous scan file size |
 | `THREAD_POOL_WORKERS` | No | `4` | Worker threads for CPU-bound extraction |
+| `REPORTS_DIR` | No | `/tmp/fileguard/reports` | Local directory where generated compliance report files are stored |
+| `REPORT_CADENCE` | No | `daily` | Beat schedule cadence for automatic report generation (`daily` or `weekly`) |
 | `RUN_MIGRATIONS` | No | `false` | Run `alembic upgrade head` on container start |
 
 ## API Reference
@@ -131,10 +133,13 @@ fileguard/              Python package (FastAPI application)
 │   └── compliance_report.py  SQLAlchemy ORM model for compliance_report table
 ├── schemas/
 │   ├── tenant.py               Pydantic TenantConfig schema (request.state.tenant)
+│   ├── report.py               Pydantic schemas for compliance report data structures
 │   └── compliance_report.py    Pydantic schemas for compliance report API responses
+├── celery_app.py               Celery application factory (broker, beat schedule)
 ├── services/
-│   ├── audit.py          AuditService: HMAC-signed scan event persistence + SIEM forwarding
-│   └── compliance_report.py  ComplianceReportService: read-only report listing and retrieval
+│   ├── audit.py                AuditService: HMAC-signed scan event persistence + SIEM forwarding
+│   ├── reports.py              ReportService + Celery tasks for compliance report generation
+│   └── compliance_report.py    ComplianceReportService: read-only report listing and retrieval
 └── db/
     ├── base.py         Declarative base shared by all ORM models
     └── session.py      SQLAlchemy async session factory
@@ -157,6 +162,7 @@ tests/
 │   ├── test_clamav_adapter.py          Unit tests for ClamAV clamd adapter
 │   ├── test_audit_service.py           Unit tests for AuditService (HMAC, SIEM, DB mock)
 │   ├── test_document_extractor.py      Unit tests for DocumentExtractor
+│   ├── test_report_service.py          Unit tests for ReportService and Celery tasks
 │   └── test_compliance_report_api.py   Unit tests for compliance report API handlers and service
 └── integration/
     └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
@@ -166,6 +172,45 @@ requirements.txt        Python dependencies
 alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
 ```
+
+## Compliance Reports
+
+`fileguard/services/reports.py` implements scheduled compliance report generation.
+See [`compliance-reports.md`](compliance-reports.md) for the full reference.
+
+### Overview
+
+| Component | Description |
+|---|---|
+| `fileguard/schemas/report.py` | Pydantic schemas: `VerdictBreakdown`, `ReportPayload`, `ComplianceReportCreate`, `ComplianceReportRead` |
+| `fileguard/celery_app.py` | Celery app factory; Redis broker + result backend; configurable beat schedule |
+| `fileguard/services/reports.py` | `ReportService` for aggregation + generation; Celery tasks for scheduling |
+
+### Quick start
+
+```python
+from fileguard.services.reports import generate_compliance_report
+
+# Trigger report generation for a single tenant asynchronously
+generate_compliance_report.delay(
+    tenant_id="<tenant-uuid>",
+    period_start="2026-01-01T00:00:00+00:00",
+    period_end="2026-02-01T00:00:00+00:00",
+    fmt="json",  # or "pdf"
+)
+```
+
+### Starting the Celery worker and beat scheduler
+
+```bash
+# Start the worker
+celery -A fileguard.celery_app worker --loglevel=info -Q fileguard
+
+# Start the beat scheduler (in a separate process)
+celery -A fileguard.celery_app beat --loglevel=info
+```
+
+---
 
 ## AV Engine Adapter
 

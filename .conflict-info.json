@@ -1,9 +1,9 @@
 {
-  "prNumber": 292,
+  "prNumber": 294,
   "baseBranch": "main",
-  "headBranch": "feature/290-fileguard-sprint-3-issue-290",
+  "headBranch": "feature/289-fileguard-sprint-3-issue-289",
   "conflictedFiles": [
-    ".claude-output.json"
+    "docs/concepts/fileguard/README.md"
   ],
   "conflictCount": 1
 }

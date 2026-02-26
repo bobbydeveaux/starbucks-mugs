@@ -45,5 +45,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     MAX_FILE_SIZE_MB: int = 50
 
+    # Compliance reports
+    REPORTS_DIR: str = "/tmp/fileguard/reports"
+    REPORT_CADENCE: str = "daily"  # "daily" or "weekly"
+
 
 settings = Settings()
