@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in .claude-resolution.json and .conflict-info.json. Both are CI/CD workflow metadata files generated per merge attempt. The .conflict-info.json file had no conflict markers and was staged as-is. The .claude-resolution.json conflict was between two stale AI-generated summaries from prior merge runs; replaced with current resolution metadata reflecting this session.",
-  "strategyUsed": "replaced conflicted metadata files with correct current-context values — .conflict-info.json was already clean and staged as-is; .claude-resolution.json conflict markers were removed and the file was rewritten to reflect this resolution session"
+  "filesResolved": 1,
+  "summary": "Resolved one conflict in .claude-output.json. The file was deleted by our branch (feature/183-fileguard-sprint-3-issue-183) but the incoming merge had a version from a previous AI-assisted process about a different feature (dashboard-ui, Closes #258). The deletion was accepted as the correct resolution.",
+  "strategyUsed": "kept our deletion of .claude-output.json — the file is a generated output artifact from a previous PR workflow run (unrelated to the current branch work), and our branch intentionally removed it; accepting the deletion avoids carrying over stale metadata from a different feature"
 }
