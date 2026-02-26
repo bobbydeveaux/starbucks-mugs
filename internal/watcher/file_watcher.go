@@ -1,132 +1,253 @@
-// This file provides the platform-agnostic base implementation of the Watcher
-// interface and the shared configuration type used by all file watcher variants.
-//
-// Build-tag conventions for platform-specific implementations:
-//
-//	file_watcher_linux.go  (//go:build linux)  — inotify-based implementation
-//	file_watcher_darwin.go (//go:build darwin) — FSEvents/kqueue-based implementation
-//
-// Platform-specific files register a constructor via init():
-//
-//	func init() { platformFactory = newInotifyWatcher }  // Linux example
-//
-// When no platform registration has occurred, NewWatcher falls back to the
-// baseWatcher, which satisfies the interface but delivers no filesystem events.
-// This allows the package to build and link cleanly on every supported OS.
 package watcher
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+	"path/filepath"
 	"sync"
+	"time"
+
+	"github.com/tripwire/agent/internal/agent"
+	"github.com/tripwire/agent/internal/config"
 )
 
-// defaultBufferSize is the default capacity of the FileEvent channel returned
-// by baseWatcher.Events(). A capacity of 64 prevents the watcher from blocking
-// the kernel/OS callback when the consumer is momentarily behind.
-const defaultBufferSize = 64
+// platformWatcherFunc is the signature of the platform-specific file watching
+// function. It must send FileEvents to events until ctx is cancelled or an
+// error occurs, then return. It must NOT close the events channel.
+type platformWatcherFunc func(ctx context.Context, paths []string, events chan<- FileEvent) error
 
-// WatcherConfig holds the shared configuration used when constructing a
-// platform-specific file watcher. It is passed to NewWatcher and forwarded
-// to the registered platform factory.
-type WatcherConfig struct {
-	// Paths is the initial list of file or directory paths to monitor.
-	// An empty slice is valid; paths can be supplied later via Watch.
-	Paths []string
-
-	// BufferSize is the capacity of the FileEvent channel returned by
-	// Events(). A value of 0 or negative uses defaultBufferSize (64).
-	// Increase this for high-traffic directories where the consumer may
-	// lag behind the watcher.
-	BufferSize int
+// FileWatcher implements agent.Watcher for file system monitoring. It wraps a
+// platform-specific watching backend and adds goroutine lifecycle management
+// with automatic restart on error.
+type FileWatcher struct {
+	rule            config.TripwireRule
+	logger          *slog.Logger
+	events          chan agent.AlertEvent
+	cancel          context.CancelFunc
+	done            chan struct{}
+	mu              sync.Mutex
+	started         bool
+	platformWatcher platformWatcherFunc
 }
 
-// platformFactory is the registered platform-specific constructor. It is set
-// by platform-specific files (file_watcher_linux.go, file_watcher_darwin.go)
-// in their init() function. When nil, NewWatcher falls back to the baseWatcher.
-//
-// Constructor signature that platform files must use:
-//
-//	func newPlatformImpl(cfg WatcherConfig) (Watcher, error)
-var platformFactory func(cfg WatcherConfig) (Watcher, error)
+// NewFileWatcher creates a FileWatcher for the given TripwireRule. The watcher
+// is idle until Start is called.
+func NewFileWatcher(rule config.TripwireRule, logger *slog.Logger) *FileWatcher {
+	return &FileWatcher{
+		rule:            rule,
+		logger:          logger,
+		events:          make(chan agent.AlertEvent, 64),
+		platformWatcher: startPlatformWatcher,
+	}
+}
 
-// NewWatcher constructs a Watcher from cfg. On Linux it returns an
-// inotify-backed watcher (when file_watcher_linux.go is compiled in);
-// on macOS it returns an FSEvents/kqueue-backed watcher (when
-// file_watcher_darwin.go is compiled in). On unsupported platforms, or
-// when no platform implementation has been registered, it returns a no-op
-// baseWatcher that satisfies the interface but delivers no events.
+// Start begins monitoring the paths configured in the rule. It launches a
+// background goroutine and returns immediately. If the path glob matches
+// nothing, the parent directory is watched and the watcher waits for the
+// file(s) to be created.
 //
-// If cfg.Paths is non-empty, Watch is called automatically with those paths
-// before NewWatcher returns; any error from that call is returned here.
-func NewWatcher(cfg WatcherConfig) (Watcher, error) {
-	if cfg.BufferSize <= 0 {
-		cfg.BufferSize = defaultBufferSize
+// Returns an error if the rule target is an invalid glob or if Start has
+// already been called on this instance.
+func (fw *FileWatcher) Start(ctx context.Context) error {
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+
+	if fw.started {
+		return fmt.Errorf("file watcher %q: already started", fw.rule.Name)
 	}
 
-	var (
-		w   Watcher
-		err error
-	)
-
-	if platformFactory != nil {
-		w, err = platformFactory(cfg)
-	} else {
-		w = newBaseWatcher(cfg.BufferSize)
-	}
-
+	paths, err := fw.resolvePaths()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if len(cfg.Paths) > 0 {
-		if err := w.Watch(cfg.Paths); err != nil {
-			_ = w.Stop()
-			return nil, err
+	watchCtx, cancel := context.WithCancel(ctx)
+	fw.cancel = cancel
+	fw.done = make(chan struct{})
+	fw.started = true
+
+	go fw.watchLoop(watchCtx, paths)
+	return nil
+}
+
+// resolvePaths expands the rule's Target glob into a list of existing paths.
+// If no paths match, the parent directory is returned so that the watcher can
+// detect file creation.
+func (fw *FileWatcher) resolvePaths() ([]string, error) {
+	paths, err := filepath.Glob(fw.rule.Target)
+	if err != nil {
+		return nil, fmt.Errorf("file watcher %q: invalid glob %q: %w", fw.rule.Name, fw.rule.Target, err)
+	}
+
+	if len(paths) == 0 {
+		// The target doesn't exist yet — watch the parent directory so we
+		// can detect creation events.
+		dir := filepath.Dir(fw.rule.Target)
+		fw.logger.Info("file watcher: glob matches nothing, watching parent directory",
+			slog.String("rule", fw.rule.Name),
+			slog.String("glob", fw.rule.Target),
+			slog.String("dir", dir),
+		)
+		paths = []string{dir}
+	}
+
+	return paths, nil
+}
+
+// watchLoop is the background goroutine. It runs the platform watcher in a
+// loop, restarting with exponential backoff whenever an error occurs. It exits
+// cleanly when ctx is cancelled.
+func (fw *FileWatcher) watchLoop(ctx context.Context, paths []string) {
+	// Signal the events channel and done channel on exit so downstream
+	// consumers and Stop() callers can unblock.
+	defer func() {
+		close(fw.events)
+		close(fw.done)
+	}()
+
+	backoff := time.Second
+	const maxBackoff = 30 * time.Second
+
+	for {
+		// Check for cancellation before (re-)starting.
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		watchErr := fw.runWatcher(ctx, paths)
+		if watchErr == nil {
+			// Clean exit (context cancelled or platform watcher finished without error).
+			return
+		}
+
+		// Platform watcher returned an error; restart after backoff.
+		fw.logger.Warn("file watcher error, restarting",
+			slog.String("rule", fw.rule.Name),
+			slog.Any("error", watchErr),
+			slog.Duration("backoff", backoff),
+		)
+
+		select {
+		case <-time.After(backoff):
+			backoff = min(backoff*2, maxBackoff)
+		case <-ctx.Done():
+			return
 		}
 	}
-
-	return w, nil
 }
 
-// ---------------------------------------------------------------------------
-// baseWatcher — fallback / unsupported-platform implementation
-// ---------------------------------------------------------------------------
+// runWatcher starts the platform-specific watcher in a goroutine and
+// forwards FileEvents to the agent alert pipeline until the platform watcher
+// exits or ctx is cancelled. Returns nil on clean shutdown, non-nil on error.
+func (fw *FileWatcher) runWatcher(ctx context.Context, paths []string) error {
+	fileEvents := make(chan FileEvent, 64)
+	errCh := make(chan error, 1)
 
-// baseWatcher is the no-op fallback implementation of Watcher used when no
-// platform-specific factory has been registered. It satisfies the interface
-// contract: Watch and Stop succeed without error, Events returns a channel
-// that is closed when Stop is called. No events are ever delivered.
-//
-// Platform-specific files replace this behaviour by registering a factory
-// via the platformFactory variable in their init() function.
-type baseWatcher struct {
-	events   chan FileEvent
-	stopOnce sync.Once
-}
+	watchCtx, watchCancel := context.WithCancel(ctx)
+	defer watchCancel()
 
-// newBaseWatcher constructs a baseWatcher with a buffered FileEvent channel.
-func newBaseWatcher(bufSize int) *baseWatcher {
-	return &baseWatcher{
-		events: make(chan FileEvent, bufSize),
+	go func() {
+		errCh <- fw.platformWatcher(watchCtx, paths, fileEvents)
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			// Outer context cancelled; signal the platform watcher and wait.
+			watchCancel()
+			<-errCh
+			return nil
+
+		case fe := <-fileEvents:
+			fw.emitAlert(fe)
+
+		case err := <-errCh:
+			// Platform watcher finished. Drain any buffered events first.
+			for {
+				select {
+				case fe := <-fileEvents:
+					fw.emitAlert(fe)
+				default:
+					return err
+				}
+			}
+		}
 	}
 }
 
-// Watch is a no-op on the base implementation. Platform-specific constructors
-// registered via platformFactory replace this with kernel-level watch logic.
-func (w *baseWatcher) Watch(_ []string) error {
-	return nil
+// emitAlert converts a FileEvent into an agent.AlertEvent and forwards it to
+// the event channel. If the channel buffer is full the event is dropped and
+// a warning is logged.
+func (fw *FileWatcher) emitAlert(fe FileEvent) {
+	detail := map[string]any{
+		"path":       fe.FilePath,
+		"event_type": eventTypeName(fe.EventType),
+	}
+	if fe.PID != 0 {
+		detail["pid"] = fe.PID
+	}
+	if fe.UID != 0 {
+		detail["uid"] = fe.UID
+	}
+	if fe.Username != "" {
+		detail["username"] = fe.Username
+	}
+
+	evt := agent.AlertEvent{
+		TripwireType: "FILE",
+		RuleName:     fw.rule.Name,
+		Severity:     fw.rule.Severity,
+		Timestamp:    fe.Timestamp,
+		Detail:       detail,
+	}
+
+	select {
+	case fw.events <- evt:
+	default:
+		fw.logger.Warn("file watcher: event buffer full, dropping event",
+			slog.String("rule", fw.rule.Name),
+			slog.String("path", fe.FilePath),
+		)
+	}
 }
 
-// Stop closes the Events channel. It is idempotent and safe to call multiple
-// times.
-func (w *baseWatcher) Stop() error {
-	w.stopOnce.Do(func() {
-		close(w.events)
-	})
-	return nil
+// Stop signals the watcher to stop monitoring and blocks until all internal
+// goroutines have exited. It is safe to call Stop multiple times and before
+// Start has been called.
+func (fw *FileWatcher) Stop() {
+	fw.mu.Lock()
+	started := fw.started
+	fw.mu.Unlock()
+
+	if !started {
+		return
+	}
+
+	fw.cancel()
+	<-fw.done
 }
 
-// Events returns the read-only FileEvent channel. The channel is closed when
-// Stop returns.
-func (w *baseWatcher) Events() <-chan FileEvent {
-	return w.events
+// Events returns the read-only channel on which alert events are delivered.
+// The channel is closed when the watcher stops.
+func (fw *FileWatcher) Events() <-chan agent.AlertEvent {
+	return fw.events
+}
+
+// eventTypeName returns a human-readable string for an EventType.
+func eventTypeName(et EventType) string {
+	switch et {
+	case EventRead:
+		return "read"
+	case EventWrite:
+		return "write"
+	case EventCreate:
+		return "create"
+	case EventDelete:
+		return "delete"
+	default:
+		return "unknown"
+	}
 }

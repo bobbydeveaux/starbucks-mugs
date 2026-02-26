@@ -91,25 +91,56 @@ rules:
 > `mmap`-based reads or kernel-initiated reads (e.g. exec loader).  The
 > `read` event is most reliable for user-space `open(2)` + `read(2)` patterns.
 
-### `rules.networks` — Network tripwires
+### `NETWORK` rules — TCP/UDP port tripwires
+
+NETWORK rules monitor TCP and UDP traffic on specific ports.  The agent polls
+`/proc/net/tcp`, `/proc/net/tcp6`, `/proc/net/udp`, and `/proc/net/udp6` at
+a configurable interval (default 1 s) and emits an alert the first time a
+connection matching the rule's filters is observed.
 
 ```yaml
 rules:
-  networks:
-    - name: ssh-honeypot
-      port: 2222
-      protocol: tcp
-      direction: inbound
-      severity: CRITICAL
+  - name: ssh-honeypot
+    type: NETWORK
+    target: "2222"
+    protocol: tcp
+    direction: inbound
+    severity: CRITICAL
+  - name: dns-monitor
+    type: NETWORK
+    target: "53"
+    protocol: udp
+    direction: both
+    severity: WARN
 ```
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `name` | string | **yes** | — | Unique rule identifier. |
-| `port` | integer | **yes** | — | Port number to monitor (1–65535). |
-| `protocol` | string | no | `tcp` | Transport protocol: `tcp`, `udp`, or `both`. |
-| `direction` | string | no | `inbound` | Connection direction: `inbound`, `outbound`, or `both`. |
-| `severity` | string | no | `WARN` | Alert severity: `INFO`, `WARN`, or `CRITICAL`. |
+| `name` | string | **yes** | — | Unique rule identifier (appears in every alert). |
+| `type` | string | **yes** | — | Must be `NETWORK`. |
+| `target` | string | **yes** | — | Port number to monitor (1–65535). |
+| `severity` | string | **yes** | — | Alert severity: `INFO`, `WARN`, or `CRITICAL`. |
+| `protocol` | string | no | `both` | Transport protocol to match: `tcp`, `udp`, or `both`. `tcp` also matches IPv6 TCP (`tcp6`); `udp` also matches IPv6 UDP (`udp6`). |
+| `direction` | string | no | `inbound` | Connection direction: `inbound` (match on local port), `outbound` (match on remote port), or `both`. |
+
+**Protocol notes:**
+
+- **TCP** monitoring detects ESTABLISHED connections (state `0x01` in `/proc/net/tcp`).
+- **UDP** monitoring detects active bound sockets (state `0x07`) and connected sockets (state `0x01`) in `/proc/net/udp`.  Because most UDP services are unconnected, the remote address in alerts may be `0.0.0.0:0`.
+
+**Direction notes:**
+
+- `inbound` – fires when the rule's port equals the *local* port (a remote client connected to this host).
+- `outbound` – fires when the rule's port equals the *remote* port (this host initiated a connection to that port on another machine).
+- `both` – fires in either case.
+
+**Alert Detail fields** emitted by a NETWORK rule:
+
+| Detail key | Example value | Description |
+|---|---|---|
+| `local_addr` | `"0.0.0.0:22"` | Local address of the connection. |
+| `remote_addr` | `"10.0.0.5:54321"` | Remote address (may be `0.0.0.0:0` for unconnected UDP). |
+| `protocol` | `"tcp"` / `"udp"` / `"tcp6"` / `"udp6"` | Transport protocol detected. |
 
 ### `rules.processes` — Process execution tripwires
 
