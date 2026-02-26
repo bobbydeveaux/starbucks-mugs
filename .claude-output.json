@@ -1,18 +1,21 @@
 {
-  "prTitle": "feat: GitHub Actions build matrix for cross-platform agent binaries + stable host_id fix",
-  "prBody": "## Summary\n\nThis PR implements the GitHub Actions build matrix for cross-compiled TripWire agent release artifacts and addresses all blocking/significant review feedback from PR #236.\n\n### GitHub Actions Build Matrix (`.github/workflows/build.yml`)\n\nAlready present on main; confirmed correct and complete:\n- Matrix of 4 targets: `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`\n- `CGO_ENABLED=0` static binaries, verified via `file` command on Linux targets\n- Triggered on `push` to `main` (artifacts retained 7 days) and `v*.*.*` tags (GitHub Release)\n- Release job downloads all 4 artifacts and publishes via `softprops/action-gh-release@v2`\n- Version string injected at link time via `-X main.Version=<ver>`\n\n### Review Feedback Addressed\n\n#### BLOCKING — WebSocket oversized frame crash\nAlready fixed: `internal/server/websocket/handler.go` has the `rawLen > maxFrameSize` guard against int64 overflow before `make([]byte, length)`.\n\n#### BLOCKING — `RegisterAgent` does not return a stable `host_id`\n**Fixed in this PR:**\n- Updated `grpc.Store` interface: `UpsertHost` now returns `(string, error)` matching the `postgres.Store` implementation\n- `RegisterAgent` now generates a fresh `uuid.NewString()` candidate on each call; the DB `ON CONFLICT (hostname) DO UPDATE … RETURNING host_id` clause returns the pre-existing UUID on reconnect\n- Removed `hostIDFromHostname` placeholder that returned the hostname string as the host_id\n- Updated `mockStore` in tests to match new interface signature\n- Added `TestRegisterAgent_StableHostID` and `TestRegisterAgent_HostIDIsUUID` tests\n\n#### Additional — Test compilation failure in `process_watcher_test.go`\nAlready fixed: `process_watcher_test.go` (package `watcher`) defines its own `noopLogger()` function, independent of `file_test.go` (package `watcher_test`).\n\nCloses #231",
+  "prTitle": "fix: address WebSocket handler and gRPC service review feedback",
+  "prBody": "## Summary\n\nThis PR addresses all blocking and non-blocking issues raised in code review of PR #236 (AlertService RPCs) and the WebSocket upgrade handler:\n\n### Blocking Issues Fixed\n\n**1. WebSocket server crash via oversized frame (int64 overflow)**\n- `internal/server/websocket/handler.go`: Added `maxFrameSize` (64 KiB) constant and guards `rawLen > maxFrameSize` check *before* converting `uint64` to `int64`, preventing the overflow-to-negative that caused `make([]byte, length)` to panic\n- Replaced `make([]byte, length)` allocation with `io.CopyN(io.Discard, buf, length)` to avoid memory exhaustion\n- Added `recover()` to the `readLoop` goroutine so any future panic cannot crash the server process\n\n**2. `RegisterAgent` now returns a stable `host_id` across reconnects**\n- `internal/server/storage/postgres.go`: `UpsertHost` uses `RETURNING host_id` so the pre-existing UUID is returned on hostname conflict, not the freshly-generated candidate\n- `internal/server/grpc/alert_service.go`: `Store.UpsertHost` interface updated to return `(string, error)`; `RegisterAgent` uses the `effectiveHostID` in the response\n\n### Non-Blocking Issues Addressed\n\n**3. `stream.Recv()` error handling distinguishes transport errors**\n- `StreamAlerts` now checks `ctx.Err()` to distinguish clean context cancellation (logged at Debug) from transport/auth errors (logged at Warn and returned as non-nil)\n\n**4. WebSocket endpoint authentication documented**\n- `Handler` godoc explains the reverse-proxy deployment model and guidance for adding token validation when running without a proxy\n\n**5. Test compilation failure in `process_watcher_test.go`**\n- Added `noopLogger()` directly to `process_watcher_test.go` (package `watcher`) since it cannot inherit from `file_test.go` (package `watcher_test`)\n\nCloses #228",
   "testsPass": true,
   "filesChanged": [
-    ".github/workflows/build.yml",
+    "internal/server/websocket/handler.go",
     "internal/server/grpc/alert_service.go",
-    "internal/server/grpc/alert_service_test.go"
+    "internal/server/storage/postgres.go",
+    "internal/watcher/process_watcher_test.go",
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md"
   ],
   "docsUpdated": [
     "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md"
   ],
   "docsReviewed": [
-    "docs/concepts/tripwire-cybersecurity-tool/ci-cd-build-matrix.md",
-    "docs/concepts/tripwire-cybersecurity-tool/storage.md",
-    "README.md"
-  ]
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/README.md"
+  ],
+  "completedTasks": [1, 2, 3, 4, 5]
 }

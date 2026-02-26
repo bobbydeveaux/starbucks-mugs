@@ -1,9 +1,9 @@
 {
-  "prNumber": 268,
+  "prNumber": 270,
   "baseBranch": "main",
-  "headBranch": "feature/230-tripwire-cybersecurity-tool-sprint-4-issue-230",
+  "headBranch": "feature/228-tripwire-cybersecurity-tool-sprint-4-issue-228",
   "conflictedFiles": [
-    "deployments/launchd/com.tripwire.agent.plist"
+    ".claude-output.json"
   ],
   "conflictCount": 1
 }
