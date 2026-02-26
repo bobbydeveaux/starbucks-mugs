@@ -235,9 +235,13 @@ func (s *Store) QueryAlerts(ctx context.Context, q AlertQuery) ([]Alert, error) 
 // --- Host CRUD ---
 
 // UpsertHost inserts a new host or, on hostname conflict, updates all mutable
-// fields.  This is called on every agent registration and heartbeat.
-func (s *Store) UpsertHost(ctx context.Context, h Host) error {
-	_, err := s.pool.Exec(ctx, `
+// fields.  It returns the effective host_id that is persisted in the database:
+// on a clean insert this equals h.HostID; on a hostname conflict the existing
+// host_id is returned unchanged, so callers always receive a stable identifier
+// that correlates with historical alerts even across agent reconnects.
+func (s *Store) UpsertHost(ctx context.Context, h Host) (string, error) {
+	var effectiveHostID string
+	err := s.pool.QueryRow(ctx, `
 		INSERT INTO hosts
 			(host_id, hostname, ip_address, platform, agent_version, last_seen, status)
 		VALUES ($1, $2, $3::inet, $4, $5, $6, $7)
@@ -246,7 +250,8 @@ func (s *Store) UpsertHost(ctx context.Context, h Host) error {
 			platform      = EXCLUDED.platform,
 			agent_version = EXCLUDED.agent_version,
 			last_seen     = EXCLUDED.last_seen,
-			status        = EXCLUDED.status`,
+			status        = EXCLUDED.status
+		RETURNING host_id`,
 		h.HostID,
 		h.Hostname,
 		nullableStr(h.IPAddress),
@@ -254,11 +259,11 @@ func (s *Store) UpsertHost(ctx context.Context, h Host) error {
 		nullableStr(h.AgentVersion),
 		h.LastSeen,
 		string(h.Status),
-	)
+	).Scan(&effectiveHostID)
 	if err != nil {
-		return fmt.Errorf("upsert host: %w", err)
+		return "", fmt.Errorf("upsert host: %w", err)
 	}
-	return nil
+	return effectiveHostID, nil
 }
 
 // GetHost returns the host with the given UUID, or an error wrapping

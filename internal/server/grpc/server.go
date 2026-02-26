@@ -53,7 +53,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	alertpb "github.com/tripwire/agent/proto"
+	alertpb "github.com/tripwire/agent/proto/alert"
 )
 
 // contextKey is an unexported type for context keys in this package to avoid

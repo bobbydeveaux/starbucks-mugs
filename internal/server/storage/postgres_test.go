@@ -130,7 +130,7 @@ func TestHostUpsertAndGet(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000001000001")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
@@ -158,14 +158,14 @@ func TestHostUpsertUpdatesExisting(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000002000002")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("initial UpsertHost: %v", err)
 	}
 
 	// Update agent version and status via upsert on the same hostname.
 	h.AgentVersion = "0.2.0"
 	h.Status = storage.HostStatusDegraded
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("update UpsertHost: %v", err)
 	}
 
@@ -189,7 +189,7 @@ func TestListHosts(t *testing.T) {
 	h1 := testHost("000003000003")
 	h2 := testHost("000004000004")
 	for _, h := range []storage.Host{h1, h2} {
-		if err := store.UpsertHost(ctx, h); err != nil {
+		if _, err := store.UpsertHost(ctx, h); err != nil {
 			t.Fatalf("UpsertHost: %v", err)
 		}
 	}
@@ -227,7 +227,7 @@ func TestBatchInsertAlerts_FlushOnSize(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000005000005")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
@@ -263,7 +263,7 @@ func TestBatchInsertAlerts_FlushOnInterval(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000006000006")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
@@ -302,7 +302,7 @@ func TestQueryAlerts_SeverityFilter(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000007000007")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
@@ -349,7 +349,7 @@ func TestQueryAlerts_EventDetailRoundtrip(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000008000008")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
@@ -398,7 +398,7 @@ func TestRuleCRUD(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000009000009")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
@@ -458,7 +458,7 @@ func TestListRules_GlobalAndHostScoped(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000010000010")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
@@ -502,7 +502,7 @@ func TestAuditEntryInsertAndQuery(t *testing.T) {
 	ctx := context.Background()
 
 	h := testHost("000011000011")
-	if err := store.UpsertHost(ctx, h); err != nil {
+	if _, err := store.UpsertHost(ctx, h); err != nil {
 		t.Fatalf("UpsertHost: %v", err)
 	}
 
