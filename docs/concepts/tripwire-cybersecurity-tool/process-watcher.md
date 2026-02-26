@@ -346,11 +346,66 @@ descriptive error.
 
 ---
 
-## Non-Linux platforms
+## macOS / Darwin: kqueue fallback
 
-On macOS, the `darwinKqueueBackend` provides kqueue-based monitoring with ps
-polling as a fallback. On Windows and other non-Linux/non-darwin systems,
-`ProcessWatcher.Start` uses a ps(1) polling backend.
+On Darwin, `ProcessWatcher` uses the **kqueue** `EVFILT_PROC` filter with
+`NOTE_EXEC` to detect execve events without requiring a BPF compiler or
+`NETLINK_CONNECTOR`. Two complementary mechanisms work together:
+
+### How it works
+
+```
+                macOS kernel
+┌────────────────────────────────────────────┐
+│  Process calls execve(2)                    │
+│              ↓                              │
+│  kqueue delivers EVFILT_PROC + NOTE_EXEC    │
+│  to any kq that watches the PID            │
+└─────────────────────┬──────────────────────┘
+                      │  kqueue fd
+        ┌─────────────▼──────────────────┐
+        │  run() kqueue drain loop        │  100 ms timeout, checks done channel
+        │    NOTE_EXEC → emit ProcessEvent│
+        └─────────────┬──────────────────┘
+                      │
+               dispatch() ──► emit AlertEvent to channel
+
+        ┌─────────────────────────────────┐
+        │  periodic ps scan               │  every 500 ms
+        │    scanProcs()                  │  ps -e -o pid=,ppid=,uid=,comm=
+        │    registerPIDs()               │  add new PIDs to kqueue
+        └─────────────────────────────────┘
+```
+
+### Privilege requirement
+
+- `kqueue()` itself requires no privilege.
+- `EVFILT_PROC` registration succeeds for processes owned by the **same user**
+  as the watcher. Root can watch all processes. Non-root watchers silently skip
+  processes owned by other users.
+
+### Known limitations (vs Linux NETLINK)
+
+| Constraint | Details |
+|------------|---------|
+| PID-scoped | kqueue watches specific PIDs; system-wide coverage relies on poll discovery for processes not yet tracked |
+| Poll gap | New processes spawned between poll ticks may be detected up to 500 ms late |
+| Race on exit | Process may exit before its kqueue event is processed; the event is still emitted based on the last known snapshot |
+| Non-root scope | Without root, only same-UID processes are monitored |
+
+---
+
+## Other platforms (Windows, FreeBSD, …)
+
+On platforms other than Linux and macOS, `ProcessWatcher` uses a ps(1) polling
+backend (`pollProcBackend`) that scans the process list at 500 ms intervals.
+Platforms that do not ship a POSIX-compatible `ps(1)` will see an empty process
+list and no PROCESS alerts will be emitted.
+
+To add a native backend for another OS, create
+`internal/watcher/process_watcher_<goos>.go` implementing `newProcessBackend`
+and update the build tag in `process_watcher_other.go` to exclude the new
+platform.
 
 ---
 
