@@ -1,7 +1,7 @@
 {
-  "prNumber": 275,
+  "prNumber": 296,
   "baseBranch": "main",
-  "headBranch": "feature/226-tripwire-cybersecurity-tool-sprint-4-issue-226",
+  "headBranch": "feature/181-fileguard-sprint-3-issue-181",
   "conflictedFiles": [
     ".claude-output.json"
   ],
