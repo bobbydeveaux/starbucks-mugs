@@ -1,6 +1,167 @@
 # React Components
 
-This document describes the React components and hooks for both the Costa vs Starbucks drink comparison and the Ferrari vs Lamborghini car catalog.
+This document describes the React components and hooks for the Costa vs Starbucks drink comparison, the Ferrari vs Lamborghini car catalog, and the **Tripwire Real-Time Security Dashboard**.
+
+---
+
+## Tripwire Security Dashboard
+
+### TrendChart
+
+**File:** `src/components/TrendChart.tsx`
+
+Renders a real-time alert volume trend as a stacked Recharts `AreaChart` with one area series per severity level (INFO / WARN / CRITICAL). Data is aggregated client-side from a flat `Alert[]` array so the chart stays in sync with WebSocket-pushed events without additional API round-trips.
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `alerts` | `Alert[]` | — | Raw alert objects to bin and visualise |
+| `from` | `Date` | — | Inclusive window start for bucket alignment |
+| `to` | `Date` | — | Inclusive window end for bucket alignment |
+| `timeRange` | `TimeRange` | — | Active preset shown in the `TimeRangeSelector` |
+| `onTimeRangeChange` | `(range: TimeRange) => void` | — | Called when the user selects a different preset |
+| `loading` | `boolean` | `false` | Shows a loading overlay while the REST fetch is in flight |
+| `error` | `string \| null` | `null` | Shows an error overlay when non-null |
+| `className` | `string` | `''` | Extra CSS classes applied to the outermost `<section>` |
+
+#### Features
+
+- **Three severity series** — INFO (blue `#3B82F6`), WARN (amber `#F59E0B`), CRITICAL (red `#EF4444`)
+- **Automatic bucket sizing** — hourly buckets for windows ≤ 24 h; daily buckets for longer windows
+- **Zero-gap X axis** — every bucket in [from, to] is always present, even when empty
+- **Reactive updates** — re-renders within one cycle when the `alerts` prop changes (e.g. WebSocket push)
+- **Three states** — loading spinner, error message, empty-state copy, and the chart itself
+- **TimeRangeSelector** — five preset buttons (1h / 6h / 24h / 7d / 30d) with `aria-pressed` toggling
+- **Accessible** — root `<section aria-label="Alert volume trend chart">`, group label on selector
+
+#### Usage
+
+```tsx
+import { TrendChart } from './components/TrendChart';
+
+<TrendChart
+  alerts={alerts}
+  from={from}
+  to={to}
+  timeRange={filters.timeRange}
+  onTimeRangeChange={(range) => setFilters(f => ({ ...f, timeRange: range }))}
+  loading={loading}
+  error={error}
+/>
+```
+
+---
+
+### DashboardPage
+
+**File:** `src/pages/DashboardPage.tsx`
+
+Wires the `useAlerts` hook (REST + WebSocket) to `TrendChart`. Mounted at the `/dashboard` route.
+
+#### Features
+
+- Severity filter (`ALL | INFO | WARN | CRITICAL`) and tripwire-type filter (`ALL | FILE | NETWORK | PROCESS`)
+- Alert count badge in the top nav updates in real time as WS events arrive
+
+---
+
+### useAlerts
+
+**File:** `src/hooks/useAlerts.ts`
+
+Fetches alerts from the REST API and patches in live WebSocket events so both the feed and the trend chart update within one render cycle.
+
+#### Signature
+
+```ts
+function useAlerts(filters: AlertFilters): UseAlertsResult
+```
+
+#### UseAlertsResult
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `alerts` | `Alert[]` | Combined REST + WS alert list (newest first) |
+| `loading` | `boolean` | `true` while the initial fetch is in flight |
+| `error` | `string \| null` | Non-null when the fetch fails |
+| `from` | `Date` | Computed window start (from `timeRange` preset) |
+| `to` | `Date` | Computed window end |
+
+---
+
+### useWebSocket
+
+**File:** `src/hooks/useWebSocket.ts`
+
+Manages a WebSocket connection with automatic exponential-backoff reconnection (1 s → 30 s cap) and optional bearer-token auth via `?token=<value>`.
+
+#### Signature
+
+```ts
+function useWebSocket<T>(options: UseWebSocketOptions<T>): void
+```
+
+#### UseWebSocketOptions
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | `string` | Full WebSocket URL |
+| `token` | `string?` | Optional bearer token |
+| `onMessage` | `(msg: WebSocketMessage<T>) => void` | Called for every successfully parsed JSON frame |
+| `enabled` | `boolean` | `true` — set `false` to skip connecting |
+
+---
+
+### aggregateAlertsByTime
+
+**File:** `src/utils/aggregateAlerts.ts`
+
+Aggregates a flat alert list into uniformly-spaced `TrendBucket` objects for recharts.
+
+#### Signature
+
+```ts
+function aggregateAlertsByTime(alerts: Alert[], from: Date, to: Date): TrendBucket[]
+```
+
+#### TrendBucket shape
+
+```ts
+interface TrendBucket {
+  time: string;    // X-axis label ("14:00" or "Feb 25")
+  timeMs: number;  // Epoch ms — used for sort order
+  INFO: number;
+  WARN: number;
+  CRITICAL: number;
+}
+```
+
+#### timeRangeToDates
+
+```ts
+function timeRangeToDates(preset: TimeRange, now?: Date): { from: Date; to: Date }
+```
+
+Converts a `TimeRange` preset string to absolute `[from, to]` dates relative to `now` (defaults to `new Date()`).
+
+---
+
+### Tripwire TypeScript Types
+
+**File:** `src/types.ts`
+
+| Type | Description |
+|------|-------------|
+| `Severity` | `'INFO' \| 'WARN' \| 'CRITICAL'` |
+| `TripwireType` | `'FILE' \| 'NETWORK' \| 'PROCESS'` |
+| `HostStatus` | `'ONLINE' \| 'OFFLINE' \| 'DEGRADED'` |
+| `Alert` | Full alert entity: `alert_id`, `host_id`, `timestamp`, `tripwire_type`, `rule_name`, `event_detail`, `severity`, `received_at` |
+| `Host` | Registered monitoring host: `host_id`, `hostname`, `ip_address`, `platform`, `agent_version`, `last_seen`, `status` |
+| `TimeRange` | `'1h' \| '6h' \| '24h' \| '7d' \| '30d'` |
+| `AlertFilters` | `{ hostIds, severity, tripwireType, timeRange }` — passed to `useAlerts` |
+
+---
 
 ## DrinkCard
 

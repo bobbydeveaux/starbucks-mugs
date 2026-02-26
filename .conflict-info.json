@@ -1,10 +1,11 @@
 {
-  "prNumber": 310,
+  "prNumber": 311,
   "baseBranch": "main",
-  "headBranch": "feature/256-tripwire-cybersecurity-tool-sprint-5-issue-256",
+  "headBranch": "feature/260-tripwire-cybersecurity-tool-sprint-5-issue-260",
   "conflictedFiles": [
-    ".claude-output.json",
-    "docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md"
+    "src/App.tsx",
+    "src/hooks/useAlerts.ts",
+    "src/hooks/useWebSocket.ts"
   ],
-  "conflictCount": 2
+  "conflictCount": 3
 }

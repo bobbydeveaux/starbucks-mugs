@@ -238,12 +238,6 @@ export interface CarComparisonState {
 // ---------------------------------------------------------------------------
 
 /**
- * Liveness state of a monitored host as reported by the dashboard server.
- * Maps to the `HostStatus` enum in the Go storage layer.
- */
-export type HostStatus = 'ONLINE' | 'OFFLINE' | 'DEGRADED';
-
-/**
  * A registered agent host as returned by `GET /api/v1/hosts`.
  * Maps to the `storage.Host` struct in the Go backend.
  */
