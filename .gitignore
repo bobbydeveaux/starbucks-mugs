@@ -63,3 +63,7 @@ AGENTS.md
 *.tar.bz2
 *.tar.xz
 *.zip
+
+# eBPF build artifacts (generated; not committed)
+internal/watcher/ebpf/vmlinux.h
+internal/watcher/ebpf/*.bpf.o
