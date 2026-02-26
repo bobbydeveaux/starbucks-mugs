@@ -3,12 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/124-tripwire-cybersecurity-tool-sprint-2-issue-124",
   "conflictedFiles": [
-    ".claude-output.json",
-    "go.mod",
-    "go.sum",
-    "internal/queue/schema.sql",
-    "internal/queue/sqlite_queue.go",
-    "internal/queue/sqlite_queue_test.go"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 6
+  "conflictCount": 2
 }
