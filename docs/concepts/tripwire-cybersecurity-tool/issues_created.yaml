@@ -1,48 +1,51 @@
-GeneratedAt: "2026-02-25T22:39:39Z"
+GeneratedAt: "2026-02-26T08:19:45Z"
 Issues:
-- IssueNumber: 159
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/159
-  TaskID: task-tripwire-cybersecurity-tool-feat-file-watcher-1
-- IssueNumber: 160
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/160
-  TaskID: task-tripwire-cybersecurity-tool-feat-file-watcher-2
-- IssueNumber: 161
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/161
-  TaskID: task-tripwire-cybersecurity-tool-feat-file-watcher-3
-- IssueNumber: 162
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/162
-  TaskID: task-tripwire-cybersecurity-tool-feat-network-watcher-1
-- IssueNumber: 163
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/163
-  TaskID: task-tripwire-cybersecurity-tool-feat-network-watcher-2
-- IssueNumber: 165
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/165
-  TaskID: task-tripwire-cybersecurity-tool-feat-network-watcher-3
-- IssueNumber: 167
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/167
-  TaskID: task-tripwire-cybersecurity-tool-feat-agent-queue-audit-1
-- IssueNumber: 169
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/169
-  TaskID: task-tripwire-cybersecurity-tool-feat-agent-queue-audit-2
-- IssueNumber: 171
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/171
+- IssueNumber: 216
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/216
   TaskID: task-tripwire-cybersecurity-tool-feat-process-watcher-1
-- IssueNumber: 174
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/174
+- IssueNumber: 217
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/217
   TaskID: task-tripwire-cybersecurity-tool-feat-process-watcher-2
-- IssueNumber: 176
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/176
+- IssueNumber: 218
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/218
   TaskID: task-tripwire-cybersecurity-tool-feat-process-watcher-3
-- IssueNumber: 178
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/178
+- IssueNumber: 219
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/219
   TaskID: task-tripwire-cybersecurity-tool-feat-grpc-server-1
-- IssueNumber: 180
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/180
+- IssueNumber: 220
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/220
   TaskID: task-tripwire-cybersecurity-tool-feat-grpc-server-2
-- IssueNumber: 182
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/182
+- IssueNumber: 221
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/221
+  TaskID: task-tripwire-cybersecurity-tool-feat-grpc-server-3
+- IssueNumber: 222
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/222
   TaskID: task-tripwire-cybersecurity-tool-feat-rest-api-1
-- IssueNumber: 184
-  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/184
+- IssueNumber: 223
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/223
   TaskID: task-tripwire-cybersecurity-tool-feat-rest-api-2
+- IssueNumber: 224
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/224
+  TaskID: task-tripwire-cybersecurity-tool-feat-agent-transport-1
+- IssueNumber: 225
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/225
+  TaskID: task-tripwire-cybersecurity-tool-feat-agent-transport-2
+- IssueNumber: 226
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/226
+  TaskID: task-tripwire-cybersecurity-tool-feat-agent-transport-3
+- IssueNumber: 227
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/227
+  TaskID: task-tripwire-cybersecurity-tool-feat-websocket-1
+- IssueNumber: 228
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/228
+  TaskID: task-tripwire-cybersecurity-tool-feat-websocket-2
+- IssueNumber: 229
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/229
+  TaskID: task-tripwire-cybersecurity-tool-feat-deployment-1
+- IssueNumber: 230
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/230
+  TaskID: task-tripwire-cybersecurity-tool-feat-deployment-2
+- IssueNumber: 231
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/231
+  TaskID: task-tripwire-cybersecurity-tool-feat-deployment-3
 Plan: tripwire-cybersecurity-tool-plan
