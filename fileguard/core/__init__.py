@@ -1,1 +1,1 @@
-"""Core scan engine components for FileGuard."""
+"""Core scan engine components for FileGuard — pipeline components."""

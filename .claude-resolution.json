@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 3,
-  "summary": "Resolved 3 metadata-only conflicts resulting from a merge of origin/main (which included the fileguard AuditService PR #190) into feature/123-tripwire-cybersecurity-tool-sprint-2-issue-123. All conflicts were in AI-generated metadata files (.claude-output.json, .claude-resolution.json, .conflict-info.json), not in source code. The fileguard AuditService files (fileguard/services/audit.py, fileguard/services/__init__.py, tests/unit/test_audit_service.py, docs/concepts/fileguard/audit.md) merged cleanly as new files.",
-  "strategyUsed": "For .claude-output.json: kept HEAD (NetworkWatcher PR #188 metadata) since this is the feature/123 branch and HEAD correctly describes the work done in this PR. For .claude-resolution.json: wrote fresh metadata reflecting the current resolution. For .conflict-info.json: the working tree already contained the correctly auto-merged content (PR #188, 3 conflicted metadata files) — staged as-is."
+  "filesResolved": 1,
+  "summary": "Resolved 1 conflict in fileguard/core/__init__.py: merged two different module-level descriptions into a single docstring that captures the intent of both sides.",
+  "strategyUsed": "Preserved both changes: HEAD used a proper Python module docstring ('Core scan engine components for FileGuard.') and origin/main used a comment ('fileguard.core — pipeline components'). Combined them into a single docstring that covers both descriptions, preferring the docstring form as the more Pythonic and tooling-friendly approach."
 }

@@ -17,7 +17,11 @@ import (
 
 	"github.com/tripwire/agent/internal/agent"
 	"github.com/tripwire/agent/internal/config"
+	"github.com/tripwire/agent/internal/watcher"
 )
+
+// networkPollInterval is how frequently the NetworkWatcher polls /proc/net/*.
+const networkPollInterval = time.Second
 
 func main() {
 	configPath := flag.String("config", "/etc/tripwire/config.yaml", "path to the TripWire agent YAML configuration file")
@@ -41,11 +45,24 @@ func main() {
 		slog.String("health_addr", cfg.HealthAddr),
 	)
 
-	// Create agent orchestrator.
-	// Real watcher/queue/transport implementations are registered here as
-	// they are developed in subsequent sprints. For now the agent runs
-	// without watchers (no-op mode) which is valid for the healthz check.
-	ag := agent.New(cfg, logger)
+	// Create agent orchestrator with all registered watchers.
+	var agentOpts []agent.Option
+
+	// Instantiate a NetworkWatcher for all NETWORK-type rules.  The watcher
+	// silently filters non-NETWORK rules, so it is always safe to create.
+	netWatcher, err := agent.NewNetworkWatcher(cfg.Rules, logger, networkPollInterval)
+	if err != nil {
+		logger.Error("failed to create network watcher", slog.Any("error", err))
+		os.Exit(1)
+	}
+	agentOpts = append(agentOpts, agent.WithWatchers(netWatcher))
+
+	// Build the list of file watchers from configured rules and register them.
+	if fileWatchers := buildFileWatchers(cfg, logger); len(fileWatchers) > 0 {
+		agentOpts = append(agentOpts, agent.WithWatchers(fileWatchers...))
+	}
+
+	ag := agent.New(cfg, logger, agentOpts...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -92,6 +109,25 @@ func main() {
 	}
 
 	logger.Info("tripwire agent exited cleanly")
+}
+
+// buildFileWatchers creates a FileWatcher for every FILE-type rule in the
+// configuration. If no FILE rules are configured, an empty slice is returned.
+func buildFileWatchers(cfg *config.Config, logger *slog.Logger) []agent.Watcher {
+	var watchers []agent.Watcher
+	for _, rule := range cfg.Rules {
+		if rule.Type != "FILE" {
+			continue
+		}
+		fw := watcher.NewFileWatcher(rule, logger)
+		watchers = append(watchers, fw)
+		logger.Info("registered file watcher",
+			slog.String("rule", rule.Name),
+			slog.String("target", rule.Target),
+			slog.String("severity", rule.Severity),
+		)
+	}
+	return watchers
 }
 
 // newLogger constructs a *slog.Logger that writes JSON-structured log records
