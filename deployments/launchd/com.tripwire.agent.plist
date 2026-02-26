@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Unique reverse-DNS label for this job. -->
+    <key>Label</key>
+    <string>com.tripwire.agent</string>
+
+    <!-- Absolute path to the installed agent binary and its arguments. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/tripwire</string>
+        <string>-config</string>
+        <string>/etc/tripwire/config.yaml</string>
+    </array>
+
+    <!-- Start the agent automatically when the plist is loaded (boot / login). -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!--
+        KeepAlive: restart the agent if it exits unexpectedly.
+        - Crashed: true  → restart only when the process exits with a non-zero
+          status or is killed by a signal (mirrors systemd's Restart=on-failure).
+        Using Crashed rather than the boolean short-form intentionally allows a
+        clean exit (status 0) to stop the agent permanently until the next load.
+    -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <!--
+        ThrottleInterval: minimum seconds between automatic restarts.
+        Set to 5 to match the acceptance criterion (restart within 5 s after
+        a crash) while preventing rapid restart loops.
+    -->
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <!-- Redirect stdout and stderr to log files under /var/log/tripwire/. -->
+    <key>StandardOutPath</key>
+    <string>/var/log/tripwire/agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/tripwire/agent-error.log</string>
+
+    <!--
+        Working directory for the agent process.  /var/lib/tripwire is used
+        for any ephemeral state (e.g. the local SQLite alert queue).
+    -->
+    <key>WorkingDirectory</key>
+    <string>/var/lib/tripwire</string>
+
+    <!--
+        ProcessType: Background indicates this is a long-running daemon that
+        does not interact with the user session, allowing macOS to manage its
+        scheduling priority appropriately.
+    -->
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
