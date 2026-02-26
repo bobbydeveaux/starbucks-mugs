@@ -7,7 +7,9 @@
 //   - Linux: NETLINK_CONNECTOR process connector (kernel-driven, zero-polling).
 //     The companion eBPF C program in bpf/execve.c documents the equivalent
 //     BPF tracepoint implementation for environments with BPF compiler tooling.
-//   - Other: a no-op stub that returns an error on Start.
+//   - macOS/Darwin: kqueue EVFILT_PROC with NOTE_EXEC + periodic process-list
+//     poll (fallback; per-PID subscription, no system-wide subscription).
+//   - Other: a stub that returns an error on Start.
 //
 // ProcessWatcher is safe for concurrent use.
 package watcher

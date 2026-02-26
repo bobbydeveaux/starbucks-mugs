@@ -10,13 +10,14 @@ syscalls using kernel-level mechanisms.
 
 The Process Watcher emits an `AlertEvent` (with `TripwireType: "PROCESS"`) whenever
 a configured process name pattern is matched against a newly exec'd process.
-It is designed as a two-layer system:
+It is designed as a multi-layer system with platform-specific backends:
 
 | Layer | File | Description |
 |-------|------|-------------|
 | eBPF kernel program | `internal/watcher/ebpf/process.bpf.c` | Attaches to execve/execveat tracepoints; writes events to a BPF ring buffer |
-| Go userspace (runtime) | `internal/watcher/process_watcher_linux.go` | Linux runtime; uses `NETLINK_CONNECTOR` for kernel-level execve notifications |
-| Go stub | `internal/watcher/process_watcher_other.go` | Non-Linux: returns error on Start |
+| Go userspace — Linux | `internal/watcher/process_watcher_linux.go` | Uses `NETLINK_CONNECTOR` for kernel-level PROC_EVENT_EXEC notifications |
+| Go userspace — Darwin | `internal/watcher/process_watcher_darwin.go` | Uses kqueue `EVFILT_PROC`/`NOTE_EXEC` + process-list poll fallback |
+| Go stub | `internal/watcher/process_watcher_other.go` | All other platforms: returns an error on Start |
 
 ---
 
@@ -151,18 +152,99 @@ rules:
 
 ---
 
-## Non-Linux platforms
+## macOS / Darwin: kqueue fallback
 
-On macOS, Windows, and other non-Linux systems `ProcessWatcher.Start` returns:
+On Darwin, `ProcessWatcher` uses the **kqueue** `EVFILT_PROC` filter with
+`NOTE_EXEC` to detect execve events without requiring a BPF compiler or
+`NETLINK_CONNECTOR`. Two complementary mechanisms work together:
+
+### How it works
 
 ```
-process watcher: PROC_EVENT_EXEC / eBPF execve tracing is only
-supported on Linux (current platform: darwin)
+                macOS kernel
+┌────────────────────────────────────────────┐
+│  Process calls execve(2)                    │
+│              ↓                              │
+│  kqueue delivers EVFILT_PROC + NOTE_EXEC    │
+│  to any kq that watches the PID            │
+└─────────────────────┬──────────────────────┘
+                      │  kqueue fd
+        ┌─────────────▼──────────────────┐
+        │  runProcKqueueLoop()            │  100 ms timeout, checks ctx.Done()
+        │    handleProcKevent()           │
+        │      darwinProcInfo(pid)        │  sysctl kern.procargs2.<pid>
+        └─────────────┬──────────────────┘
+                      │
+               matchingRule() ──► emit AlertEvent to channel
+
+        ┌─────────────────────────────────┐
+        │  runProcPollLoop()              │  every 500 ms
+        │    listRunningPIDs()            │  ps -axo pid=
+        │    state.addPID(pid)            │  add new PIDs to kqueue
+        └─────────────────────────────────┘
+```
+
+### Privilege requirement
+
+- `kqueue()` itself requires no privilege.
+- `EVFILT_PROC` registration succeeds for processes owned by the **same user**
+  as the watcher. Root can watch all processes. Non-root watchers silently skip
+  processes owned by other users.
+- `KERN_PROCARGS2` sysctl (process details after NOTE_EXEC) requires the same
+  effective UID as the target process, or root. If unavailable the event is
+  still emitted with only the PID recorded.
+
+### NOTE_TRACK: transitive fork tracking
+
+When `NOTE_TRACK` is set on a watched PID, the kernel automatically registers
+the same `EVFILT_PROC` filters on any child process spawned via `fork(2)`. This
+means exec events for all descendants of a tracked process are delivered without
+explicit re-registration.
+
+If `NOTE_TRACK` fails for a child (`NOTE_TRACKERR`), the poll loop re-discovers
+the missed PID within the next poll interval (default 500 ms).
+
+### Known limitations (vs Linux NETLINK)
+
+| Constraint | Details |
+|------------|---------|
+| PID-scoped | kqueue watches specific PIDs; system-wide coverage relies on NOTE_TRACK propagation starting from processes already running when the watcher started |
+| Poll gap | New processes spawned between poll ticks by non-descendant parents may be detected up to 500 ms late |
+| Race on exit | KERN_PROCARGS2 may fail if the target process exits before the watcher reads it; the event is still emitted with only the PID |
+| Non-root scope | Without root, only same-UID processes are monitored |
+
+### AlertEvent fields (Darwin)
+
+```go
+AlertEvent{
+    TripwireType: "PROCESS",
+    RuleName:     "<rule name from config>",
+    Severity:     "<INFO | WARN | CRITICAL>",
+    Timestamp:    time.Now().UTC(),
+    Detail: map[string]any{
+        "pid":     <int>,    // process ID
+        "comm":    <string>, // base name of executable (empty if process exited first)
+        "exe":     <string>, // full exe path from kern.procargs2 sysctl
+        "cmdline": <string>, // space-joined argv from kern.procargs2 sysctl
+    },
+}
+```
+
+---
+
+## Other platforms (Windows, FreeBSD, …)
+
+On platforms other than Linux and macOS, `ProcessWatcher.Start` returns:
+
+```
+process watcher: execve tracing is only supported on Linux
+(NETLINK_CONNECTOR) and macOS (kqueue/EVFILT_PROC); current platform: <goos>
 ```
 
 To add support for another OS, create
 `internal/watcher/process_watcher_<goos>.go` with platform-specific `Start`
-and `Stop` implementations.
+and `Stop` implementations and update the build tag in
+`process_watcher_other.go` to exclude the new platform.
 
 ---
 
