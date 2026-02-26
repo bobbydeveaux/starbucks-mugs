@@ -11,6 +11,18 @@
 //	    log.Fatal(err)
 //	}
 //
+// # Prometheus metrics
+//
+// Attach a [Metrics] value to collect operational counters and gauges while
+// the client is running:
+//
+//	m := transport.NewMetrics()
+//	client := transport.New(cfg, logger, transport.WithMetrics(m))
+//
+//	// Serve the collected metrics on an HTTP endpoint.
+//	http.Handle("/metrics", m.Handler())
+//	go http.ListenAndServe(":9100", nil)
+//
 // # mTLS
 //
 // The client loads three files from [config.TLSConfig]:
@@ -73,6 +85,20 @@ type Alert struct {
 	Severity string
 }
 
+// Option is a functional option for [New] that customises [Client] behaviour.
+type Option func(*Client)
+
+// WithMetrics wires a [Metrics] value into the client so that transport events
+// are recorded as Prometheus-compatible counters and gauges.
+//
+// If this option is not provided the client runs without any metric
+// instrumentation (a nil [Metrics] pointer is treated as a no-op).
+func WithMetrics(m *Metrics) Option {
+	return func(c *Client) {
+		c.metrics = m
+	}
+}
+
 // Client manages the gRPC connection to the TripWire dashboard server.
 // Create one with [New]; call [Run] to start the send loop.
 type Client struct {
@@ -84,13 +110,18 @@ type Client struct {
 	hostname          string
 	agentVersion      string
 	logger            *slog.Logger
+	metrics           *Metrics // nil when no instrumentation is requested
 }
 
 // New creates a Client from the supplied agent configuration.
 //
+// Optional [Option] values (e.g. [WithMetrics]) can be passed to customise
+// behaviour; the call is backward-compatible – existing callers that omit the
+// options argument continue to work unchanged.
+//
 // The Client is idle until [Run] is called.
-func New(cfg *config.AgentConfig, logger *slog.Logger) *Client {
-	return &Client{
+func New(cfg *config.AgentConfig, logger *slog.Logger, opts ...Option) *Client {
+	c := &Client{
 		endpoint:          cfg.Dashboard.Endpoint,
 		dialTimeout:       cfg.Dashboard.DialTimeout,
 		reconnectDelay:    cfg.Dashboard.ReconnectDelay,
@@ -100,6 +131,10 @@ func New(cfg *config.AgentConfig, logger *slog.Logger) *Client {
 		agentVersion:      cfg.AgentVersion,
 		logger:            logger,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 // Run connects to the dashboard, registers this agent, and forwards alerts
@@ -137,6 +172,9 @@ func (c *Client) Run(ctx context.Context, alerts <-chan Alert) error {
 			return nil
 		}
 
+		// Transient error – back off and retry.
+		c.metricsReconnectAttempt()
+
 		c.logger.Warn("transport: disconnected, will retry",
 			slog.String("endpoint", c.endpoint),
 			slog.String("error", connErr.Error()),
@@ -159,8 +197,11 @@ func (c *Client) Run(ctx context.Context, alerts <-chan Alert) error {
 // It returns a non-nil error on any transient problem so the caller can back
 // off and retry.
 func (c *Client) runOnce(ctx context.Context, creds credentials.TransportCredentials, alerts <-chan Alert) error {
+	c.metricsConnectionAttempt()
+
 	conn, err := grpc.NewClient(c.endpoint, grpc.WithTransportCredentials(creds))
 	if err != nil {
+		c.metricsConnectionError()
 		return fmt.Errorf("create gRPC client for %s: %w", c.endpoint, err)
 	}
 	defer conn.Close()
@@ -169,6 +210,7 @@ func (c *Client) runOnce(ctx context.Context, creds credentials.TransportCredent
 
 	// Register this agent.  Use DialTimeout as the overall budget so that a
 	// completely unreachable server does not block indefinitely.
+	c.metricsRegistrationAttempt()
 	regCtx, regCancel := context.WithTimeout(ctx, c.dialTimeout)
 	resp, err := stub.RegisterAgent(regCtx, &alertpb.RegisterRequest{
 		Hostname:     c.hostname,
@@ -177,6 +219,7 @@ func (c *Client) runOnce(ctx context.Context, creds credentials.TransportCredent
 	})
 	regCancel()
 	if err != nil {
+		c.metricsRegistrationError()
 		return fmt.Errorf("RegisterAgent: %w", err)
 	}
 
@@ -192,6 +235,10 @@ func (c *Client) runOnce(ctx context.Context, creds credentials.TransportCredent
 		return fmt.Errorf("StreamAlerts: %w", err)
 	}
 
+	// Mark the connection as active.
+	c.metricsSetConnected(true)
+	defer c.metricsSetConnected(false)
+
 	// Drain server commands (ACKs / ERRORs) in a background goroutine so the
 	// send loop is never blocked waiting for a response.
 	recvErrCh := make(chan error, 1)
@@ -202,6 +249,7 @@ func (c *Client) runOnce(ctx context.Context, creds credentials.TransportCredent
 				if recvErr == io.EOF {
 					recvErrCh <- nil
 				} else {
+					c.metricsStreamRecvError()
 					recvErrCh <- recvErr
 				}
 				return
@@ -241,8 +289,10 @@ func (c *Client) runOnce(ctx context.Context, creds credentials.TransportCredent
 				EventDetailJson: alert.EventDetailJSON,
 				Severity:        alert.Severity,
 			}); err != nil {
+				c.metricsStreamSendError()
 				return fmt.Errorf("stream send: %w", err)
 			}
+			c.metricsAlertSent()
 		}
 	}
 }
@@ -296,4 +346,67 @@ func NextDelay(current, max time.Duration) time.Duration {
 		return max
 	}
 	return next
+}
+
+// ── metrics helpers ──────────────────────────────────────────────────────────
+//
+// Each helper is a no-op when c.metrics is nil so the hot path (no-op) is a
+// single nil pointer check and avoids any indirection.
+
+func (c *Client) metricsConnectionAttempt() {
+	if c.metrics != nil {
+		c.metrics.ConnectionAttempts.Add(1)
+	}
+}
+
+func (c *Client) metricsConnectionError() {
+	if c.metrics != nil {
+		c.metrics.ConnectionErrors.Add(1)
+	}
+}
+
+func (c *Client) metricsReconnectAttempt() {
+	if c.metrics != nil {
+		c.metrics.ReconnectAttempts.Add(1)
+	}
+}
+
+func (c *Client) metricsRegistrationAttempt() {
+	if c.metrics != nil {
+		c.metrics.AgentRegistrations.Add(1)
+	}
+}
+
+func (c *Client) metricsRegistrationError() {
+	if c.metrics != nil {
+		c.metrics.RegistrationErrors.Add(1)
+	}
+}
+
+func (c *Client) metricsAlertSent() {
+	if c.metrics != nil {
+		c.metrics.AlertsSent.Add(1)
+	}
+}
+
+func (c *Client) metricsStreamSendError() {
+	if c.metrics != nil {
+		c.metrics.StreamSendErrors.Add(1)
+	}
+}
+
+func (c *Client) metricsStreamRecvError() {
+	if c.metrics != nil {
+		c.metrics.StreamRecvErrors.Add(1)
+	}
+}
+
+func (c *Client) metricsSetConnected(connected bool) {
+	if c.metrics != nil {
+		if connected {
+			c.metrics.Connected.Store(1)
+		} else {
+			c.metrics.Connected.Store(0)
+		}
+	}
 }

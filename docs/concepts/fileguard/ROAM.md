@@ -543,15 +543,16 @@ Config: mounted JSON config file for patterns and disposition rules
 - `fileguard_scan_duration_seconds` histogram (p50, p95, p99 per file type)
 - `fileguard_scan_total` counter by `status` label
 - `fileguard_batch_files_per_hour` gauge
-- `fileguard_siem_delivery_errors_total` counter
+- `fileguard_siem_delivery_attempts_total` counter — every SIEM forward attempt
+- `fileguard_siem_delivery_errors_total` counter — every failed SIEM forward attempt
 - Celery queue depth via `celery-exporter`
 
 **Distributed tracing:** OpenTelemetry SDK with OTLP export (Jaeger / Tempo); trace spans for: API receive → AV scan → PII detection → disposition → audit write → webhook dispatch
 
-**Alerting rules:**
+**Alerting rules** (see `deploy/prometheus/alerts/` for rule files):
 - Scan p95 latency > 4s (warn) / > 6s (critical)
 - Worker error rate > 1% over 5 minutes
-- SIEM delivery failure rate > 0.5%
+- SIEM delivery failure rate > 0.5% — `SIEMHighDeliveryErrorRate` alert in `deploy/prometheus/alerts/siem.yaml`
 - Celery DLQ depth > 10
 - ClamAV daemon unreachable (any worker)
 

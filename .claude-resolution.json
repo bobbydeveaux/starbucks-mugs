@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json. Kept HEAD's version which accurately describes this branch's PR (#270): WebSocket handler and gRPC service review feedback fixes (closes #228). The origin/main version described a different PR (GitHub Actions build matrix, closes #231) which is unrelated to this feature branch.",
-  "strategyUsed": "Chose HEAD for all conflict sections: HEAD's prTitle, prBody, and filesChanged accurately reflect this branch's work (WebSocket/gRPC fixes). HEAD's docsReviewed (grpc-alert-service.md, LLD.md, README.md) and completedTasks [1,2,3,4,5] are retained. origin/main's conflicting sections described a separate PR's artifacts and were discarded to avoid mixing unrelated PR metadata."
+  "summary": "Resolved one conflict: .claude-output.json was deleted by origin/main ('deleted by them'). Accepted the deletion because this is a transient Claude session output file that does not belong in the repository long-term; origin/main correctly removed it.",
+  "strategyUsed": "accepted theirs (deletion) — the file is ephemeral metadata from a previous Claude run and has no ongoing value in the codebase"
 }
