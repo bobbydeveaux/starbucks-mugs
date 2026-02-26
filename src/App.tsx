@@ -4,6 +4,7 @@ import { FerrariPage } from './pages/FerrariPage';
 import { LamborghiniPage } from './pages/LamborghiniPage';
 import { ComparePage } from './pages/ComparePage';
 import { CatalogPage } from './pages/CatalogPage';
+import { AlertDashboardPage } from './pages/AlertDashboardPage';
 import { TripWireDashboardPage } from './pages/TripWireDashboardPage';
 
 function App() {
@@ -15,7 +16,8 @@ function App() {
         <Route path="/lamborghini" element={<LamborghiniPage />} />
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/catalog" element={<CatalogPage />} />
-        <Route path="/dashboard" element={<TripWireDashboardPage />} />
+        <Route path="/dashboard" element={<AlertDashboardPage />} />
+        <Route path="/hosts" element={<TripWireDashboardPage />} />
       </Routes>
     </BrowserRouter>
   );
