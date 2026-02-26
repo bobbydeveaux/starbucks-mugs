@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 2,
-  "summary": "Resolved 2 conflicted metadata files for PR #214 (feature/124-tripwire-cybersecurity-tool-sprint-2-issue-124). The .claude-resolution.json file contained conflict markers between two stale prior-session AI summaries: HEAD described a 6-file SQLite alert queue merge; origin/main described a 2-file metadata merge. The .conflict-info.json file had no conflict markers and already contained the correct current-session metadata.",
-  "strategyUsed": "For .claude-resolution.json: wrote a fresh resolution summary for the current session rather than merging two stale prior-session descriptions that no longer apply. For .conflict-info.json: the file contained no conflict markers and already had correct content (PR #214, feature/124 branch), so it was staged as-is."
+  "summary": "Resolved 2 conflicted metadata files for PR #199 (feature/139-fileguard-sprint-2-issue-139). Both .claude-resolution.json and .conflict-info.json contained conflict markers between stale prior-session AI summaries that no longer applied to the current merge. The actual merge changes (agent-core.md, alert-queue.md, go.mod, go.sum) were already staged without conflicts.",
+  "strategyUsed": "For .claude-resolution.json: wrote a fresh resolution summary for the current session rather than merging two stale prior-session descriptions that no longer apply. For .conflict-info.json: the file contained no conflict markers and already had correct current-session metadata (PR #199, feature/139 branch), so it was staged as-is."
 }
