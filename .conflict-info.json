@@ -3,9 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/118-tripwire-cybersecurity-tool-sprint-2-issue-118",
   "conflictedFiles": [
-    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md",
-    "docs/concepts/tripwire-cybersecurity-tool/file-watcher.md",
-    "internal/watcher/watcher.go"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 3
+  "conflictCount": 2
 }
