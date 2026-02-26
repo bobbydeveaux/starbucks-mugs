@@ -1,26 +1,23 @@
 {
-  "prTitle": "feat: implement chi router and API handlers for REST API",
-  "prBody": "## Summary\n\nImplements `task-tripwire-cybersecurity-tool-feat-rest-api-2`: chi router and all REST API handlers for the TripWire dashboard server.\n\n### What was built\n\n**`internal/server/rest/middleware.go`** (also covers task-1 dependency)\n- `JWTMiddleware(pubKey)` — RS256 Bearer token validation; rejects missing/malformed/expired tokens with HTTP 401\n- `ClaimsFromContext(ctx)` — retrieves validated `Claims` from request context\n- `writeError` — shared JSON error response helper\n\n**`internal/server/rest/store.go`**\n- `Store` interface over the subset of `storage.Store` methods used by handlers, enabling in-process mocking for unit tests without a live database\n\n**`internal/server/rest/handlers.go`**\n- `NewServer(store Store)` — handler dependency injection\n- `GET /healthz` — unauthenticated liveness probe, returns `{\"status\":\"ok\"}`\n- `GET /api/v1/alerts` — paginated alert query; validates `from`/`to` (RFC3339, required), `severity`, `host_id`, `limit` (max 1000), `offset`; returns 400 with descriptive error on bad params\n- `GET /api/v1/hosts` — lists all registered hosts ordered by hostname\n- `GET /api/v1/audit` — queries tamper-evident audit entries for a host; requires `host_id`, `from`, `to`\n\n**`internal/server/rest/router.go`**\n- `NewRouter(srv, pubKey)` — chi router with `RequestID`, `RealIP`, `Recoverer` middleware; `/healthz` is unauthenticated; all `/api/v1/*` routes protected by `JWTMiddleware`\n- Passing `nil` for `pubKey` disables JWT validation (test-friendly)\n\n### Tests\n\n- `middleware_test.go` — covers missing header, malformed header, expired token, wrong key, valid token path, claims stored in context\n- `handlers_test.go` — covers missing/malformed params (400), valid requests (200), empty array responses (not null)\n- `router_test.go` — covers `/healthz` accessible without JWT, all `/api/v1/*` routes return 401 without JWT, valid JWT reaches handlers\n\n### Dependencies added\n\n- `github.com/go-chi/chi/v5 v5.1.0` — zero-dependency HTTP router\n- `github.com/golang-jwt/jwt/v5 v5.2.1` — RS256 JWT validation\n\n### Acceptance criteria met\n\n- ✅ GET /healthz returns 200 without authentication\n- ✅ All /api/v1/* routes return 401 without a valid JWT\n- ✅ GET /api/v1/alerts filters by host, severity, time range\n- ✅ GET /api/v1/hosts and GET /api/v1/audit return paginated JSON arrays\n- ✅ Invalid query parameters return 400 with descriptive JSON error body\n\nCloses #223",
+  "prTitle": "[task-tripwire-cybersecurity-tool-feat-grpc-server-1] Bootstrap gRPC server with mTLS and cert CN extraction",
+  "prBody": "## Summary\n\nImplements `task-tripwire-cybersecurity-tool-feat-grpc-server-1`: Bootstrap gRPC server with mTLS and cert CN extraction.\n\nAlso provides proto bindings required by `task-tripwire-cybersecurity-tool-feat-agent-transport-1`.\n\n### What was built\n\n**`proto/alert.proto`**\n- `AlertService` with two RPCs: `RegisterAgent` (unary) and `StreamAlerts` (bidirectional streaming)\n- Messages: `AgentRegistration` (agent_cn, hostname, platform, agent_version, ip_address), `AgentEvent` (host_id, timestamp_ms, tripwire_type, rule_name, severity, event_detail), `ServerAck` (ok, alert_id, error)\n\n**`proto/alert.pb.go`** and **`proto/alert_grpc.pb.go`**\n- Hand-crafted Go bindings compatible with `protoc-gen-go v1.34.2` / `protoc-gen-go-grpc v1.4.0`\n- Raw `FileDescriptorProto` binary encoded via Node.js (no `protoc` in environment)\n- Correct `protoimpl.MessageState` struct layout and `TypeBuilder`/`DescBuilder` init pattern\n- `AlertServiceClient`, `AlertServiceServer`, `UnimplementedAlertServiceServer`, `RegisterAlertServiceServer`\n\n**`internal/server/grpc/server.go`**\n- `Config` struct: `CertPath`, `KeyPath`, `CAPath`, `Addr` (default `:4443`)\n- `New(cfg, logger, srv)` — loads mTLS credentials, installs CN interceptors, registers AlertService\n- `loadTLSCredentials` — `tls.RequireAndVerifyClientCert`, `MinVersion: tls.VersionTLS12`, CA pool\n- `Serve(ctx)` and `ServeOnListener(ctx, lis)` — context-aware lifecycle; graceful stop on cancellation\n- `GracefulStop()` and `Stop()` for external lifecycle control\n- `extractCN(ctx)` — walks `peer.FromContext` → `credentials.TLSInfo` → `VerifiedChains[0][0].Subject.CommonName`\n- `cnUnaryInterceptor` and `cnStreamInterceptor` — inject CN into context; return `codes.Unauthenticated` if extraction fails\n- `AgentCNFromContext(ctx)` — public helper for handlers to retrieve agent identity\n\n**`cmd/server/main.go`**\n- CLI flags: `-grpc-addr`, `-http-addr`, `-tls-cert`, `-tls-key`, `-tls-ca`, `-dsn`, `-jwt-pubkey`, `-log-level`\n- Opens PostgreSQL pool (dev mode: skipped when DSN empty)\n- Wires `UnimplementedAlertServiceServer` stub into gRPC server (concrete impl in task-2)\n- Runs gRPC and HTTP servers in parallel goroutines\n- Signal handling: `SIGTERM`/`SIGINT` → 30-second graceful shutdown (cancel context → HTTP shutdown → gRPC drain)\n\n**`internal/server/grpc/server_test.go`**\n- In-memory PKI (`testPKI`): self-signed CA + server cert using ECDSA P-256, written to `t.TempDir()`\n- `signClientCert(t, cn)` — per-test client certificates signed by the test CA\n- `startServer` uses `ServeOnListener` with OS-assigned port (port 0) to avoid conflicts\n- Full end-to-end mTLS tests over real TCP connections\n\n### Acceptance criteria met\n\n- ✅ gRPC server starts and listens with mTLS; connections without a valid client cert are rejected at the TLS handshake\n- ✅ Client cert CN is extracted and available in the gRPC context for each RPC call via `AgentCNFromContext`\n- ✅ Server wires into `cmd/server/main.go` with graceful shutdown (30-second timeout)\n\n### Test coverage\n\n| Test | Description |\n|------|-------------|\n| `TestAgentCNFromContext` | Returns `(\"\", false)` on a plain background context |\n| `TestMTLSAcceptsValidClientCert` | Valid CA-signed cert → RegisterAgent succeeds, CN extracted |\n| `TestMTLSRejectsNoClientCert` | Client without cert → TLS handshake rejected |\n| `TestMTLSRejectsUnknownCAClientCert` | Rogue CA cert → TLS handshake rejected |\n| `TestCNExtraction` | Multiple CN values correctly propagated to handlers |\n| `TestServerNewErrorBadCert` | Invalid cert paths → `New` returns error |\n\nCloses #219",
   "testsPass": true,
   "filesChanged": [
     "go.mod",
-    "go.sum",
-    "internal/server/rest/middleware.go",
-    "internal/server/rest/store.go",
-    "internal/server/rest/handlers.go",
-    "internal/server/rest/router.go",
-    "internal/server/rest/handlers_test.go",
-    "internal/server/rest/middleware_test.go",
-    "internal/server/rest/router_test.go"
+    "proto/alert.proto",
+    "proto/alert.pb.go",
+    "proto/alert_grpc.pb.go",
+    "internal/server/grpc/server.go",
+    "internal/server/grpc/server_test.go",
+    "internal/proto/gen/gen.go",
+    "cmd/server/main.go"
   ],
   "docsUpdated": [
-    "docs/concepts/tripwire-cybersecurity-tool/rest-api.md"
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-server.md"
   ],
   "docsReviewed": [
-    "docs/concepts/tripwire-cybersecurity-tool/storage.md",
-    "docs/concepts/tripwire-cybersecurity-tool/README.md",
-    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
-    "docs/concepts/tripwire-cybersecurity-tool/tasks.yaml"
+    "docs/concepts/tripwire-cybersecurity-tool/tasks.yaml",
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-server.md"
   ],
-  "completedTasks": [1, 2]
+  "completedTasks": [1]
 }
