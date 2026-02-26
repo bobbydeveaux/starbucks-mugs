@@ -1,0 +1,21 @@
+{
+  "prTitle": "feat: define proto schema for StreamAlerts and RegisterAgent RPCs",
+  "prBody": "## Summary\n\nThis PR implements the proto schema definition task for issue #248.\n\n### Changes\n\n- **`proto/alert.proto`** — Already correct; updated the documentation comment to reference `make proto` as the canonical regeneration command.\n\n- **`proto/alert.pb.go`** — Replaced stale content (old `AgentRegistration`/`ServerAck` schema, `package proto`) with the correct generated Go bindings matching the current `proto/alert.proto` schema: `AgentEvent`, `RegisterRequest`, `RegisterResponse`, `ServerCommand` in `package alert`.\n\n- **`proto/alert_grpc.pb.go`** — Replaced stale content with correct gRPC service bindings: `RegisterAgent` (unary) and `StreamAlerts` (bidirectional) RPCs using the correct message types and service name `alert.AlertService`.\n\n- **`proto/generate.go`** — New file providing the `//go:generate` directive so `go generate ./proto/...` can regenerate the proto bindings deterministically.\n\n- **`Makefile`** — New file with `make proto` target that reproducibly regenerates `proto/alert.pb.go` and `proto/alert_grpc.pb.go` from `proto/alert.proto`.\n\n- **`cmd/server/main.go`** — Fixed import from `\"github.com/tripwire/agent/proto\"` (stale package) to `\"github.com/tripwire/agent/proto/alert\"` (correct package), resolving a type mismatch with `grpcserver.New()`.\n\n### Acceptance Criteria\n\n- [x] `alert.proto` defines `StreamAlerts` (bidirectional) and `RegisterAgent` (unary) with correct message types\n- [x] Generated `alert.pb.go` and `alert_grpc.pb.go` compile without errors  \n- [x] `make proto` or `go generate ./proto/...` reproduces the generated files deterministically\n\nCloses #248",
+  "testsPass": true,
+  "filesChanged": [
+    "proto/alert.pb.go",
+    "proto/alert_grpc.pb.go",
+    "proto/alert.proto",
+    "proto/generate.go",
+    "cmd/server/main.go",
+    "Makefile"
+  ],
+  "docsUpdated": [
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-server.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/agent-transport.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/HLD.md"
+  ]
+}
