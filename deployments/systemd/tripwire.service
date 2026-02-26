@@ -1,0 +1,58 @@
+[Unit]
+Description=TripWire Security Agent
+Documentation=https://github.com/tripwire/agent
+# Start after the network is up so the agent can reach the dashboard gRPC endpoint.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Run as a dedicated unprivileged user; create with:
+#   useradd --system --no-create-home --shell /sbin/nologin tripwire
+User=tripwire
+Group=tripwire
+
+# Absolute path to the installed agent binary.
+ExecStart=/usr/local/bin/tripwire -config /etc/tripwire/config.yaml
+
+# Restart the agent automatically on crash (exit code ≠ 0) or if it is
+# killed by a signal other than SIGTERM.  RestartSec sets a 5-second
+# back-off so a rapid crash loop does not spin the CPU.
+Restart=on-failure
+RestartSec=5s
+
+# Hard limit on the number of restarts within a 1-minute window.  If the
+# agent crashes more than 5 times per minute it is considered unrecoverable
+# and systemd will stop retrying until the next manual start.
+StartLimitInterval=60s
+StartLimitBurst=5
+
+# Let in-flight alert sends drain for up to 30 seconds before SIGKILL.
+TimeoutStopSec=30s
+
+# Write journal log entries with the unit name as the identifier so that
+#   journalctl -u tripwire
+# captures all stdout/stderr output from the agent.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tripwire
+
+# Security hardening: restrict the agent's ability to modify system state
+# beyond what is needed for file monitoring and outbound gRPC connections.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/var/lib/tripwire /run/tripwire
+ReadOnlyPaths=/etc/tripwire
+
+# Cap the agent's CPU and memory footprint.
+CPUQuota=50%
+MemoryMax=256M
+
+[Install]
+# Enable at multi-user (non-graphical) runlevel so the agent is started on
+# every boot:
+#   sudo systemctl enable --now tripwire
+WantedBy=multi-user.target

@@ -50,14 +50,24 @@
   <key>RunAtLoad</key>
   <true/>
 
-  <!-- Restart the agent if it exits for any reason. -->
+  <!--
+      KeepAlive: restart the agent if it exits unexpectedly.
+      - Crashed: true  → restart only when the process exits with a non-zero
+        status or is killed by a signal (mirrors systemd's Restart=on-failure).
+      Using Crashed rather than the boolean short-form intentionally allows a
+      clean exit (status 0) to stop the agent permanently until the next load.
+  -->
   <key>KeepAlive</key>
-  <true/>
+  <dict>
+    <key>Crashed</key>
+    <true/>
+  </dict>
 
-  <!-- Throttle rapid restart loops: wait at least 10 seconds between
-       restarts.  launchd backs off exponentially up to 60 seconds. -->
+  <!-- Throttle rapid restart loops: wait at least 5 seconds between restarts,
+       matching the acceptance criterion (restart within 5 s after a crash)
+       while preventing rapid restart loops. -->
   <key>ThrottleInterval</key>
-  <integer>10</integer>
+  <integer>5</integer>
 
   <!-- ── Working directory ───────────────────────────────────────────── -->
   <key>WorkingDirectory</key>
@@ -72,6 +82,13 @@
 
   <key>StandardErrorPath</key>
   <string>/var/log/tripwire/agent.err</string>
+
+  <!-- ── Process type ─────────────────────────────────────────────────── -->
+  <!-- Background indicates this is a long-running daemon that does not
+       interact with the user session, allowing macOS to manage its
+       scheduling priority appropriately. -->
+  <key>ProcessType</key>
+  <string>Background</string>
 
   <!-- ── Environment ─────────────────────────────────────────────────── -->
   <!-- Override individual settings without editing config.yaml.

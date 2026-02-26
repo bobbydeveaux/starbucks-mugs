@@ -1,11 +1,11 @@
 {
-  "prNumber": 267,
+  "prNumber": 272,
   "baseBranch": "main",
-  "headBranch": "feature/231-tripwire-cybersecurity-tool-sprint-4-issue-231",
+  "headBranch": "feature/250-tripwire-cybersecurity-tool-sprint-4-issue-250",
   "conflictedFiles": [
-    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md",
-    "internal/server/grpc/alert_service.go",
-    "internal/server/grpc/alert_service_test.go"
+    ".claude-output.json",
+    "cmd/agent/main.go",
+    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md"
   ],
   "conflictCount": 3
 }
