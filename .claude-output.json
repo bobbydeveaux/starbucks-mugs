@@ -1,0 +1,27 @@
+{
+  "prTitle": "feat: WebSocket hook and live alert feed component",
+  "prBody": "## Summary\n\nImplements task `task-tripwire-cybersecurity-tool-feat-dashboard-ui-2`: WebSocket hook and live alert feed component for the TripWire security dashboard.\n\n### Changes\n\n- **`src/types.ts`** — Add TripWire types: `TripwireAlert`, `TripwireHost`, `WsAlertMessage`, `TripwireType`, `Severity`, `HostStatus`, `WebSocketReadyState`\n- **`src/hooks/useWebSocket.ts`** — WebSocket connection hook with exponential-backoff auto-reconnect; bearer token appended as `?token=` query param (browsers cannot send custom WS headers)\n- **`src/hooks/useAlerts.ts`** — Live alert accumulation hook; prepends incoming WS alerts newest-first, caps list at `maxAlerts` to prevent unbounded memory growth\n- **`src/components/AlertFeed.tsx`** — Virtualized alert list using `react-window` `FixedSizeList`; DOM node count stays constant regardless of alert volume; severity colour-coding and keyboard accessibility\n- **`src/pages/TripwireDashboardPage.tsx`** — Top-level `/dashboard` route with connection status badge, alert count toolbar, and click-to-expand alert detail modal\n- **`src/App.tsx`** — Add `/dashboard` route\n- **`package.json`** — Add `react-window@1.8.10` and `@types/react-window`\n\n### Tests (51 new, all passing)\n\n- `useWebSocket.test.ts` (20 tests)\n- `useAlerts.test.ts` (13 tests)\n- `AlertFeed.test.tsx` (18 tests)\n\n### Acceptance criteria\n\n- useWebSocket reconnects automatically on disconnect with exponential backoff\n- Bearer token applied in the upgrade request via `?token=` query param\n- New alerts appear in the feed via prepend — no full list re-render needed\n- AlertFeed virtualizes rows via react-window so DOM node count stays constant\n\nCloses #257",
+  "testsPass": true,
+  "filesChanged": [
+    "src/types.ts",
+    "src/hooks/useWebSocket.ts",
+    "src/hooks/useWebSocket.test.ts",
+    "src/hooks/useAlerts.ts",
+    "src/hooks/useAlerts.test.ts",
+    "src/components/AlertFeed.tsx",
+    "src/components/AlertFeed.test.tsx",
+    "src/pages/TripwireDashboardPage.tsx",
+    "src/App.tsx",
+    "package.json",
+    "package-lock.json"
+  ],
+  "docsUpdated": [
+    "docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md",
+    "docs/concepts/tripwire-cybersecurity-tool/rest-api.md"
+  ],
+  "completedTasks": [1, 2, 3, 4]
+}
