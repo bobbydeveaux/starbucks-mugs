@@ -1,0 +1,95 @@
+# Promtool unit tests for deploy/prometheus/alerts/siem.yaml
+#
+# Run with:
+#   promtool test rules deploy/prometheus/tests/siem_test.yaml
+#
+# The tests verify that SIEMHighDeliveryErrorRate:
+#   - fires when the 5-minute error rate exceeds the 0.5% threshold for at
+#     least 5 consecutive minutes (the `for: 5m` pending window).
+#   - does NOT fire when the error rate is at or below the threshold.
+#   - does NOT fire when there are zero delivery attempts (no SIEM configured).
+
+rule_files:
+  - ../alerts/siem.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # ── Test 1: High error rate (1%) → alert fires after 5-minute pending window ──
+  #
+  # Series have counter values that produce a sustained ~1% error rate.
+  # Increments chosen so that rate(errors[5m]) / rate(attempts[5m]) ≈ 0.01.
+  - interval: 1m
+    input_series:
+      # 1000 attempts per minute
+      - series: 'fileguard_siem_delivery_attempts_total'
+        values: '0 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000'
+      # 10 errors per minute → 1% error rate
+      - series: 'fileguard_siem_delivery_errors_total'
+        values: '0 10 20 30 40 50 60 70 80 90 100'
+
+    alert_rule_test:
+      # At 5m the expression first becomes true; the alert enters PENDING.
+      # At 10m it has been PENDING for 5 minutes and transitions to FIRING.
+      - eval_time: 10m
+        alertname: SIEMHighDeliveryErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: fileguard
+              component: siem
+            exp_annotations:
+              summary: "FileGuard SIEM delivery error rate is above 0.5%"
+
+  # ── Test 2: Zero error rate → alert must NOT fire ──
+  - interval: 1m
+    input_series:
+      - series: 'fileguard_siem_delivery_attempts_total'
+        values: '0 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000'
+      - series: 'fileguard_siem_delivery_errors_total'
+        values: '0 0 0 0 0 0 0 0 0 0 0'
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SIEMHighDeliveryErrorRate
+        exp_alerts: []
+
+  # ── Test 3: Error rate below threshold (0.4%) → alert must NOT fire ──
+  - interval: 1m
+    input_series:
+      # 1000 attempts per minute, 4 errors per minute → 0.4% rate (below 0.5%)
+      - series: 'fileguard_siem_delivery_attempts_total'
+        values: '0 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000'
+      - series: 'fileguard_siem_delivery_errors_total'
+        values: '0 4 8 12 16 20 24 28 32 36 40'
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SIEMHighDeliveryErrorRate
+        exp_alerts: []
+
+  # ── Test 4: Error rate above threshold but less than 5 minutes → still PENDING ──
+  #
+  # The alert expression is true from t=5m, but `for: 5m` means it fires at
+  # t=10m.  At t=9m the alert is still pending (only 4 minutes of truth so far)
+  # and should not appear in the firing set.
+  - interval: 1m
+    input_series:
+      - series: 'fileguard_siem_delivery_attempts_total'
+        values: '0 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000'
+      - series: 'fileguard_siem_delivery_errors_total'
+        values: '0 10 20 30 40 50 60 70 80 90 100'
+
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: SIEMHighDeliveryErrorRate
+        exp_alerts: []
+
+  # ── Test 5: No SIEM configured (no metrics at all) → alert must NOT fire ──
+  - interval: 1m
+    input_series: []
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SIEMHighDeliveryErrorRate
+        exp_alerts: []

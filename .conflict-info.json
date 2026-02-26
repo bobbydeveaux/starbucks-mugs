@@ -1,10 +1,9 @@
 {
-  "prNumber": 297,
+  "prNumber": 307,
   "baseBranch": "main",
-  "headBranch": "feature/186-fileguard-sprint-3-issue-186",
+  "headBranch": "feature/179-fileguard-sprint-3-issue-179",
   "conflictedFiles": [
-    ".claude-resolution.json",
-    ".conflict-info.json"
+    "fileguard/core/adapters/__init__.py"
   ],
-  "conflictCount": 2
+  "conflictCount": 1
 }

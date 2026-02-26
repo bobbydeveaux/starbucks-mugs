@@ -183,7 +183,21 @@ fileguard/
     ├── __init__.py   # public re-exports
     ├── base.py       # AVEngineAdapter, Finding, AVEngineError
     └── clamav.py     # ClamAVAdapter
+fileguard/
+└── core/
+    └── adapters/
+        ├── __init__.py       # GoogleDLPAdapter, AWSMacieAdapter exports
+        ├── clamav_adapter.py # ClamAV async adapter (INSTREAM protocol)
+        ├── dlp_adapter.py    # Google Cloud DLP PII adapter
+        └── macie_adapter.py  # AWS Macie PII adapter
 tests/
 └── unit/
     └── test_av_engine.py
 ```
+
+---
+
+## PII Cloud Adapters
+
+For cloud-based PII detection backends (Google DLP, AWS Macie), see
+[pii-cloud-adapters.md](pii-cloud-adapters.md).
