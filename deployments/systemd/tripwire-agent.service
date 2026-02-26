@@ -1,0 +1,110 @@
+# TripWire Agent — systemd service unit
+#
+# Installation:
+#   sudo cp tripwire-agent.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable tripwire-agent
+#   sudo systemctl start  tripwire-agent
+#
+# Uninstall:
+#   sudo systemctl stop    tripwire-agent
+#   sudo systemctl disable tripwire-agent
+#   sudo rm /etc/systemd/system/tripwire-agent.service
+#   sudo systemctl daemon-reload
+#
+# View logs:
+#   sudo journalctl -u tripwire-agent -f
+
+[Unit]
+Description=TripWire Security Agent
+Documentation=https://github.com/tripwire/agent
+# Require the network to be available before starting so the agent can
+# register with the dashboard and establish its gRPC stream.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# --- Identity -----------------------------------------------------------
+# The agent runs as a dedicated low-privilege user.  The user and group are
+# created by the install-agent-linux.sh script.  On Linux kernels ≥ 5.8,
+# Ambient Capabilities grant the required privileges without running as root.
+User=tripwire
+Group=tripwire
+
+# --- Invocation ---------------------------------------------------------
+ExecStart=/usr/local/bin/tripwire start --config /etc/tripwire/config.yaml
+
+# Send SIGHUP to the agent when `systemctl reload` is called so it can
+# re-open log/audit files after logrotate without a full restart.
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Optional environment overrides (e.g. TRIPWIRE_LOG_LEVEL=debug).
+# The leading '-' suppresses the error if the file does not exist.
+EnvironmentFile=-/etc/tripwire/agent.env
+
+# Working directory: writable by the tripwire user.
+WorkingDirectory=/var/lib/tripwire
+
+# --- Restart policy -----------------------------------------------------
+Restart=on-failure
+RestartSec=5s
+# Limit restart bursts: no more than 5 restarts within 30 seconds.
+StartLimitIntervalSec=30s
+StartLimitBurst=5
+
+TimeoutStartSec=30s
+TimeoutStopSec=30s
+
+# --- Logging ------------------------------------------------------------
+# Structured JSON output from the agent is captured by journald.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tripwire-agent
+
+# --- Security hardening -------------------------------------------------
+# Prevent the process from gaining new privileges via setuid/setgid.
+NoNewPrivileges=yes
+
+# Private /tmp directory isolated from other services.
+PrivateTmp=yes
+
+# Mount / and /usr read-only; the agent only writes to the paths listed in
+# ReadWritePaths below.
+ProtectSystem=strict
+ReadWritePaths=/var/lib/tripwire /var/log/tripwire
+
+# Hide /home directories from the service.
+ProtectHome=yes
+
+# Prevent the service from modifying kernel tunables.
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+# Restrict address families to those needed for gRPC (TCP/IPv4/IPv6) and
+# Unix domain sockets (SQLite WAL mode).
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# --- Linux capabilities -------------------------------------------------
+# The TripWire agent's process watcher uses eBPF (kernel ≥ 5.8) or ptrace
+# as a fallback.  The minimal capability set required is:
+#
+#   CAP_SYS_PTRACE  — ptrace-based process monitoring (fallback backend)
+#   CAP_BPF         — load and attach eBPF programs (kernel ≥ 5.8)
+#   CAP_PERFMON     — read perf events used by eBPF (kernel ≥ 5.8)
+#   CAP_NET_ADMIN   — attach TC/XDP network-monitoring programs
+#   CAP_SYS_ADMIN   — required on kernels < 5.8 where CAP_BPF/CAP_PERFMON
+#                     are not yet split out
+#
+# The capabilities are added to both the Bounding and Ambient sets so that
+# the non-root tripwire user receives them without a setuid wrapper.
+#
+# IMPORTANT: Remove CAP_SYS_ADMIN on kernel ≥ 5.8 environments to reduce
+# the attack surface.  See the deployment guide for details.
+CapabilityBoundingSet=CAP_SYS_PTRACE CAP_BPF CAP_PERFMON CAP_NET_ADMIN CAP_SYS_ADMIN
+AmbientCapabilities=CAP_SYS_PTRACE CAP_BPF CAP_PERFMON CAP_NET_ADMIN CAP_SYS_ADMIN
+
+[Install]
+WantedBy=multi-user.target
