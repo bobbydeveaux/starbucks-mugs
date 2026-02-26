@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
@@ -33,7 +34,12 @@ import (
 
 // Store is the subset of the storage layer used by AlertService.
 type Store interface {
-	UpsertHost(ctx context.Context, h storage.Host) error
+	// UpsertHost inserts or updates a host record and returns the effective
+	// host_id persisted in the database.  On a first insert the supplied
+	// h.HostID is stored and returned; on a hostname conflict the pre-existing
+	// host_id is returned unchanged, giving callers a stable identifier across
+	// agent reconnects.
+	UpsertHost(ctx context.Context, h storage.Host) (string, error)
 	BatchInsertAlerts(ctx context.Context, a storage.Alert) error
 }
 
@@ -97,8 +103,15 @@ func (s *AlertService) RegisterAgent(ctx context.Context, req *alertpb.RegisterR
 	}
 
 	now := time.Now().UTC()
+	// Generate a candidate UUID for new registrations.  UpsertHost uses
+	// ON CONFLICT (hostname) DO UPDATE … RETURNING host_id, so if a host
+	// with the same hostname already exists the DB returns the pre-existing
+	// UUID and candidateID is discarded.  This guarantees that every agent
+	// reconnect receives the same stable host_id, preserving alert correlation
+	// across disconnects.
+	candidateID := uuid.NewString()
 	host := storage.Host{
-		HostID:       hostIDFromHostname(hostname),
+		HostID:       candidateID,
 		Hostname:     hostname,
 		Platform:     req.GetPlatform(),
 		AgentVersion: req.GetAgentVersion(),
@@ -106,7 +119,8 @@ func (s *AlertService) RegisterAgent(ctx context.Context, req *alertpb.RegisterR
 		Status:       storage.HostStatusOnline,
 	}
 
-	if err := s.store.UpsertHost(ctx, host); err != nil {
+	effectiveHostID, err := s.store.UpsertHost(ctx, host)
+	if err != nil {
 		s.logger.Error("register_agent: upsert host failed",
 			slog.String("hostname", hostname),
 			slog.Any("error", err),
@@ -115,13 +129,13 @@ func (s *AlertService) RegisterAgent(ctx context.Context, req *alertpb.RegisterR
 	}
 
 	s.logger.Info("agent registered",
-		slog.String("host_id", host.HostID),
+		slog.String("host_id", effectiveHostID),
 		slog.String("hostname", hostname),
 		slog.String("platform", req.GetPlatform()),
 	)
 
 	return &alertpb.RegisterResponse{
-		HostId:       host.HostID,
+		HostId:       effectiveHostID,
 		ServerTimeUs: now.UnixMicro(),
 	}, nil
 }
@@ -321,18 +335,6 @@ func certCN(ctx context.Context) string {
 		return ""
 	}
 	return tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
-}
-
-// hostIDFromHostname derives a stable, deterministic host UUID from the
-// hostname using a simple SHA-256-based approach.  In production, the host_id
-// should be persisted in the database; this helper is used only when the agent
-// has not yet been registered or the caller does not carry a pre-assigned ID.
-//
-// NOTE: this is a placeholder; the actual UpsertHost call handles identity.
-func hostIDFromHostname(hostname string) string {
-	// Use the hostname directly as a deterministic key for now.
-	// A proper implementation would generate or fetch a UUID from the DB.
-	return hostname
 }
 
 // Ensure InProcessBroadcaster satisfies the local Broadcaster interface at
