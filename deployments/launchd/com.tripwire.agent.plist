@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TripWire Agent — launchd daemon plist (macOS)
+
+  Installation:
+    sudo cp com.tripwire.agent.plist /Library/LaunchDaemons/
+    sudo chown root:wheel /Library/LaunchDaemons/com.tripwire.agent.plist
+    sudo chmod 644 /Library/LaunchDaemons/com.tripwire.agent.plist
+    sudo launchctl bootstrap system /Library/LaunchDaemons/com.tripwire.agent.plist
+
+  Start / stop:
+    sudo launchctl kickstart -k system/com.tripwire.agent   # start (or restart)
+    sudo launchctl bootout   system/com.tripwire.agent      # stop and unload
+
+  Uninstall:
+    sudo launchctl bootout   system/com.tripwire.agent
+    sudo rm /Library/LaunchDaemons/com.tripwire.agent.plist
+
+  View logs:
+    sudo log stream --predicate 'subsystem == "com.tripwire.agent"'
+    tail -f /var/log/tripwire/agent.log
+    tail -f /var/log/tripwire/agent.err
+
+  Notes:
+    - This is a LaunchDaemon (system-wide, loaded at boot, runs as root).
+    - File access tripwires and process monitoring via kqueue require root or
+      the com.apple.security.temporary-exception.files.all-files entitlement.
+    - The agent binary must be signed for Gatekeeper acceptance on macOS 13+.
+-->
+<plist version="1.0">
+<dict>
+
+  <!-- Unique service label — must match the plist filename. -->
+  <key>Label</key>
+  <string>com.tripwire.agent</string>
+
+  <!-- ── Program ─────────────────────────────────────────────────────── -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/tripwire</string>
+    <string>start</string>
+    <string>--config</string>
+    <string>/etc/tripwire/config.yaml</string>
+  </array>
+
+  <!-- ── Lifecycle ───────────────────────────────────────────────────── -->
+  <!-- Start automatically when the system boots. -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!--
+      KeepAlive: restart the agent if it exits unexpectedly.
+      - Crashed: true  → restart only when the process exits with a non-zero
+        status or is killed by a signal (mirrors systemd's Restart=on-failure).
+      Using Crashed rather than the boolean short-form intentionally allows a
+      clean exit (status 0) to stop the agent permanently until the next load.
+  -->
+  <key>KeepAlive</key>
+  <dict>
+    <key>Crashed</key>
+    <true/>
+  </dict>
+
+  <!-- Throttle rapid restart loops: wait at least 5 seconds between restarts,
+       matching the acceptance criterion (restart within 5 s after a crash)
+       while preventing rapid restart loops. -->
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <!-- ── Working directory ───────────────────────────────────────────── -->
+  <key>WorkingDirectory</key>
+  <string>/var/lib/tripwire</string>
+
+  <!-- ── Logging ─────────────────────────────────────────────────────── -->
+  <!-- Standard output and error are redirected to files rather than the
+       system log so that structured JSON lines are preserved verbatim.
+       Use `log stream` for Apple Unified Log integration (see header). -->
+  <key>StandardOutPath</key>
+  <string>/var/log/tripwire/agent.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/var/log/tripwire/agent.err</string>
+
+  <!-- ── Process type ─────────────────────────────────────────────────── -->
+  <!-- Background indicates this is a long-running daemon that does not
+       interact with the user session, allowing macOS to manage its
+       scheduling priority appropriately. -->
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <!-- ── Environment ─────────────────────────────────────────────────── -->
+  <!-- Override individual settings without editing config.yaml.
+       Remove or comment out keys you do not need. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- Log level: debug | info | warn | error -->
+    <key>TRIPWIRE_LOG_LEVEL</key>
+    <string>info</string>
+
+    <!-- Log format: json | console -->
+    <key>TRIPWIRE_LOG_FORMAT</key>
+    <string>json</string>
+  </dict>
+
+  <!-- ── Resource limits ─────────────────────────────────────────────── -->
+  <!-- Allow the agent to open a large number of file descriptors for
+       inotify/kqueue watches and the SQLite WAL. -->
+  <key>SoftResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>65536</integer>
+  </dict>
+  <key>HardResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>65536</integer>
+  </dict>
+
+  <!-- ── macOS sandboxing note ───────────────────────────────────────── -->
+  <!-- On macOS 14+ (Sonoma) Full Disk Access must be granted to
+       /usr/local/bin/tripwire in:
+         System Settings → Privacy & Security → Full Disk Access
+       Without it, the agent cannot watch /etc, /private, or /var paths. -->
+
+</dict>
+</plist>

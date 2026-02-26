@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved 2 conflicts in metadata files (.claude-resolution.json and .conflict-info.json) from merging origin/main into feature/164-fileguard-sprint-2-issue-164 (PR #208). The HEAD version of .claude-resolution.json documented resolution of 4 Python files (fileguard/core/__init__.py, fileguard/core/document_extractor.py, tests/unit/test_document_extractor.py, and .claude-output.json deletion). The origin/main version documented resolution of 1 docs conflict (docs/concepts/tripwire-cybersecurity-tool/agent-core.md). Both summaries were merged to preserve full resolution history.",
-  "strategyUsed": "For .claude-resolution.json: merged both prior resolution summaries into a single unified record preserving the full history of resolved conflicts across branches. For .conflict-info.json: kept the working-tree version which accurately reflects the current merge's conflicted files (.claude-resolution.json and .conflict-info.json, conflictCount: 2), as this was the most current and accurate representation of the actual conflict state."
+  "filesResolved": 1,
+  "summary": "Resolved conflict in .claude-output.json. Kept HEAD's version which accurately describes this branch's PR (#270): WebSocket handler and gRPC service review feedback fixes (closes #228). The origin/main version described a different PR (GitHub Actions build matrix, closes #231) which is unrelated to this feature branch.",
+  "strategyUsed": "Chose HEAD for all conflict sections: HEAD's prTitle, prBody, and filesChanged accurately reflect this branch's work (WebSocket/gRPC fixes). HEAD's docsReviewed (grpc-alert-service.md, LLD.md, README.md) and completedTasks [1,2,3,4,5] are retained. origin/main's conflicting sections described a separate PR's artifacts and were discarded to avoid mixing unrelated PR metadata."
 }

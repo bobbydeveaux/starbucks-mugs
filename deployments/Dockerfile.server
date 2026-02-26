@@ -1,0 +1,70 @@
+# ============================================================
+# Stage 1: Builder — compile the TripWire dashboard server
+# ============================================================
+FROM golang:1.22-bookworm AS builder
+
+WORKDIR /src
+
+# Download dependencies first to leverage layer caching.
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy remaining source and build a statically-linked binary.
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux \
+    go build -ldflags="-s -w" -o /tripwire-server ./cmd/server
+
+# ============================================================
+# Stage 2: Runtime — minimal Debian slim image
+# ============================================================
+FROM debian:bookworm-slim AS runtime
+
+LABEL org.opencontainers.image.title="TripWire Dashboard Server" \
+      org.opencontainers.image.description="Security alert ingestion dashboard for the TripWire agent fleet" \
+      org.opencontainers.image.vendor="RiverSafe"
+
+# Install:
+#   - ca-certificates: system CAs needed by outbound TLS connections
+#   - curl:            used by the HEALTHCHECK instruction
+#   - openssl:         generates dev TLS certs in the entrypoint when none are mounted
+#   - postgresql-client: provides psql + pg_isready for migration runner
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    openssl \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a dedicated non-root user to run the service.
+RUN groupadd --gid 1001 tripwire \
+    && useradd --uid 1001 --gid tripwire --shell /bin/bash --create-home tripwire
+
+# Copy compiled binary from the builder stage.
+COPY --from=builder /tripwire-server /usr/local/bin/tripwire-server
+
+# Copy database migration files.  The entrypoint applies these at startup when
+# RUN_MIGRATIONS=true.
+COPY db/migrations /app/migrations
+
+# Copy and configure the container entrypoint.
+COPY deployments/entrypoint.server.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Pre-create the cert directory with correct ownership so the non-root user can
+# write generated dev certs into it without requiring a volume mount.
+RUN mkdir -p /etc/tripwire && chown tripwire:tripwire /etc/tripwire
+
+WORKDIR /app
+
+# Switch to non-root user for the runtime process.
+USER tripwire
+
+# 4443 — gRPC mTLS (agents connect here)
+# 8080 — HTTP REST API + unauthenticated /healthz
+EXPOSE 4443 8080
+
+# Liveness probe against the unauthenticated health endpoint.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/healthz || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]

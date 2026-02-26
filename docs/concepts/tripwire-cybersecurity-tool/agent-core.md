@@ -77,11 +77,28 @@ value.
 
 ---
 
-## Package: `internal/agent`
+## Package: `internal/watcher`
 
-**File:** `internal/agent/agent.go`
+**File:** `internal/watcher/watcher.go`
 
-### Interfaces
+The `internal/watcher` package defines the common abstractions shared by all
+watcher implementations. Placing them here keeps the dependency direction
+clean: concrete watchers depend only on `internal/watcher`, while the agent
+orchestrator depends on `internal/watcher` for the shared contract.
+
+### AlertEvent
+
+```go
+type AlertEvent struct {
+    TripwireType string         // "FILE" | "NETWORK" | "PROCESS"
+    RuleName     string
+    Severity     string         // "INFO" | "WARN" | "CRITICAL"
+    Timestamp    time.Time
+    Detail       map[string]any // type-specific metadata
+}
+```
+
+### Watcher interface
 
 ```go
 type Watcher interface {
@@ -89,7 +106,30 @@ type Watcher interface {
     Stop()
     Events() <-chan AlertEvent
 }
+```
 
+All watcher implementations (`FileWatcher`, `NetworkWatcher`, and the planned
+`ProcessWatcher`) satisfy this interface.
+
+---
+
+## Package: `internal/agent`
+
+**File:** `internal/agent/agent.go`
+
+### Re-exported types
+
+For backward compatibility and ergonomic imports, the agent package re-exports
+`AlertEvent` and `Watcher` as type aliases pointing to the `watcher` package:
+
+```go
+type AlertEvent = watcher.AlertEvent
+type Watcher    = watcher.Watcher
+```
+
+### Additional interfaces
+
+```go
 type Queue interface {
     Enqueue(ctx context.Context, evt AlertEvent) error
     Depth() int
@@ -106,6 +146,10 @@ type Transport interface {
 These interfaces are the contracts implemented by the file, network, and
 process watcher packages, the SQLite alert queue, and the gRPC transport
 client respectively.
+
+The concrete `Queue` implementation is `*queue.SQLiteQueue` from the
+`internal/queue` package — see [`agent-queue.md`](agent-queue.md) for full
+details on the WAL-mode SQLite queue.
 
 ### AlertEvent
 
@@ -300,17 +344,17 @@ If no NETWORK rules are configured the goroutine exits immediately after
 |------|---------|-------------|
 | `-config` | `/etc/tripwire/config.yaml` | Path to the YAML configuration file |
 
-### Component wiring
+### Startup sequence
 
-After loading configuration the binary:
-
-1. Creates a single `NetworkWatcher` with all NETWORK-type rules from the
-   config (polls `/proc/net/tcp*` and `/proc/net/udp*` every second).
-2. Passes the watcher to `agent.New` via `WithWatchers`.
-3. Starts the agent — the NetworkWatcher goroutine begins polling immediately.
-
-Additional watcher/queue/transport components are registered in later sprints
-by appending further `agent.Option` values to `agentOpts`.
+1. Load and validate configuration via `config.LoadConfig`.
+2. Initialise the structured logger from `Config.LogLevel`.
+3. Create a single `NetworkWatcher` for all NETWORK-type rules (polls
+   `/proc/net/tcp*` and `/proc/net/udp*` every second) and register it with
+   the agent via `WithWatchers`.
+4. Build one `FileWatcher` per FILE-type rule via `buildFileWatchers` and
+   register them with the agent via `WithWatchers`.
+5. Start the agent orchestrator.
+6. Serve `/healthz` on `Config.HealthAddr`.
 
 ### Logging
 
@@ -355,6 +399,31 @@ The agent does **not** bind to external interfaces for this endpoint.
 ```
 
 `last_alert_at` is omitted when no alert has been processed since agent start.
+
+---
+
+## Package: `internal/queue`
+
+**Files:** `internal/queue/schema.sql`, `internal/queue/sqlite_queue.go`
+
+`SQLiteQueue` implements the `Queue` interface using a WAL-mode SQLite
+database.  It buffers alert events durably on disk with at-least-once delivery
+semantics so that no events are lost if the gRPC transport is temporarily
+unavailable.
+
+Key operations:
+
+| Method | Description |
+|--------|-------------|
+| `Open(path, logger)` | Opens/creates the database and applies the WAL schema |
+| `Enqueue(ctx, evt)` | Persists an alert for at-least-once delivery |
+| `Dequeue(ctx, n)` | Returns up to `n` unacknowledged events in insertion order |
+| `Ack(ctx, id)` | Marks an event as delivered; idempotent |
+| `Depth()` | Returns the count of pending events (surfaced on `/healthz`) |
+| `Close()` | Releases the database connection; idempotent |
+
+See [`alert-queue.md`](alert-queue.md) for full API reference and usage
+examples.
 
 ---
 

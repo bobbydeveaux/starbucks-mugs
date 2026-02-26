@@ -1,9 +1,8 @@
-// Package watcher provides filesystem monitoring components that implement
-// the agent.Watcher interface. The FileWatcher polls the filesystem at a
-// configurable interval (default 100 ms) to detect creates, writes, and
-// deletes on the paths defined by FILE-type tripwire rules. The 100 ms poll
-// interval ensures events are detected well within the 5-second alert SLA
-// required by the product specification.
+// Package watcher provides filesystem monitoring components. The FileWatcher
+// polls the filesystem at a configurable interval (default 100 ms) to detect
+// creates, writes, and deletes on the paths defined by FILE-type tripwire
+// rules. The 100 ms poll interval ensures events are detected well within the
+// 5-second alert SLA required by the product specification.
 package watcher
 
 import (
@@ -14,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tripwire/agent/internal/agent"
 	"github.com/tripwire/agent/internal/config"
 )
 
@@ -31,8 +29,8 @@ type fileState struct {
 }
 
 // FileWatcher monitors file and directory paths configured by FILE-type
-// tripwire rules. It implements [agent.Watcher] and is safe for concurrent
-// use. Changes are detected by comparing periodic filesystem snapshots; no
+// tripwire rules. It implements [Watcher] and is safe for concurrent use.
+// Changes are detected by comparing periodic filesystem snapshots; no
 // kernel-level inotify handle is held, so the watcher tolerates paths that do
 // not yet exist at startup.
 type FileWatcher struct {
@@ -40,7 +38,7 @@ type FileWatcher struct {
 	logger   *slog.Logger
 	interval time.Duration
 
-	events chan agent.AlertEvent
+	events chan AlertEvent
 	done   chan struct{}
 	// ready is closed once the initial snapshot has been taken. Callers
 	// (especially tests) may wait on Ready() before triggering filesystem
@@ -76,7 +74,7 @@ func NewFileWatcher(rules []config.TripwireRule, logger *slog.Logger, interval t
 		rules:    fileRules,
 		logger:   logger,
 		interval: interval,
-		events:   make(chan agent.AlertEvent, 64),
+		events:   make(chan AlertEvent, 64),
 		done:     make(chan struct{}),
 		ready:    make(chan struct{}),
 		snapshot: make(map[string]fileState),
@@ -106,7 +104,7 @@ func (fw *FileWatcher) Stop() {
 
 // Events returns the read-only channel on which AlertEvents are delivered.
 // The channel is closed when Stop returns.
-func (fw *FileWatcher) Events() <-chan agent.AlertEvent {
+func (fw *FileWatcher) Events() <-chan AlertEvent {
 	return fw.events
 }
 
@@ -225,7 +223,7 @@ func (fw *FileWatcher) emit(path, operation string) {
 		return
 	}
 
-	evt := agent.AlertEvent{
+	evt := AlertEvent{
 		TripwireType: "FILE",
 		RuleName:     rule.Name,
 		Severity:     rule.Severity,
