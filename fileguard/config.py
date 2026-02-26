@@ -61,5 +61,10 @@ class Settings(BaseSettings):
     REPORTS_DIR: str = "/tmp/fileguard/reports"
     REPORT_CADENCE: str = "daily"  # "daily" or "weekly"
 
+    # Redacted file storage and signed URLs
+    REDACTED_FILES_DIR: str = "/tmp/fileguard/redacted"
+    REDACTED_URL_TTL_SECONDS: int = 3600  # 1 hour default
+    REDACTED_BASE_URL: str = ""  # e.g. "https://api.example.com"
+
 
 settings = Settings()

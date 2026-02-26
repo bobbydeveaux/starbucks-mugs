@@ -44,6 +44,10 @@ logger = logging.getLogger(__name__)
 # Paths that bypass authentication (health / readiness endpoints)
 _UNAUTHENTICATED_PATHS: frozenset[str] = frozenset({"/healthz", "/v1/docs", "/v1/openapi.json"})
 
+# Path prefixes that bypass authentication (e.g. signed-URL endpoints that
+# carry their own cryptographic credentials in the query string).
+_UNAUTHENTICATED_PREFIXES: tuple[str, ...] = ("/v1/redacted/",)
+
 # Simple in-process JWKS cache: maps jwks_url -> (keys_list, expiry_timestamp)
 _jwks_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
 _JWKS_CACHE_TTL_SECONDS: float = 300.0  # 5 minutes
@@ -192,7 +196,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:  # type: ignore[override]
-        if request.url.path in _UNAUTHENTICATED_PATHS:
+        path = request.url.path
+        if path in _UNAUTHENTICATED_PATHS:
+            return await call_next(request)
+        if path.startswith(_UNAUTHENTICATED_PREFIXES):
             return await call_next(request)
 
         auth_header = request.headers.get("Authorization", "")
