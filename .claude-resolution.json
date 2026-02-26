@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 3,
-  "summary": "Resolved 3 conflicted files: (1) docs/concepts/fileguard/README.md — merged project structure and documentation sections from both branches, preserving AV Engine Adapter content from HEAD and Document Extraction/AuditService sections from origin/main; (2) fileguard/core/__init__.py — used HEAD's more descriptive package docstring; (3) tests/unit/test_clamav_adapter.py — used origin/main's test suite which tests the canonical ClamAVAdapter in fileguard/core/adapters/clamav_adapter.py (the newer implementation with AVEngineAdapter base class, Unix socket + TCP support, and is_available() method).",
-  "strategyUsed": "Preserved both changes where possible: README merged all documentation sections from both branches into a coherent document; __init__.py chose the more descriptive HEAD docstring; test_clamav_adapter.py chose origin/main's version which tests the canonical newer adapter implementation (fileguard.core.adapters.clamav_adapter) that aligns with the AVEngineAdapter abstract interface defined in av_adapter.py"
+  "filesResolved": 1,
+  "summary": "Resolved 1 conflicted file: .claude-output.json was deleted on main (origin/main) but present on the feature branch. Since this file contains automation metadata from a previous CI task and is not functional code, the deletion from main was accepted by staging the file removal.",
+  "strategyUsed": "accepted theirs (deletion) — .claude-output.json is CI/automation metadata with no functional impact; respecting the cleanup done on main is the correct resolution"
 }

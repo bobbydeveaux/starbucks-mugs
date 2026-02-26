@@ -1,11 +1,9 @@
 {
-  "prNumber": 194,
+  "prNumber": 205,
   "baseBranch": "main",
-  "headBranch": "feature/170-fileguard-sprint-2-issue-170",
+  "headBranch": "feature/143-fileguard-sprint-2-issue-143",
   "conflictedFiles": [
-    "docs/concepts/fileguard/README.md",
-    "fileguard/core/__init__.py",
-    "tests/unit/test_clamav_adapter.py"
+    ".claude-output.json"
   ],
-  "conflictCount": 3
+  "conflictCount": 1
 }
