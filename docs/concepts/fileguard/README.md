@@ -71,6 +71,9 @@ docker compose down -v
 | `THREAD_POOL_WORKERS` | No | `4` | Worker threads for CPU-bound extraction |
 | `REPORTS_DIR` | No | `/tmp/fileguard/reports` | Local directory where generated compliance report files are stored |
 | `REPORT_CADENCE` | No | `daily` | Beat schedule cadence for automatic report generation (`daily` or `weekly`) |
+| `REDACTED_FILES_DIR` | No | `/tmp/fileguard/redacted` | Local directory for storing redacted file content |
+| `REDACTED_URL_TTL_SECONDS` | No | `3600` | Default signed-URL lifetime in seconds (1 hour) |
+| `REDACTED_BASE_URL` | No | `""` | Base URL prepended to `/v1/redacted/{file_id}` in signed URLs (e.g. `https://api.example.com`) |
 | `RUN_MIGRATIONS` | No | `false` | Run `alembic upgrade head` on container start |
 
 ## API Reference
@@ -121,13 +124,15 @@ fileguard/              Python package (FastAPI application)
 │   │   ├── auth.py     Bearer-token authentication middleware
 │   │   └── rate_limit.py Redis-backed sliding-window rate limiter
 │   └── routes/
-│       └── reports.py  GET /v1/reports and GET /v1/reports/{id}/download handlers
+│       ├── reports.py   GET /v1/reports and GET /v1/reports/{id}/download handlers
+│       └── redacted.py  GET /v1/redacted/{file_id} signed-URL download handler
 ├── core/
 │   ├── av_engine.py    Abstract AVEngineAdapter interface + ScanResult/Finding types
 │   ├── clamav_adapter.py ClamAV clamd TCP socket adapter (fail-secure)
 │   ├── document_extractor.py  Multi-format text extractor with thread-pool execution
 │   ├── scan_context.py  ScanContext dataclass — shared state for the scan pipeline
 │   ├── pii_detector.py  PIIDetector engine + PIIFinding type
+│   ├── redaction.py     RedactionEngine — span-based PII redaction with overlap merging
 │   └── patterns/
 │       ├── __init__.py
 │       └── uk_patterns.py  Pre-compiled UK PII patterns + JSON custom-pattern loading
@@ -144,7 +149,8 @@ fileguard/              Python package (FastAPI application)
 ├── services/
 │   ├── audit.py                AuditService: HMAC-signed scan event persistence + SIEM forwarding
 │   ├── reports.py              ReportService + Celery tasks for compliance report generation
-│   └── compliance_report.py    ComplianceReportService: read-only report listing and retrieval
+│   ├── compliance_report.py    ComplianceReportService: read-only report listing and retrieval
+│   └── storage.py              RedactedFileStorage: write redacted files + generate signed URLs
 └── db/
     ├── base.py         Declarative base shared by all ORM models
     └── session.py      SQLAlchemy async session factory
@@ -168,7 +174,8 @@ tests/
 │   ├── test_audit_service.py           Unit tests for AuditService (HMAC, SIEM, DB mock)
 │   ├── test_document_extractor.py      Unit tests for DocumentExtractor
 │   ├── test_report_service.py          Unit tests for ReportService and Celery tasks
-│   └── test_compliance_report_api.py   Unit tests for compliance report API handlers and service
+│   ├── test_compliance_report_api.py   Unit tests for compliance report API handlers and service
+│   └── test_redaction.py               Unit tests for RedactionEngine and RedactedFileStorage
 └── integration/
     ├── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
     └── test_reports_api.py               Integration tests for reports list + download API
@@ -378,6 +385,65 @@ print(ctx.findings)
 
 `PIIDetector.scan()` is a no-op when `ctx.extracted_text` is `None` or empty,
 so it is safe to call even if document extraction was skipped.
+
+## PII Redaction Engine
+
+`fileguard/core/redaction.py` implements `RedactionEngine`, which replaces each detected
+PII span in `ScanContext.extracted_text` with the token `[REDACTED]`.
+
+### How it works
+
+1. **Span detection** — each `PIIFinding` in `ctx.findings` carries a `match` string
+   and a `offset` (byte offset in the original file).  A reverse map from byte offset
+   to character index is built from `ctx.byte_offsets`, enabling O(1) span lookup.
+   Findings where `offset == -1` fall back to a left-to-right substring search.
+2. **Overlap merging** — overlapping or adjacent spans are merged into a single
+   `[REDACTED]` token before substitution, preventing double-redaction and index drift.
+3. **Right-to-left substitution** — replacements are applied from the rightmost span
+   backwards so earlier character indices remain valid.
+
+### Requesting redaction in the scan pipeline
+
+Set `ScanContext.request_redaction = True` before running the pipeline to signal that
+a signed URL should be produced.  After redaction, store the result with
+`RedactedFileStorage` and set `ctx.redacted_file_url`:
+
+```python
+from fileguard.core.redaction import RedactionEngine
+from fileguard.services.storage import RedactedFileStorage
+from fileguard.core.scan_context import ScanContext
+
+ctx = ScanContext(file_bytes=b"...", mime_type="text/plain", request_redaction=True)
+# ... run extraction and PII detection steps ...
+
+engine = RedactionEngine()
+redacted_text = engine.redact(ctx)
+
+storage = RedactedFileStorage()
+ctx.redacted_file_url = storage.store_and_sign(redacted_text, scan_id=ctx.scan_id)
+
+print(ctx.redacted_file_url)
+# "https://api.example.com/v1/redacted/scan-abc-12345678?expires=1756000000&sig=abc..."
+```
+
+### Signed URL download
+
+The signed URL points to `GET /v1/redacted/{file_id}?expires=<ts>&sig=<hmac>`.
+This endpoint:
+- Verifies the HMAC-SHA256 signature and expiry timestamp (no `Authorization` header needed).
+- Streams the redacted file as `text/plain`.
+- Returns `403 Forbidden` if the URL is expired or tampered, `404 Not Found` if the
+  file is absent.
+
+### Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `REDACTED_FILES_DIR` | `/tmp/fileguard/redacted` | Directory for stored redacted files |
+| `REDACTED_URL_TTL_SECONDS` | `3600` | Default signed-URL lifetime (seconds) |
+| `REDACTED_BASE_URL` | `""` | Base URL for signed URLs (e.g. `https://api.example.com`) |
+
+---
 
 ## Compliance Reports API
 
