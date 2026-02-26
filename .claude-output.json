@@ -1,23 +1,26 @@
 {
-  "prTitle": "feat: fan persisted alerts to WebSocket broadcaster (grpc-server-3)",
-  "prBody": "## Summary\n\n- Implements `task-tripwire-cybersecurity-tool-feat-grpc-server-3`: after a valid `AgentEvent` is persisted to PostgreSQL, publish it to the WebSocket broadcaster so connected browser clients receive real-time updates\n- Uses a non-blocking `select/default` send in `InProcessBroadcaster.Publish` so a slow or disconnected WebSocket consumer never stalls the gRPC `StreamAlerts` goroutine\n- All three acceptance criteria are satisfied and covered by automated tests\n\n## Files Changed\n\n| File | Purpose |\n|---|---|\n| `proto/alert.proto` | Proto3 service definition (StreamAlerts, RegisterAgent RPCs) |\n| `proto/alert/alert.pb.go` | Hand-written proto message stubs (to be regenerated with protoc) |\n| `proto/alert/alert_grpc.pb.go` | Hand-written gRPC service stubs |\n| `internal/server/websocket/broadcaster.go` | In-process WebSocket broadcaster with non-blocking fan-out |\n| `internal/server/grpc/alert_service.go` | AlertService: validate → persist → broadcast each AgentEvent |\n| `internal/server/grpc/alert_service_test.go` | Unit + integration tests covering all 3 acceptance criteria |\n| `docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md` | Reference doc for gRPC service and broadcaster |\n\n## Acceptance Criteria\n\n| # | Criterion | Implementation |\n|---|---|---|\n| §1 | Each persisted alert published without blocking StreamAlerts | `broadcaster.Publish(alert)` called after `store.BatchInsertAlerts` succeeds; `Publish` uses non-blocking `select/default` |\n| §2 | Slow/disconnected WS consumer causes no back-pressure | Per-subscriber buffered channel; `Publish` drops and logs on full buffer; tested by `TestStreamAlerts_SlowSubscriberDoesNotBlock` |\n| §3 | Integration test: ingested event appears on WS subscription | `TestIntegration_IngestedEventAppearsOnWebSocketSubscription` wires real broadcaster to service and asserts event delivery |\n\nCloses #221",
+  "prTitle": "feat: implement chi router and API handlers for REST API",
+  "prBody": "## Summary\n\nImplements `task-tripwire-cybersecurity-tool-feat-rest-api-2`: chi router and all REST API handlers for the TripWire dashboard server.\n\n### What was built\n\n**`internal/server/rest/middleware.go`** (also covers task-1 dependency)\n- `JWTMiddleware(pubKey)` — RS256 Bearer token validation; rejects missing/malformed/expired tokens with HTTP 401\n- `ClaimsFromContext(ctx)` — retrieves validated `Claims` from request context\n- `writeError` — shared JSON error response helper\n\n**`internal/server/rest/store.go`**\n- `Store` interface over the subset of `storage.Store` methods used by handlers, enabling in-process mocking for unit tests without a live database\n\n**`internal/server/rest/handlers.go`**\n- `NewServer(store Store)` — handler dependency injection\n- `GET /healthz` — unauthenticated liveness probe, returns `{\"status\":\"ok\"}`\n- `GET /api/v1/alerts` — paginated alert query; validates `from`/`to` (RFC3339, required), `severity`, `host_id`, `limit` (max 1000), `offset`; returns 400 with descriptive error on bad params\n- `GET /api/v1/hosts` — lists all registered hosts ordered by hostname\n- `GET /api/v1/audit` — queries tamper-evident audit entries for a host; requires `host_id`, `from`, `to`\n\n**`internal/server/rest/router.go`**\n- `NewRouter(srv, pubKey)` — chi router with `RequestID`, `RealIP`, `Recoverer` middleware; `/healthz` is unauthenticated; all `/api/v1/*` routes protected by `JWTMiddleware`\n- Passing `nil` for `pubKey` disables JWT validation (test-friendly)\n\n### Tests\n\n- `middleware_test.go` — covers missing header, malformed header, expired token, wrong key, valid token path, claims stored in context\n- `handlers_test.go` — covers missing/malformed params (400), valid requests (200), empty array responses (not null)\n- `router_test.go` — covers `/healthz` accessible without JWT, all `/api/v1/*` routes return 401 without JWT, valid JWT reaches handlers\n\n### Dependencies added\n\n- `github.com/go-chi/chi/v5 v5.1.0` — zero-dependency HTTP router\n- `github.com/golang-jwt/jwt/v5 v5.2.1` — RS256 JWT validation\n\n### Acceptance criteria met\n\n- ✅ GET /healthz returns 200 without authentication\n- ✅ All /api/v1/* routes return 401 without a valid JWT\n- ✅ GET /api/v1/alerts filters by host, severity, time range\n- ✅ GET /api/v1/hosts and GET /api/v1/audit return paginated JSON arrays\n- ✅ Invalid query parameters return 400 with descriptive JSON error body\n\nCloses #223",
   "testsPass": true,
   "filesChanged": [
-    "proto/alert.proto",
-    "proto/alert/alert.pb.go",
-    "proto/alert/alert_grpc.pb.go",
-    "internal/server/websocket/broadcaster.go",
-    "internal/server/grpc/alert_service.go",
-    "internal/server/grpc/alert_service_test.go",
-    "go.mod"
+    "go.mod",
+    "go.sum",
+    "internal/server/rest/middleware.go",
+    "internal/server/rest/store.go",
+    "internal/server/rest/handlers.go",
+    "internal/server/rest/router.go",
+    "internal/server/rest/handlers_test.go",
+    "internal/server/rest/middleware_test.go",
+    "internal/server/rest/router_test.go"
   ],
   "docsUpdated": [
-    "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md"
+    "docs/concepts/tripwire-cybersecurity-tool/rest-api.md"
   ],
   "docsReviewed": [
-    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
     "docs/concepts/tripwire-cybersecurity-tool/storage.md",
+    "docs/concepts/tripwire-cybersecurity-tool/README.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
     "docs/concepts/tripwire-cybersecurity-tool/tasks.yaml"
   ],
-  "completedTasks": [1, 2, 3, 4, 5, 6]
+  "completedTasks": [1, 2]
 }

@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved 1 conflicted file: .claude-output.json was deleted on main (origin/main) but present on the feature branch. Since this file contains automation metadata from a previous CI task and is not functional code, the deletion from main was accepted by staging the file removal.",
-  "strategyUsed": "accepted theirs (deletion) — .claude-output.json is CI/automation metadata with no functional impact; respecting the cleanup done on main is the correct resolution"
+  "summary": "Resolved conflict in .claude-output.json by choosing the origin/main version, which contains the REST API implementation metadata for PR #232 (chi router, handlers, middleware). The HEAD version contained gRPC-server-3 feature metadata from an earlier sprint task, which was superseded by the REST API work being merged.",
+  "strategyUsed": "chose origin/main for .claude-output.json: the metadata file tracks the current PR's (#232) feature work (REST API chi router and handlers), while HEAD contained stale metadata from the prior grpc-server-3 task; preserving origin/main ensures accurate PR tracking"
 }
