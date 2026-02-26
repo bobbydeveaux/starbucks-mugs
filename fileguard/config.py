@@ -61,5 +61,10 @@ class Settings(BaseSettings):
     REPORTS_DIR: str = "/tmp/fileguard/reports"
     REPORT_CADENCE: str = "daily"  # "daily" or "weekly"
 
+    # Quarantine
+    QUARANTINE_DEFAULT_TTL_SECONDS: int = 86400  # 24 hours
+    QUARANTINE_MAX_TTL_SECONDS: int = 2592000     # 30 days
+    QUARANTINE_REDIS_KEY_PREFIX: str = "fileguard:quarantine"
+
 
 settings = Settings()
