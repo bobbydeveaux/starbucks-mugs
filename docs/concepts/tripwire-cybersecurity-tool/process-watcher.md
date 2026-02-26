@@ -10,11 +10,12 @@ syscalls using kernel-level mechanisms.
 
 The Process Watcher emits an `AlertEvent` (with `TripwireType: "PROCESS"`) whenever
 a configured process name pattern is matched against a newly exec'd process.
-It is designed as a two-layer system:
+It is designed as a three-layer system:
 
 | Layer | File | Description |
 |-------|------|-------------|
 | eBPF kernel program | `internal/watcher/ebpf/process.bpf.c` | Attaches to execve/execveat tracepoints; writes events to a BPF ring buffer |
+| eBPF Go userspace loader | `internal/watcher/ebpf/process.go` | Loads the compiled BPF object, reads ring-buffer events, converts to `ExecEvent` |
 | Go userspace (runtime) | `internal/watcher/process_watcher_linux.go` | Linux runtime; uses `NETLINK_CONNECTOR` for kernel-level execve notifications |
 | Go stub | `internal/watcher/process_watcher_other.go` | Non-Linux: returns error on Start |
 
@@ -58,11 +59,86 @@ make -C internal/watcher/ebpf
 The resulting `process.bpf.o` is embedded into the Go binary via `//go:embed`
 in `internal/watcher/ebpf/process.go` so that no runtime compilation is required.
 
+> **Note**: A minimal placeholder `process.bpf.o` is committed to the repository
+> so that `go build` succeeds without a BPF compiler toolchain. Running
+> `make -C internal/watcher/ebpf` replaces it with the real object. The placeholder
+> causes `Loader.Load()` to return an error on load, which callers treat as a
+> signal to fall back to the NETLINK_CONNECTOR implementation.
+
 ### Kernel requirements
 
 - Linux ≥ 5.8 — BPF ring buffer (`BPF_MAP_TYPE_RINGBUF`)
 - `CONFIG_BPF_SYSCALL=y`, `CONFIG_DEBUG_INFO_BTF=y` (for CO-RE)
 - `CAP_BPF` (Linux ≥ 5.8) or `CAP_SYS_ADMIN`
+
+---
+
+## eBPF Go Userspace Loader (`internal/watcher/ebpf`)
+
+The `ebpf` package implements the `Loader` type that bridges the BPF kernel
+program and the Go event pipeline:
+
+```
+                kernel
+┌────────────────────────────────────────┐
+│  Process calls execve(2)/execveat(2)   │
+│              ↓                          │
+│  BPF tracepoint fires                  │
+│  → ring buffer record written          │
+└──────────────┬─────────────────────────┘
+               │ BPF_MAP_TYPE_RINGBUF
+      ┌────────▼────────┐
+      │ Loader.readLoop │  1-second deadline, checks ctx.Done()
+      └────────┬────────┘
+               │ parseExecEvent()
+               │ deserialises execEvent struct (544 B)
+               ↓
+           ExecEvent ──► events chan ExecEvent
+```
+
+### Loader lifecycle
+
+```go
+// 1. Check kernel version (≥ 5.8) and create loader.
+loader, err := ebpf.NewLoader(logger)
+if errors.Is(err, ebpf.ErrNotSupported) {
+    // Fall back to NETLINK_CONNECTOR implementation.
+}
+
+// 2. Load BPF object and attach to tracepoints.
+if err := loader.Load(ctx); err != nil {
+    loader.Close()
+    // Handle: invalid BPF object or insufficient privileges.
+}
+
+// 3. Consume events.
+for evt := range loader.Events() {
+    fmt.Printf("pid=%d comm=%s filename=%s\n", evt.PID, evt.Comm, evt.Filename)
+}
+
+// 4. Clean up.
+loader.Close()
+```
+
+### ExecEvent fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `PID` | `uint32` | tgid of the process that called execve |
+| `PPID` | `uint32` | Parent tgid |
+| `UID` | `uint32` | Real UID of the calling process |
+| `GID` | `uint32` | Real GID of the calling process |
+| `Comm` | `string` | Short task name (≤ 15 chars) |
+| `Filename` | `string` | Path argument to execve/execveat |
+| `Argv` | `string` | Space-joined argv[0..N], truncated at 255 chars |
+
+### Graceful shutdown
+
+`Close()` is idempotent and safe to call concurrently:
+1. Closes the ring-buffer reader, unblocking the event-pump goroutine.
+2. Waits for the goroutine to exit (no goroutine leak).
+3. Detaches tracepoint links and frees all BPF objects.
+4. Closes the `Events()` channel so `range` loops terminate cleanly.
 
 ---
 
