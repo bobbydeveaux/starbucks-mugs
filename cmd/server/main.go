@@ -19,7 +19,7 @@ import (
 	grpcserver "github.com/tripwire/agent/internal/server/grpc"
 	"github.com/tripwire/agent/internal/server/rest"
 	"github.com/tripwire/agent/internal/server/storage"
-	alertpb "github.com/tripwire/agent/proto"
+	alertpb "github.com/tripwire/agent/proto/alert"
 )
 
 // serverConfig holds the parsed runtime configuration for the dashboard server.

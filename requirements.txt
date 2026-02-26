@@ -25,6 +25,7 @@ redis[hiredis]>=5.0.0
 # Document extraction
 pdfminer.six>=20221105
 python-docx>=1.1.0
+reportlab>=4.0.0
 
 # ClamAV client
 clamd>=1.0.2

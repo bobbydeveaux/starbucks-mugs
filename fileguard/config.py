@@ -57,5 +57,9 @@ class Settings(BaseSettings):
     MACIE_POLL_INTERVAL: float = 5.0
     MACIE_JOB_TIMEOUT: float = 300.0
 
+    # Compliance reports
+    REPORTS_DIR: str = "/tmp/fileguard/reports"
+    REPORT_CADENCE: str = "daily"  # "daily" or "weekly"
+
 
 settings = Settings()
