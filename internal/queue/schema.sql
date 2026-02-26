@@ -1,39 +1,27 @@
--- schema.sql initialises the WAL-mode SQLite database used by the TripWire
--- agent's local alert queue.  The database stores alert events emitted by
--- watcher components and buffers them until they are acknowledged by the
--- transport layer (at-least-once delivery semantics).
+-- alert_queue: durable local buffer for TripWire alert events.
 --
--- Journal mode and synchronous settings are applied first so that all
--- subsequent operations run under WAL mode.  WAL (Write-Ahead Logging) allows
--- concurrent reads and a single writer without blocking, and provides much
--- better throughput than the default DELETE journal mode for the agent's
--- workload pattern (frequent small inserts, occasional reads and updates).
+-- WAL journal mode and NORMAL synchronous durability are applied by the Go
+-- code at connection time via PRAGMA statements; they cannot be set from DDL.
+--
+-- Schema design notes:
+--   • id         – monotonically increasing rowid used for delivery ordering.
+--   • delivered  – 0 = pending (default), 1 = acknowledged and safe to ignore.
+--   • detail     – JSON-encoded map[string]any from AlertEvent.Detail.
+--   • ts         – RFC3339Nano UTC timestamp of the original sensor event.
+--   • enqueued_at – wall-clock time the row was written (set by SQLite default).
 
-PRAGMA journal_mode=WAL;
-PRAGMA synchronous=NORMAL;
-
--- alerts holds every queued event.  Rows are never deleted; instead the
--- delivered column is set to 1 when the transport layer has acknowledged the
--- event.  This preserves a complete local history and supports idempotent
--- re-delivery after a crash.
-CREATE TABLE IF NOT EXISTS alerts (
+CREATE TABLE IF NOT EXISTS alert_queue (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    -- AlertEvent fields.
-    tripwire_type TEXT    NOT NULL,          -- "FILE", "NETWORK", or "PROCESS"
+    tripwire_type TEXT    NOT NULL,
     rule_name     TEXT    NOT NULL,
-    severity      TEXT    NOT NULL,          -- "INFO", "WARN", or "CRITICAL"
-    ts            TEXT    NOT NULL,          -- RFC3339Nano timestamp (UTC)
-    detail        TEXT    NOT NULL DEFAULT '{}', -- JSON object of type-specific metadata
-
-    -- Delivery tracking.
-    delivered     INTEGER NOT NULL DEFAULT 0,   -- 0 = pending, 1 = acknowledged
-
-    -- Audit timestamp (set by SQLite at insert time).
-    created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    severity      TEXT    NOT NULL,
+    ts            TEXT    NOT NULL,
+    detail        TEXT    NOT NULL DEFAULT '{}',
+    enqueued_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    delivered     INTEGER NOT NULL DEFAULT 0
 );
 
--- idx_alerts_pending accelerates the most common query pattern: fetching
--- undelivered rows in insertion order (Dequeue) and counting pending rows
--- (Depth).
-CREATE INDEX IF NOT EXISTS idx_alerts_pending ON alerts (delivered, id);
+-- Covering index that makes the common dequeue query
+-- (WHERE delivered = 0 ORDER BY id LIMIT n) an index-only scan.
+CREATE INDEX IF NOT EXISTS idx_alert_queue_pending
+    ON alert_queue (delivered, id);

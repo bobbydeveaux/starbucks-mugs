@@ -1,31 +1,21 @@
-// Package queue provides a durable, WAL-mode SQLite-backed alert queue that
-// satisfies the agent.Queue interface.  The queue is used by the TripWire
-// agent to buffer alert events locally when the dashboard transport is
-// unavailable, implementing at-least-once delivery semantics.
+// Package queue provides a WAL-mode SQLite-backed alert queue for the
+// TripWire agent. It implements the agent.Queue interface and adds Dequeue
+// and Ack operations to support at-least-once delivery semantics: events are
+// persisted on Enqueue and are not removed until the caller calls Ack.
 //
 // # WAL mode
 //
-// The SQLite database is opened with journal_mode=WAL and synchronous=NORMAL,
-// which allows concurrent reads alongside the single writer and provides good
-// throughput for the agent's insert-heavy workload.  WAL mode also makes
-// crash recovery safer: an incomplete transaction is simply rolled back from
-// the WAL file on the next open.
+// The database is opened with PRAGMA journal_mode = WAL so that concurrent
+// readers and a single writer can proceed without blocking each other. This
+// is important because the agent's event-processing goroutines call Enqueue
+// while a separate delivery goroutine calls Dequeue and Ack.
 //
 // # At-least-once delivery
 //
-// Events are persisted by Enqueue and remain in the database with
-// delivered=0 until the caller explicitly acknowledges them via Ack.
-// Acknowledged events are marked delivered=1 but never physically deleted,
-// providing a complete local audit trail.  On restart, the transport layer
-// calls Dequeue and Ack again for any events that were not acknowledged before
-// the previous shutdown.
-//
-// # Thread safety
-//
-// SQLiteQueue is safe for concurrent use from multiple goroutines.  A single
-// *sql.DB handle is used; database/sql manages a connection pool internally.
-// SQLite's WAL mode allows concurrent readers, and database/sql serialises
-// writers automatically.
+// The delivered column is set to 1 only when Ack is called. If the process
+// crashes between Enqueue and Ack, the event is returned again by the next
+// Dequeue call after restart, ensuring every alert reaches the dashboard even
+// when the transport is temporarily unavailable.
 package queue
 
 import (
@@ -33,116 +23,101 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
-	"sync"
+	"strings"
+	"sync/atomic"
 	"time"
 
-	_ "modernc.org/sqlite" // register the "sqlite" driver with database/sql
-
 	"github.com/tripwire/agent/internal/agent"
+	_ "modernc.org/sqlite" // register "sqlite" driver with database/sql
 )
 
-// driverName is the name under which modernc.org/sqlite registers itself with
-// the database/sql package.
-const driverName = "sqlite"
-
 // SQLiteQueue is a WAL-mode SQLite-backed implementation of agent.Queue.
-// Create one with Open; do not copy after first use.
+// It is safe for concurrent use.
 type SQLiteQueue struct {
-	db     *sql.DB
-	logger *slog.Logger
-
-	mu     sync.Mutex
-	closed bool
+	db    *sql.DB
+	depth atomic.Int64
 }
 
-// Row is a single queued alert together with its database row ID.  The ID is
-// needed to acknowledge the event via Ack after successful delivery.
-type Row struct {
-	ID  int64
-	Evt agent.AlertEvent
-}
-
-// Open opens (or creates) the SQLite database at path, enables WAL journal
-// mode, and applies the schema from schema.sql (embedded at compile time).  It
-// returns an error if the database cannot be opened or the schema cannot be
-// applied.
-func Open(path string, logger *slog.Logger) (*SQLiteQueue, error) {
-	if logger == nil {
-		logger = slog.Default()
-	}
-
-	// Use the file path with no extra query parameters; pragmas are set
-	// programmatically below so they can be verified and logged.
-	db, err := sql.Open(driverName, path)
+// New opens (or creates) the SQLite database at path, enables WAL journal
+// mode, and applies the schema. If path is ":memory:", an in-memory database
+// is used; this is suitable for tests but loses all data when closed.
+//
+// New seeds the internal depth counter from the number of rows currently
+// marked as pending (delivered = 0), so Depth() is accurate immediately
+// after a crash-recovery restart.
+func New(path string) (*SQLiteQueue, error) {
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
-		return nil, fmt.Errorf("queue: open sqlite %q: %w", path, err)
+		return nil, fmt.Errorf("queue: open %q: %w", path, err)
 	}
 
-	// Limit to a single connection so that PRAGMA journal_mode=WAL takes
-	// effect globally and we avoid "database is locked" errors from
-	// concurrent writers on WAL mode setup.
+	// SQLite allows only one writer at a time. Limiting the pool to a single
+	// connection avoids "database is locked" errors when multiple goroutines
+	// call Enqueue concurrently; each call serialises through this connection.
 	db.SetMaxOpenConns(1)
 
-	if err := applySchema(db); err != nil {
+	// Enable WAL mode: readers and the single writer proceed concurrently.
+	if _, err := db.Exec(`PRAGMA journal_mode = WAL`); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("queue: set WAL mode: %w", err)
+	}
+
+	// NORMAL synchronous: durable across application crashes; not OS crashes.
+	// This gives a significant write-throughput improvement over FULL while
+	// still guaranteeing that a committed transaction survives a process exit.
+	if _, err := db.Exec(`PRAGMA synchronous = NORMAL`); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("queue: set synchronous = NORMAL: %w", err)
+	}
+
+	// Apply the schema (idempotent: CREATE TABLE IF NOT EXISTS).
+	if _, err := db.Exec(ddl); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("queue: apply schema: %w", err)
 	}
 
-	q := &SQLiteQueue{
-		db:     db,
-		logger: logger,
-	}
+	q := &SQLiteQueue{db: db}
 
-	logger.Info("alert queue opened", slog.String("path", path))
+	// Seed the depth counter from existing undelivered rows so that Depth()
+	// reflects the correct value immediately after a restart.
+	var count int64
+	if err := db.QueryRow(`SELECT COUNT(*) FROM alert_queue WHERE delivered = 0`).Scan(&count); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("queue: count pending rows: %w", err)
+	}
+	q.depth.Store(count)
+
 	return q, nil
 }
 
-// applySchema executes the WAL pragma and DDL statements needed to initialise
-// (or verify) the database schema.
-func applySchema(db *sql.DB) error {
-	stmts := []string{
-		`PRAGMA journal_mode=WAL`,
-		`PRAGMA synchronous=NORMAL`,
-		`CREATE TABLE IF NOT EXISTS alerts (
-			id            INTEGER PRIMARY KEY AUTOINCREMENT,
-			tripwire_type TEXT    NOT NULL,
-			rule_name     TEXT    NOT NULL,
-			severity      TEXT    NOT NULL,
-			ts            TEXT    NOT NULL,
-			detail        TEXT    NOT NULL DEFAULT '{}',
-			delivered     INTEGER NOT NULL DEFAULT 0,
-			created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_alerts_pending ON alerts (delivered, id)`,
-	}
+// ddl is the schema DDL, kept here to keep the package self-contained.
+// It mirrors the canonical schema.sql file in this directory.
+const ddl = `
+CREATE TABLE IF NOT EXISTS alert_queue (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    tripwire_type TEXT    NOT NULL,
+    rule_name     TEXT    NOT NULL,
+    severity      TEXT    NOT NULL,
+    ts            TEXT    NOT NULL,
+    detail        TEXT    NOT NULL DEFAULT '{}',
+    enqueued_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    delivered     INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_alert_queue_pending
+    ON alert_queue (delivered, id);
+`
 
-	for _, stmt := range stmts {
-		if _, err := db.Exec(stmt); err != nil {
-			return fmt.Errorf("exec %q: %w", stmt[:min(len(stmt), 40)], err)
-		}
-	}
-	return nil
-}
-
-// Enqueue persists evt in the database for at-least-once delivery.  It
-// returns an error if the event cannot be serialised or written.  Enqueue is
-// safe to call concurrently.
+// Enqueue persists evt to the SQLite database. It implements agent.Queue.
+// The event is stored with delivered = 0 and is included in subsequent
+// Dequeue results until Ack is called for its ID.
 func (q *SQLiteQueue) Enqueue(ctx context.Context, evt agent.AlertEvent) error {
-	q.mu.Lock()
-	if q.closed {
-		q.mu.Unlock()
-		return fmt.Errorf("queue: enqueue on closed queue")
-	}
-	q.mu.Unlock()
-
 	detail, err := json.Marshal(evt.Detail)
 	if err != nil {
 		return fmt.Errorf("queue: marshal detail: %w", err)
 	}
 
 	_, err = q.db.ExecContext(ctx,
-		`INSERT INTO alerts (tripwire_type, rule_name, severity, ts, detail)
+		`INSERT INTO alert_queue (tripwire_type, rule_name, severity, ts, detail)
 		 VALUES (?, ?, ?, ?, ?)`,
 		evt.TripwireType,
 		evt.RuleName,
@@ -151,157 +126,120 @@ func (q *SQLiteQueue) Enqueue(ctx context.Context, evt agent.AlertEvent) error {
 		string(detail),
 	)
 	if err != nil {
-		return fmt.Errorf("queue: insert alert: %w", err)
+		return fmt.Errorf("queue: enqueue: %w", err)
 	}
 
-	q.logger.Debug("alert enqueued",
-		slog.String("type", evt.TripwireType),
-		slog.String("rule", evt.RuleName),
-	)
+	q.depth.Add(1)
 	return nil
 }
 
-// Dequeue returns up to n unacknowledged events in insertion order.  Callers
-// should call Ack with each returned Row.ID after the event has been
-// successfully delivered.  Dequeue never returns events that have already been
-// acknowledged.
-func (q *SQLiteQueue) Dequeue(ctx context.Context, n int) ([]Row, error) {
-	q.mu.Lock()
-	if q.closed {
-		q.mu.Unlock()
-		return nil, fmt.Errorf("queue: dequeue on closed queue")
-	}
-	q.mu.Unlock()
+// PendingEvent is an unacknowledged alert event returned by Dequeue.
+// ID is the database primary key used to acknowledge the event via Ack.
+type PendingEvent struct {
+	ID  int64
+	Evt agent.AlertEvent
+}
 
+// Dequeue returns up to n unacknowledged events in insertion order (oldest
+// first). It does not mark events as delivered; call Ack with the returned
+// IDs to do that. If n ≤ 0, Dequeue returns nil without querying the database.
+func (q *SQLiteQueue) Dequeue(ctx context.Context, n int) ([]PendingEvent, error) {
 	if n <= 0 {
 		return nil, nil
 	}
 
 	rows, err := q.db.QueryContext(ctx,
 		`SELECT id, tripwire_type, rule_name, severity, ts, detail
-		 FROM alerts
-		 WHERE delivered = 0
-		 ORDER BY id
-		 LIMIT ?`,
-		n,
-	)
+		 FROM   alert_queue
+		 WHERE  delivered = 0
+		 ORDER  BY id
+		 LIMIT  ?`, n)
 	if err != nil {
 		return nil, fmt.Errorf("queue: dequeue query: %w", err)
 	}
 	defer rows.Close()
 
-	var results []Row
+	var events []PendingEvent
 	for rows.Next() {
 		var (
-			id           int64
-			tripwireType string
-			ruleName     string
-			severity     string
-			tsStr        string
-			detailJSON   string
+			pe        PendingEvent
+			tsStr     string
+			detailStr string
 		)
-		if err := rows.Scan(&id, &tripwireType, &ruleName, &severity, &tsStr, &detailJSON); err != nil {
-			return nil, fmt.Errorf("queue: scan row: %w", err)
+		if err := rows.Scan(
+			&pe.ID,
+			&pe.Evt.TripwireType,
+			&pe.Evt.RuleName,
+			&pe.Evt.Severity,
+			&tsStr,
+			&detailStr,
+		); err != nil {
+			return nil, fmt.Errorf("queue: dequeue scan: %w", err)
 		}
 
-		ts, err := time.Parse(time.RFC3339Nano, tsStr)
+		// Parse the stored RFC3339Nano timestamp; fall back to RFC3339.
+		pe.Evt.Timestamp, err = time.Parse(time.RFC3339Nano, tsStr)
 		if err != nil {
-			// Fall back to zero time rather than failing the whole dequeue.
-			q.logger.Warn("queue: failed to parse timestamp", slog.String("ts", tsStr), slog.Any("error", err))
-			ts = time.Time{}
+			pe.Evt.Timestamp, _ = time.Parse(time.RFC3339, tsStr)
 		}
 
-		var detail map[string]any
-		if err := json.Unmarshal([]byte(detailJSON), &detail); err != nil {
-			q.logger.Warn("queue: failed to parse detail JSON", slog.Any("error", err))
-			detail = map[string]any{}
+		// Unmarshal the detail JSON; a malformed value produces a nil map
+		// rather than an error so that one bad row does not block the queue.
+		if err := json.Unmarshal([]byte(detailStr), &pe.Evt.Detail); err != nil {
+			pe.Evt.Detail = nil
 		}
 
-		results = append(results, Row{
-			ID: id,
-			Evt: agent.AlertEvent{
-				TripwireType: tripwireType,
-				RuleName:     ruleName,
-				Severity:     severity,
-				Timestamp:    ts,
-				Detail:       detail,
-			},
-		})
+		events = append(events, pe)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("queue: iterating rows: %w", err)
+		return nil, fmt.Errorf("queue: dequeue rows: %w", err)
 	}
-
-	return results, nil
+	return events, nil
 }
 
-// Ack marks the event identified by id as delivered so it is not re-delivered
-// on the next Dequeue call.  If id does not exist or has already been
-// acknowledged, Ack returns without error (idempotent).
-func (q *SQLiteQueue) Ack(ctx context.Context, id int64) error {
-	q.mu.Lock()
-	if q.closed {
-		q.mu.Unlock()
-		return fmt.Errorf("queue: ack on closed queue")
-	}
-	q.mu.Unlock()
-
-	_, err := q.db.ExecContext(ctx,
-		`UPDATE alerts SET delivered = 1 WHERE id = ?`,
-		id,
-	)
-	if err != nil {
-		return fmt.Errorf("queue: ack id %d: %w", id, err)
-	}
-
-	q.logger.Debug("alert acknowledged", slog.Int64("id", id))
-	return nil
-}
-
-// Depth returns the number of pending (unacknowledged) events currently stored
-// in the queue.  It queries the database directly so the count is always
-// accurate.  Returns 0 if the queue is closed or the query fails.
-func (q *SQLiteQueue) Depth() int {
-	q.mu.Lock()
-	if q.closed {
-		q.mu.Unlock()
-		return 0
-	}
-	q.mu.Unlock()
-
-	var n int
-	if err := q.db.QueryRow(`SELECT COUNT(*) FROM alerts WHERE delivered = 0`).Scan(&n); err != nil {
-		q.logger.Warn("queue: depth query failed", slog.Any("error", err))
-		return 0
-	}
-	return n
-}
-
-// Close flushes any pending operations and releases the database connection.
-// It is safe to call Close multiple times; subsequent calls are no-ops.
-func (q *SQLiteQueue) Close() error {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
-	if q.closed {
+// Ack marks the events identified by ids as delivered. Acknowledged events
+// are excluded from subsequent Dequeue results. Ack is idempotent: calling
+// it multiple times with the same IDs is safe.
+//
+// The depth counter is decremented by the number of rows whose delivered
+// column transitions from 0 to 1 (already-acked IDs are skipped).
+func (q *SQLiteQueue) Ack(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
 		return nil
 	}
-	q.closed = true
 
-	if err := q.db.Close(); err != nil {
-		return fmt.Errorf("queue: close: %w", err)
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1] // trim trailing comma
+
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
 	}
 
-	q.logger.Info("alert queue closed")
+	result, err := q.db.ExecContext(ctx,
+		fmt.Sprintf(`UPDATE alert_queue SET delivered = 1 WHERE id IN (%s) AND delivered = 0`, placeholders),
+		args...,
+	)
+	if err != nil {
+		return fmt.Errorf("queue: ack: %w", err)
+	}
+
+	n, _ := result.RowsAffected()
+	q.depth.Add(-n)
 	return nil
 }
 
-// min returns the smaller of a and b.  Replaces the built-in min from Go 1.21+
-// to stay compatible with the module's go 1.22 directive.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+// Depth returns the number of pending (unacknowledged) events. It reads from
+// an atomic counter that is updated by Enqueue and Ack, so it never blocks.
+// It implements agent.Queue.
+func (q *SQLiteQueue) Depth() int {
+	return int(q.depth.Load())
+}
+
+// Close closes the underlying database connection. It implements agent.Queue.
+// Subsequent calls to any method are undefined; callers must not use the
+// queue after Close returns.
+func (q *SQLiteQueue) Close() error {
+	return q.db.Close()
 }

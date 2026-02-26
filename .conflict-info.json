@@ -1,11 +1,14 @@
 {
-  "prNumber": 188,
+  "prNumber": 214,
   "baseBranch": "main",
-  "headBranch": "feature/123-tripwire-cybersecurity-tool-sprint-2-issue-123",
+  "headBranch": "feature/124-tripwire-cybersecurity-tool-sprint-2-issue-124",
   "conflictedFiles": [
     ".claude-output.json",
-    ".claude-resolution.json",
-    ".conflict-info.json"
+    "go.mod",
+    "go.sum",
+    "internal/queue/schema.sql",
+    "internal/queue/sqlite_queue.go",
+    "internal/queue/sqlite_queue_test.go"
   ],
-  "conflictCount": 3
+  "conflictCount": 6
 }

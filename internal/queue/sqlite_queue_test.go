@@ -2,7 +2,7 @@ package queue_test
 
 import (
 	"context"
-	"os"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -11,370 +11,377 @@ import (
 	"github.com/tripwire/agent/internal/queue"
 )
 
-// sampleEvent returns a reproducible AlertEvent for use in tests.
-func sampleEvent(i int) agent.AlertEvent {
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// makeEvent returns a minimal AlertEvent for use in tests.
+func makeEvent(tripwireType, ruleName, severity string) agent.AlertEvent {
 	return agent.AlertEvent{
-		TripwireType: "FILE",
-		RuleName:     "test-rule",
-		Severity:     "WARN",
-		Timestamp:    time.Date(2026, 2, 25, 12, 0, i, 0, time.UTC),
-		Detail: map[string]any{
-			"path":  "/etc/passwd",
-			"index": i,
-		},
+		TripwireType: tripwireType,
+		RuleName:     ruleName,
+		Severity:     severity,
+		Timestamp:    time.Now().UTC().Truncate(time.Millisecond),
+		Detail:       map[string]any{"path": "/etc/passwd", "uid": 0},
 	}
 }
 
-// openQueue is a test helper that opens a new SQLiteQueue backed by a temp file
-// and registers cleanup with t.
-func openQueue(t *testing.T) *queue.SQLiteQueue {
+// openMemQueue opens an in-memory SQLiteQueue and registers t.Cleanup to
+// close it, ensuring the database is closed even when tests fail.
+func openMemQueue(t *testing.T) *queue.SQLiteQueue {
 	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "alerts.db")
-	q, err := queue.Open(path, nil)
+	q, err := queue.New(":memory:")
 	if err != nil {
-		t.Fatalf("Open: %v", err)
+		t.Fatalf("queue.New(:memory:): %v", err)
 	}
 	t.Cleanup(func() { _ = q.Close() })
 	return q
 }
 
-// --------------------------------------------------------------------------
-// TestEnqueue
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Construction
+// ---------------------------------------------------------------------------
 
-func TestEnqueue_DepthIncrements(t *testing.T) {
-	q := openQueue(t)
-	ctx := context.Background()
-
+func TestNew_InMemory_EmptyDepth(t *testing.T) {
+	q := openMemQueue(t)
 	if d := q.Depth(); d != 0 {
-		t.Fatalf("initial depth = %d, want 0", d)
-	}
-
-	for i := 0; i < 3; i++ {
-		if err := q.Enqueue(ctx, sampleEvent(i)); err != nil {
-			t.Fatalf("Enqueue[%d]: %v", i, err)
-		}
-	}
-
-	if d := q.Depth(); d != 3 {
-		t.Errorf("depth after 3 enqueues = %d, want 3", d)
+		t.Errorf("Depth = %d after open, want 0", d)
 	}
 }
 
-func TestEnqueue_PersistsAllFields(t *testing.T) {
-	q := openQueue(t)
+func TestNew_FileDB_CreatesFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "queue.db")
+
+	q, err := queue.New(path)
+	if err != nil {
+		t.Fatalf("queue.New(%q): %v", path, err)
+	}
+	_ = q.Close()
+}
+
+// ---------------------------------------------------------------------------
+// Enqueue
+// ---------------------------------------------------------------------------
+
+func TestEnqueue_IncreasesDepth(t *testing.T) {
+	q := openMemQueue(t)
 	ctx := context.Background()
 
-	evt := agent.AlertEvent{
-		TripwireType: "NETWORK",
-		RuleName:     "port-scan",
-		Severity:     "CRITICAL",
-		Timestamp:    time.Date(2026, 1, 15, 8, 30, 0, 0, time.UTC),
-		Detail:       map[string]any{"source_ip": "1.2.3.4", "port": 443},
-	}
-
+	evt := makeEvent("FILE", "etc-passwd-watch", "CRITICAL")
 	if err := q.Enqueue(ctx, evt); err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
 
-	rows, err := q.Dequeue(ctx, 10)
-	if err != nil {
-		t.Fatalf("Dequeue: %v", err)
-	}
-	if len(rows) != 1 {
-		t.Fatalf("dequeued %d rows, want 1", len(rows))
-	}
-
-	got := rows[0].Evt
-	if got.TripwireType != evt.TripwireType {
-		t.Errorf("TripwireType = %q, want %q", got.TripwireType, evt.TripwireType)
-	}
-	if got.RuleName != evt.RuleName {
-		t.Errorf("RuleName = %q, want %q", got.RuleName, evt.RuleName)
-	}
-	if got.Severity != evt.Severity {
-		t.Errorf("Severity = %q, want %q", got.Severity, evt.Severity)
-	}
-	if !got.Timestamp.Equal(evt.Timestamp) {
-		t.Errorf("Timestamp = %v, want %v", got.Timestamp, evt.Timestamp)
-	}
-	// Verify detail round-trips (JSON numbers become float64).
-	if got.Detail["source_ip"] != "1.2.3.4" {
-		t.Errorf("Detail[source_ip] = %v, want 1.2.3.4", got.Detail["source_ip"])
-	}
-}
-
-// --------------------------------------------------------------------------
-// TestDequeue
-// --------------------------------------------------------------------------
-
-func TestDequeue_ReturnsInsertionOrder(t *testing.T) {
-	q := openQueue(t)
-	ctx := context.Background()
-
-	for i := 0; i < 5; i++ {
-		if err := q.Enqueue(ctx, sampleEvent(i)); err != nil {
-			t.Fatalf("Enqueue[%d]: %v", i, err)
-		}
-	}
-
-	rows, err := q.Dequeue(ctx, 5)
-	if err != nil {
-		t.Fatalf("Dequeue: %v", err)
-	}
-	if len(rows) != 5 {
-		t.Fatalf("Dequeue returned %d rows, want 5", len(rows))
-	}
-
-	// IDs must be strictly increasing (insertion order).
-	for i := 1; i < len(rows); i++ {
-		if rows[i].ID <= rows[i-1].ID {
-			t.Errorf("rows[%d].ID = %d, want > %d", i, rows[i].ID, rows[i-1].ID)
-		}
-	}
-}
-
-func TestDequeue_LimitRespected(t *testing.T) {
-	q := openQueue(t)
-	ctx := context.Background()
-
-	for i := 0; i < 5; i++ {
-		if err := q.Enqueue(ctx, sampleEvent(i)); err != nil {
-			t.Fatalf("Enqueue[%d]: %v", i, err)
-		}
-	}
-
-	rows, err := q.Dequeue(ctx, 2)
-	if err != nil {
-		t.Fatalf("Dequeue: %v", err)
-	}
-	if len(rows) != 2 {
-		t.Errorf("Dequeue(2) returned %d rows, want 2", len(rows))
-	}
-}
-
-func TestDequeue_EmptyQueueReturnsNil(t *testing.T) {
-	q := openQueue(t)
-	ctx := context.Background()
-
-	rows, err := q.Dequeue(ctx, 10)
-	if err != nil {
-		t.Fatalf("Dequeue on empty queue: %v", err)
-	}
-	if len(rows) != 0 {
-		t.Errorf("Dequeue on empty queue returned %d rows, want 0", len(rows))
-	}
-}
-
-// --------------------------------------------------------------------------
-// TestAck
-// --------------------------------------------------------------------------
-
-func TestAck_AcknowledgedEventsNotReDelivered(t *testing.T) {
-	q := openQueue(t)
-	ctx := context.Background()
-
-	for i := 0; i < 3; i++ {
-		if err := q.Enqueue(ctx, sampleEvent(i)); err != nil {
-			t.Fatalf("Enqueue[%d]: %v", i, err)
-		}
-	}
-
-	// Dequeue all 3.
-	rows, err := q.Dequeue(ctx, 10)
-	if err != nil {
-		t.Fatalf("Dequeue: %v", err)
-	}
-	if len(rows) != 3 {
-		t.Fatalf("first Dequeue: got %d, want 3", len(rows))
-	}
-
-	// Acknowledge only the first two.
-	for _, r := range rows[:2] {
-		if err := q.Ack(ctx, r.ID); err != nil {
-			t.Fatalf("Ack(%d): %v", r.ID, err)
-		}
-	}
-
-	// Depth should now be 1.
 	if d := q.Depth(); d != 1 {
-		t.Errorf("depth after 2 acks = %d, want 1", d)
+		t.Errorf("Depth = %d after one Enqueue, want 1", d)
+	}
+}
+
+func TestEnqueue_MultipleEvents_DepthAccumulates(t *testing.T) {
+	q := openMemQueue(t)
+	ctx := context.Background()
+
+	for i := 0; i < 5; i++ {
+		if err := q.Enqueue(ctx, makeEvent("FILE", fmt.Sprintf("rule-%d", i), "INFO")); err != nil {
+			t.Fatalf("Enqueue %d: %v", i, err)
+		}
 	}
 
-	// Second Dequeue should return only the unacknowledged row.
-	rows2, err := q.Dequeue(ctx, 10)
+	if d := q.Depth(); d != 5 {
+		t.Errorf("Depth = %d after 5 enqueues, want 5", d)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Dequeue
+// ---------------------------------------------------------------------------
+
+func TestDequeue_ReturnsEventsInInsertionOrder(t *testing.T) {
+	q := openMemQueue(t)
+	ctx := context.Background()
+
+	evts := []agent.AlertEvent{
+		makeEvent("FILE", "rule-1", "INFO"),
+		makeEvent("NETWORK", "rule-2", "WARN"),
+		makeEvent("PROCESS", "rule-3", "CRITICAL"),
+	}
+	for _, e := range evts {
+		if err := q.Enqueue(ctx, e); err != nil {
+			t.Fatalf("Enqueue: %v", err)
+		}
+	}
+
+	pending, err := q.Dequeue(ctx, 10)
+	if err != nil {
+		t.Fatalf("Dequeue: %v", err)
+	}
+	if len(pending) != 3 {
+		t.Fatalf("Dequeue returned %d events, want 3", len(pending))
+	}
+
+	for i, pe := range pending {
+		if pe.Evt.RuleName != evts[i].RuleName {
+			t.Errorf("event[%d].RuleName = %q, want %q", i, pe.Evt.RuleName, evts[i].RuleName)
+		}
+		if pe.Evt.TripwireType != evts[i].TripwireType {
+			t.Errorf("event[%d].TripwireType = %q, want %q", i, pe.Evt.TripwireType, evts[i].TripwireType)
+		}
+		if pe.Evt.Severity != evts[i].Severity {
+			t.Errorf("event[%d].Severity = %q, want %q", i, pe.Evt.Severity, evts[i].Severity)
+		}
+	}
+}
+
+func TestDequeue_RespectsLimit(t *testing.T) {
+	q := openMemQueue(t)
+	ctx := context.Background()
+
+	for i := 0; i < 10; i++ {
+		_ = q.Enqueue(ctx, makeEvent("FILE", fmt.Sprintf("rule-%d", i), "INFO"))
+	}
+
+	pending, err := q.Dequeue(ctx, 4)
+	if err != nil {
+		t.Fatalf("Dequeue: %v", err)
+	}
+	if len(pending) != 4 {
+		t.Errorf("Dequeue returned %d events, want 4", len(pending))
+	}
+}
+
+func TestDequeue_ZeroLimit_ReturnsNil(t *testing.T) {
+	q := openMemQueue(t)
+	ctx := context.Background()
+	_ = q.Enqueue(ctx, makeEvent("FILE", "r", "INFO"))
+
+	pending, err := q.Dequeue(ctx, 0)
+	if err != nil {
+		t.Fatalf("Dequeue(0): %v", err)
+	}
+	if len(pending) != 0 {
+		t.Errorf("Dequeue(0) returned %d events, want 0", len(pending))
+	}
+}
+
+func TestDequeue_PreservesTimestamp(t *testing.T) {
+	q := openMemQueue(t)
+	ctx := context.Background()
+
+	// Use a rounded timestamp so nanosecond precision does not cause spurious
+	// mismatches on systems where time.Now() has sub-millisecond resolution.
+	orig := time.Now().UTC().Round(time.Millisecond)
+
+	evt := agent.AlertEvent{
+		TripwireType: "FILE",
+		RuleName:     "ts-test",
+		Severity:     "INFO",
+		Timestamp:    orig,
+		Detail:       map[string]any{},
+	}
+	_ = q.Enqueue(ctx, evt)
+
+	pending, err := q.Dequeue(ctx, 1)
+	if err != nil {
+		t.Fatalf("Dequeue: %v", err)
+	}
+	if len(pending) != 1 {
+		t.Fatalf("Dequeue returned %d events, want 1", len(pending))
+	}
+	if !pending[0].Evt.Timestamp.Equal(orig) {
+		t.Errorf("Timestamp = %v, want %v", pending[0].Evt.Timestamp, orig)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Ack
+// ---------------------------------------------------------------------------
+
+func TestAck_MarksEventDelivered(t *testing.T) {
+	q := openMemQueue(t)
+	ctx := context.Background()
+
+	_ = q.Enqueue(ctx, makeEvent("FILE", "rule-1", "INFO"))
+
+	pending, err := q.Dequeue(ctx, 10)
+	if err != nil || len(pending) != 1 {
+		t.Fatalf("Dequeue: err=%v, got %d events", err, len(pending))
+	}
+
+	if err := q.Ack(ctx, []int64{pending[0].ID}); err != nil {
+		t.Fatalf("Ack: %v", err)
+	}
+
+	// Depth should reach zero.
+	if d := q.Depth(); d != 0 {
+		t.Errorf("Depth = %d after Ack, want 0", d)
+	}
+
+	// A subsequent Dequeue should return nothing.
+	pending2, err := q.Dequeue(ctx, 10)
 	if err != nil {
 		t.Fatalf("second Dequeue: %v", err)
 	}
-	if len(rows2) != 1 {
-		t.Fatalf("second Dequeue: got %d, want 1", len(rows2))
-	}
-	if rows2[0].ID != rows[2].ID {
-		t.Errorf("second Dequeue returned ID %d, want %d", rows2[0].ID, rows[2].ID)
+	if len(pending2) != 0 {
+		t.Errorf("second Dequeue returned %d events after Ack, want 0", len(pending2))
 	}
 }
 
-func TestAck_IdempotentForAlreadyAcknowledged(t *testing.T) {
-	q := openQueue(t)
+func TestAck_Idempotent(t *testing.T) {
+	q := openMemQueue(t)
 	ctx := context.Background()
 
-	if err := q.Enqueue(ctx, sampleEvent(0)); err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
+	_ = q.Enqueue(ctx, makeEvent("FILE", "r", "INFO"))
+	pending, _ := q.Dequeue(ctx, 1)
 
-	rows, err := q.Dequeue(ctx, 1)
-	if err != nil || len(rows) != 1 {
-		t.Fatalf("Dequeue: %v, %d rows", err, len(rows))
-	}
-
-	// Ack twice — must not error.
-	if err := q.Ack(ctx, rows[0].ID); err != nil {
+	// Ack twice — must not return an error or corrupt the depth counter.
+	if err := q.Ack(ctx, []int64{pending[0].ID}); err != nil {
 		t.Fatalf("first Ack: %v", err)
 	}
-	if err := q.Ack(ctx, rows[0].ID); err != nil {
-		t.Fatalf("second Ack (idempotent): %v", err)
+	if err := q.Ack(ctx, []int64{pending[0].ID}); err != nil {
+		t.Fatalf("second (duplicate) Ack: %v", err)
+	}
+
+	if d := q.Depth(); d != 0 {
+		t.Errorf("Depth = %d after duplicate Ack, want 0", d)
 	}
 }
 
-// --------------------------------------------------------------------------
-// TestCrashRecovery
-// --------------------------------------------------------------------------
-
-func TestCrashRecovery_UnacknowledgedEventsReDeliveredAfterReopen(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "alerts.db")
+func TestAck_EmptyIDs_IsNoop(t *testing.T) {
+	q := openMemQueue(t)
 	ctx := context.Background()
 
-	// First session: enqueue 3 events, ack 1.
+	if err := q.Ack(ctx, nil); err != nil {
+		t.Errorf("Ack(nil): unexpected error: %v", err)
+	}
+	if err := q.Ack(ctx, []int64{}); err != nil {
+		t.Errorf("Ack([]): unexpected error: %v", err)
+	}
+}
+
+func TestAck_PartialAck_LeavesPendingEvents(t *testing.T) {
+	q := openMemQueue(t)
+	ctx := context.Background()
+
+	for i := 0; i < 3; i++ {
+		_ = q.Enqueue(ctx, makeEvent("FILE", fmt.Sprintf("rule-%d", i), "INFO"))
+	}
+
+	pending, _ := q.Dequeue(ctx, 10)
+	if len(pending) != 3 {
+		t.Fatalf("expected 3 pending events, got %d", len(pending))
+	}
+
+	// Ack only the first event.
+	if err := q.Ack(ctx, []int64{pending[0].ID}); err != nil {
+		t.Fatalf("Ack: %v", err)
+	}
+
+	if d := q.Depth(); d != 2 {
+		t.Errorf("Depth = %d after partial Ack, want 2", d)
+	}
+
+	remaining, err := q.Dequeue(ctx, 10)
+	if err != nil {
+		t.Fatalf("Dequeue after partial Ack: %v", err)
+	}
+	if len(remaining) != 2 {
+		t.Errorf("Dequeue returned %d events, want 2", len(remaining))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Crash recovery
+// ---------------------------------------------------------------------------
+
+func TestCrashRecovery_UnacknowledgedEventsRedelivered(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "queue.db")
+	ctx := context.Background()
+
+	// Phase 1 — enqueue two events; ack only the first (simulating a crash
+	// that occurs before the second event is acknowledged).
 	func() {
-		q, err := queue.Open(path, nil)
+		q, err := queue.New(dbPath)
 		if err != nil {
-			t.Fatalf("first Open: %v", err)
+			t.Fatalf("open 1: %v", err)
 		}
 		defer q.Close()
 
-		for i := 0; i < 3; i++ {
-			if err := q.Enqueue(ctx, sampleEvent(i)); err != nil {
-				t.Fatalf("Enqueue[%d]: %v", i, err)
-			}
-		}
+		_ = q.Enqueue(ctx, makeEvent("FILE", "acked-rule", "INFO"))
+		_ = q.Enqueue(ctx, makeEvent("NETWORK", "pending-rule", "WARN"))
 
-		rows, err := q.Dequeue(ctx, 3)
-		if err != nil || len(rows) != 3 {
-			t.Fatalf("Dequeue: %v, %d rows", err, len(rows))
+		pending, err := q.Dequeue(ctx, 10)
+		if err != nil || len(pending) != 2 {
+			t.Fatalf("phase 1 Dequeue: err=%v, got %d events", err, len(pending))
 		}
-
-		// Acknowledge only the first event (simulate partial delivery).
-		if err := q.Ack(ctx, rows[0].ID); err != nil {
-			t.Fatalf("Ack: %v", err)
-		}
+		// Ack only the first.
+		_ = q.Ack(ctx, []int64{pending[0].ID})
 	}()
 
-	// Second session (simulates restart after crash): the 2 unacknowledged
-	// events must still be returned by Dequeue.
-	q2, err := queue.Open(path, nil)
+	// Phase 2 — reopen the database (simulating a restart after the crash).
+	q2, err := queue.New(dbPath)
 	if err != nil {
-		t.Fatalf("second Open: %v", err)
-	}
-	defer q2.Close()
-
-	if d := q2.Depth(); d != 2 {
-		t.Errorf("depth on reopen = %d, want 2", d)
-	}
-
-	rows, err := q2.Dequeue(ctx, 10)
-	if err != nil {
-		t.Fatalf("second session Dequeue: %v", err)
-	}
-	if len(rows) != 2 {
-		t.Fatalf("second session Dequeue: got %d rows, want 2", len(rows))
-	}
-}
-
-func TestCrashRecovery_WALModeEnabledAfterReopen(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "alerts.db")
-	ctx := context.Background()
-
-	// Open, enqueue, and close.
-	q, err := queue.Open(path, nil)
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	if err := q.Enqueue(ctx, sampleEvent(0)); err != nil {
-		t.Fatalf("Enqueue: %v", err)
-	}
-	if err := q.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
-	}
-
-	// The WAL file should exist after writing in WAL mode.
-	walPath := path + "-wal"
-	// The WAL file may have been folded back into the main DB after close;
-	// what matters is that the main DB file exists and is readable.
-	if _, err := os.Stat(path); err != nil {
-		t.Errorf("database file missing after close: %v", err)
-	}
-	// Suppress unused variable warning if walPath is not found (it's optional).
-	_ = walPath
-
-	// Reopen and verify the event is still present.
-	q2, err := queue.Open(path, nil)
-	if err != nil {
-		t.Fatalf("reopen: %v", err)
+		t.Fatalf("open 2: %v", err)
 	}
 	defer q2.Close()
 
 	if d := q2.Depth(); d != 1 {
-		t.Errorf("depth on reopen = %d, want 1", d)
+		t.Errorf("after restart Depth = %d, want 1 (one unacknowledged event)", d)
 	}
-}
 
-// --------------------------------------------------------------------------
-// TestClose
-// --------------------------------------------------------------------------
-
-func TestClose_MultipleClosesAreIdempotent(t *testing.T) {
-	q := openQueue(t)
-
-	if err := q.Close(); err != nil {
-		t.Fatalf("first Close: %v", err)
-	}
-	// The test helper's t.Cleanup will call Close again; must not panic/error.
-}
-
-func TestClose_OperationsAfterCloseReturnError(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "alerts.db")
-	q, err := queue.Open(path, nil)
+	pending, err := q2.Dequeue(ctx, 10)
 	if err != nil {
-		t.Fatalf("Open: %v", err)
+		t.Fatalf("Dequeue after restart: %v", err)
 	}
-
-	if err := q.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
+	if len(pending) != 1 {
+		t.Fatalf("after restart got %d events, want 1", len(pending))
 	}
-
-	ctx := context.Background()
-	if err := q.Enqueue(ctx, sampleEvent(0)); err == nil {
-		t.Error("Enqueue on closed queue: expected error, got nil")
-	}
-	if _, err := q.Dequeue(ctx, 1); err == nil {
-		t.Error("Dequeue on closed queue: expected error, got nil")
-	}
-	if err := q.Ack(ctx, 1); err == nil {
-		t.Error("Ack on closed queue: expected error, got nil")
+	if pending[0].Evt.RuleName != "pending-rule" {
+		t.Errorf("RuleName = %q, want %q", pending[0].Evt.RuleName, "pending-rule")
 	}
 }
 
-// --------------------------------------------------------------------------
-// TestSatisfiesAgentQueueInterface
-// --------------------------------------------------------------------------
+func TestCrashRecovery_AllAcked_EmptyOnRestart(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "queue.db")
+	ctx := context.Background()
 
-// TestSatisfiesAgentQueueInterface ensures that *SQLiteQueue satisfies the
-// agent.Queue interface at compile time.
-func TestSatisfiesAgentQueueInterface(t *testing.T) {
-	q := openQueue(t)
-	var _ agent.Queue = q
+	func() {
+		q, err := queue.New(dbPath)
+		if err != nil {
+			t.Fatalf("open 1: %v", err)
+		}
+		defer q.Close()
+
+		_ = q.Enqueue(ctx, makeEvent("FILE", "r1", "INFO"))
+		_ = q.Enqueue(ctx, makeEvent("FILE", "r2", "WARN"))
+
+		pending, _ := q.Dequeue(ctx, 10)
+		ids := make([]int64, len(pending))
+		for i, pe := range pending {
+			ids[i] = pe.ID
+		}
+		_ = q.Ack(ctx, ids)
+	}()
+
+	q2, err := queue.New(dbPath)
+	if err != nil {
+		t.Fatalf("open 2: %v", err)
+	}
+	defer q2.Close()
+
+	if d := q2.Depth(); d != 0 {
+		t.Errorf("after restart Depth = %d, want 0 (all acked)", d)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Interface compliance
+// ---------------------------------------------------------------------------
+
+// TestSQLiteQueue_ImplementsQueueInterface verifies at compile time that
+// *SQLiteQueue satisfies the agent.Queue interface.
+func TestSQLiteQueue_ImplementsQueueInterface(t *testing.T) {
+	var _ agent.Queue = (*queue.SQLiteQueue)(nil)
 }
