@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by keeping the origin/main version. Our branch had deleted this file, but origin/main contains valid gRPC server task metadata that corresponds to the new files being merged in (cmd/server/main.go, internal/server/grpc/server.go, proto/alert.pb.go, etc.). Keeping the file preserves the task completion record for the gRPC server bootstrap task.",
-  "strategyUsed": "chose theirs (origin/main) for .claude-output.json — the file was deleted on our branch but the origin/main version contains metadata for the gRPC server bootstrap task which directly corresponds to the new source files being incorporated from origin/main"
+  "summary": "Resolved conflict in internal/server/rest/router.go where origin/main added an explanatory comment about the JWTMiddleware chi adapter wrapper. Both sides had identical functional code; only the comment was missing from HEAD.",
+  "strategyUsed": "kept both: preserved the explanatory comment from origin/main alongside the existing JWT middleware wrapper code from HEAD"
 }

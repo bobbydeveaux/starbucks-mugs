@@ -1,9 +1,9 @@
 {
-  "prNumber": 242,
+  "prNumber": 243,
   "baseBranch": "main",
-  "headBranch": "feature/184-tripwire-cybersecurity-tool-sprint-3-issue-184",
+  "headBranch": "feature/182-tripwire-cybersecurity-tool-sprint-3-issue-182",
   "conflictedFiles": [
-    ".claude-output.json"
+    "internal/server/rest/router.go"
   ],
   "conflictCount": 1
 }
