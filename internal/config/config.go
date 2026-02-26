@@ -68,15 +68,15 @@ type TripwireRule struct {
 	// Severity is one of "INFO", "WARN", or "CRITICAL". Required.
 	Severity string `yaml:"severity"`
 
-	// Protocol is the transport protocol for NETWORK rules: "tcp", "udp",
-	// or "both". Defaults to "tcp" when omitted. Ignored for non-NETWORK
-	// rules.
-	Protocol string `yaml:"protocol"`
+	// Protocol restricts a NETWORK rule to a specific transport-layer
+	// protocol. Accepted values: "tcp", "udp", "both". Defaults to "both"
+	// when omitted. Ignored for non-NETWORK rules.
+	Protocol string `yaml:"protocol,omitempty"`
 
-	// Direction is the connection direction for NETWORK rules: "inbound",
-	// "outbound", or "both". Defaults to "inbound" when omitted. Ignored
-	// for non-NETWORK rules.
-	Direction string `yaml:"direction"`
+	// Direction restricts a NETWORK rule to connections travelling in a
+	// specific direction. Accepted values: "inbound", "outbound", "both".
+	// Defaults to "inbound" when omitted. Ignored for non-NETWORK rules.
+	Direction string `yaml:"direction,omitempty"`
 }
 
 // validLogLevels is the set of accepted log level strings.
@@ -101,15 +101,15 @@ var validSeverities = map[string]bool{
 	"CRITICAL": true,
 }
 
-// validNetworkProtocols is the set of accepted protocol values for NETWORK rules.
-var validNetworkProtocols = map[string]bool{
+// validProtocols is the set of accepted protocol values for NETWORK rules.
+var validProtocols = map[string]bool{
 	"tcp":  true,
 	"udp":  true,
 	"both": true,
 }
 
-// validNetworkDirections is the set of accepted direction values for NETWORK rules.
-var validNetworkDirections = map[string]bool{
+// validDirections is the set of accepted direction values for NETWORK rules.
+var validDirections = map[string]bool{
 	"inbound":  true,
 	"outbound": true,
 	"both":     true,
@@ -149,7 +149,7 @@ func applyDefaults(cfg *Config) {
 	for i := range cfg.Rules {
 		if cfg.Rules[i].Type == "NETWORK" {
 			if cfg.Rules[i].Protocol == "" {
-				cfg.Rules[i].Protocol = "tcp"
+				cfg.Rules[i].Protocol = "both"
 			}
 			if cfg.Rules[i].Direction == "" {
 				cfg.Rules[i].Direction = "inbound"
@@ -194,10 +194,10 @@ func validate(cfg *Config) error {
 			errs = append(errs, fmt.Errorf("%s: severity %q must be one of: INFO, WARN, CRITICAL", prefix, r.Severity))
 		}
 		if r.Type == "NETWORK" {
-			if !validNetworkProtocols[r.Protocol] {
+			if !validProtocols[r.Protocol] {
 				errs = append(errs, fmt.Errorf("%s: protocol %q must be one of: tcp, udp, both", prefix, r.Protocol))
 			}
-			if !validNetworkDirections[r.Direction] {
+			if !validDirections[r.Direction] {
 				errs = append(errs, fmt.Errorf("%s: direction %q must be one of: inbound, outbound, both", prefix, r.Direction))
 			}
 		}
