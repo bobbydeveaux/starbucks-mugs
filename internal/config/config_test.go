@@ -227,6 +227,139 @@ func TestLoadConfig_InvalidYAML(t *testing.T) {
 	}
 }
 
+func TestLoadConfig_NetworkRule_DefaultProtocolAndDirection(t *testing.T) {
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: ssh-watch
+    type: NETWORK
+    target: "22"
+    severity: WARN
+`
+	path := writeTemp(t, yaml)
+	cfg, err := config.LoadConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r := cfg.Rules[0]
+	if r.Protocol != "tcp" {
+		t.Errorf("Protocol = %q, want %q (default)", r.Protocol, "tcp")
+	}
+	if r.Direction != "inbound" {
+		t.Errorf("Direction = %q, want %q (default)", r.Direction, "inbound")
+	}
+}
+
+func TestLoadConfig_NetworkRule_ExplicitProtocolAndDirection(t *testing.T) {
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: dns-watch
+    type: NETWORK
+    target: "53"
+    severity: INFO
+    protocol: udp
+    direction: both
+`
+	path := writeTemp(t, yaml)
+	cfg, err := config.LoadConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r := cfg.Rules[0]
+	if r.Protocol != "udp" {
+		t.Errorf("Protocol = %q, want %q", r.Protocol, "udp")
+	}
+	if r.Direction != "both" {
+		t.Errorf("Direction = %q, want %q", r.Direction, "both")
+	}
+}
+
+func TestLoadConfig_NetworkRule_InvalidProtocol(t *testing.T) {
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: ssh-watch
+    type: NETWORK
+    target: "22"
+    severity: WARN
+    protocol: ftp
+`
+	path := writeTemp(t, yaml)
+	_, err := config.LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected error for invalid protocol, got nil")
+	}
+	if !strings.Contains(err.Error(), "protocol") {
+		t.Errorf("error %q does not mention protocol", err.Error())
+	}
+}
+
+func TestLoadConfig_NetworkRule_InvalidDirection(t *testing.T) {
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: ssh-watch
+    type: NETWORK
+    target: "22"
+    severity: WARN
+    direction: sideways
+`
+	path := writeTemp(t, yaml)
+	_, err := config.LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected error for invalid direction, got nil")
+	}
+	if !strings.Contains(err.Error(), "direction") {
+		t.Errorf("error %q does not mention direction", err.Error())
+	}
+}
+
+func TestLoadConfig_NonNetworkRule_ProtocolDirectionNotValidated(t *testing.T) {
+	// Protocol and Direction fields on FILE rules should be empty and not trigger
+	// validation errors.
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: etc-passwd-watch
+    type: FILE
+    target: "/etc/passwd"
+    severity: CRITICAL
+`
+	path := writeTemp(t, yaml)
+	cfg, err := config.LoadConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r := cfg.Rules[0]
+	if r.Protocol != "" {
+		t.Errorf("Protocol = %q for FILE rule, want empty string", r.Protocol)
+	}
+	if r.Direction != "" {
+		t.Errorf("Direction = %q for FILE rule, want empty string", r.Direction)
+	}
+}
+
 func TestLoadConfig_RulesUnmarshalledCorrectly(t *testing.T) {
 	yaml := `
 dashboard_addr: "dashboard.example.com:4443"
@@ -259,5 +392,205 @@ rules:
 	r1 := cfg.Rules[1]
 	if r1.Type != "NETWORK" || r1.Target != "443" || r1.Severity != "CRITICAL" {
 		t.Errorf("Rules[1] = %+v", r1)
+	}
+}
+
+func TestLoadConfig_NetworkRuleDefaults(t *testing.T) {
+	// A NETWORK rule with no protocol/direction should receive defaults.
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: ssh-watch
+    type: NETWORK
+    target: "22"
+    severity: WARN
+`
+	path := writeTemp(t, yaml)
+	cfg, err := config.LoadConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r := cfg.Rules[0]
+	if r.Protocol != "both" {
+		t.Errorf("default Protocol = %q, want %q", r.Protocol, "both")
+	}
+	if r.Direction != "inbound" {
+		t.Errorf("default Direction = %q, want %q", r.Direction, "inbound")
+	}
+}
+
+func TestLoadConfig_NetworkRuleExplicitProtocolAndDirection(t *testing.T) {
+	// A NETWORK rule with explicit protocol/direction should preserve them.
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: dns-watch
+    type: NETWORK
+    target: "53"
+    severity: CRITICAL
+    protocol: udp
+    direction: both
+`
+	path := writeTemp(t, yaml)
+	cfg, err := config.LoadConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r := cfg.Rules[0]
+	if r.Protocol != "udp" {
+		t.Errorf("Protocol = %q, want %q", r.Protocol, "udp")
+	}
+	if r.Direction != "both" {
+		t.Errorf("Direction = %q, want %q", r.Direction, "both")
+	}
+}
+
+func TestLoadConfig_NetworkRuleInvalidProtocol(t *testing.T) {
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: bad-rule
+    type: NETWORK
+    target: "80"
+    severity: WARN
+    protocol: sctp
+`
+	path := writeTemp(t, yaml)
+	_, err := config.LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected error for invalid protocol, got nil")
+	}
+	if !strings.Contains(err.Error(), "protocol") {
+		t.Errorf("error %q does not mention protocol", err.Error())
+	}
+}
+
+func TestLoadConfig_NetworkRuleInvalidDirection(t *testing.T) {
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: bad-rule
+    type: NETWORK
+    target: "80"
+    severity: WARN
+    direction: sideways
+`
+	path := writeTemp(t, yaml)
+	_, err := config.LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected error for invalid direction, got nil")
+	}
+	if !strings.Contains(err.Error(), "direction") {
+		t.Errorf("error %q does not mention direction", err.Error())
+	}
+}
+
+func TestLoadConfig_NonNetworkRuleProtocolIgnored(t *testing.T) {
+	// FILE and PROCESS rules should not be affected by Protocol/Direction
+	// validation (those fields are only relevant for NETWORK rules).
+	yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: file-rule
+    type: FILE
+    target: "/etc/passwd"
+    severity: CRITICAL
+  - name: proc-rule
+    type: PROCESS
+    target: "nc"
+    severity: WARN
+`
+	path := writeTemp(t, yaml)
+	cfg, err := config.LoadConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected error for non-NETWORK rules without protocol/direction: %v", err)
+	}
+	if len(cfg.Rules) != 2 {
+		t.Fatalf("len(Rules) = %d, want 2", len(cfg.Rules))
+	}
+	// Protocol and Direction remain empty for non-NETWORK rules (no defaults applied).
+	for _, r := range cfg.Rules {
+		if r.Protocol != "" {
+			t.Errorf("non-NETWORK rule %q: Protocol = %q, want empty", r.Name, r.Protocol)
+		}
+		if r.Direction != "" {
+			t.Errorf("non-NETWORK rule %q: Direction = %q, want empty", r.Name, r.Direction)
+		}
+	}
+}
+
+func TestLoadConfig_NetworkRuleAllValidProtocols(t *testing.T) {
+	for _, proto := range []string{"tcp", "udp", "both"} {
+		t.Run(proto, func(t *testing.T) {
+			yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: net-rule
+    type: NETWORK
+    target: "80"
+    severity: INFO
+    protocol: ` + proto + `
+`
+			path := writeTemp(t, yaml)
+			cfg, err := config.LoadConfig(path)
+			if err != nil {
+				t.Fatalf("unexpected error for protocol %q: %v", proto, err)
+			}
+			if cfg.Rules[0].Protocol != proto {
+				t.Errorf("Protocol = %q, want %q", cfg.Rules[0].Protocol, proto)
+			}
+		})
+	}
+}
+
+func TestLoadConfig_NetworkRuleAllValidDirections(t *testing.T) {
+	for _, dir := range []string{"inbound", "outbound", "both"} {
+		t.Run(dir, func(t *testing.T) {
+			yaml := `
+dashboard_addr: "dashboard.example.com:4443"
+tls:
+  cert_path: "/etc/tripwire/agent.crt"
+  key_path:  "/etc/tripwire/agent.key"
+  ca_path:   "/etc/tripwire/ca.crt"
+rules:
+  - name: net-rule
+    type: NETWORK
+    target: "80"
+    severity: INFO
+    direction: ` + dir + `
+`
+			path := writeTemp(t, yaml)
+			cfg, err := config.LoadConfig(path)
+			if err != nil {
+				t.Fatalf("unexpected error for direction %q: %v", dir, err)
+			}
+			if cfg.Rules[0].Direction != dir {
+				t.Errorf("Direction = %q, want %q", cfg.Rules[0].Direction, dir)
+			}
+		})
 	}
 }

@@ -1,11 +1,9 @@
 {
-  "prNumber": 188,
+  "prNumber": 212,
   "baseBranch": "main",
-  "headBranch": "feature/123-tripwire-cybersecurity-tool-sprint-2-issue-123",
+  "headBranch": "feature/160-tripwire-cybersecurity-tool-sprint-2-issue-160",
   "conflictedFiles": [
-    ".claude-output.json",
-    ".claude-resolution.json",
-    ".conflict-info.json"
+    "docs/concepts/tripwire-cybersecurity-tool/file-watcher.md"
   ],
-  "conflictCount": 3
+  "conflictCount": 1
 }

@@ -13,11 +13,15 @@ that:
 
 1. Loads a YAML configuration file (`internal/config`).
 2. Instantiates and starts the agent orchestrator (`internal/agent`).
-3. Wires watcher, queue, and transport components together via the agent's
+3. Creates one `FileWatcher` per `FILE`-type rule (`internal/watcher`) and
+   registers them with the orchestrator via `agent.WithWatchers`.
+4. Wires watcher, queue, and transport components together via the agent's
    goroutine lifecycle.
-4. Serves a `/healthz` HTTP endpoint on a loopback address so health-check
+5. Serves a `/healthz` HTTP endpoint on a loopback address so health-check
    tooling can probe the agent without opening external inbound ports.
-5. Handles `SIGTERM`/`SIGINT` for graceful shutdown.
+6. Handles `SIGTERM`/`SIGINT` for graceful shutdown.
+
+For file watcher details see [`file-watcher.md`](file-watcher.md).
 
 ---
 
@@ -44,10 +48,12 @@ type TLSConfig struct {
 }
 
 type TripwireRule struct {
-    Name     string // Required. Human-readable rule identifier.
-    Type     string // Required. FILE | NETWORK | PROCESS.
-    Target   string // Required. Path glob, port number, or process name.
-    Severity string // Required. INFO | WARN | CRITICAL.
+    Name      string // Required. Human-readable rule identifier.
+    Type      string // Required. FILE | NETWORK | PROCESS.
+    Target    string // Required. Path glob, port number, or process name.
+    Severity  string // Required. INFO | WARN | CRITICAL.
+    Protocol  string // NETWORK only. "tcp"|"udp"|"both". Default: "both".
+    Direction string // NETWORK only. "inbound"|"outbound"|"both". Default: "inbound".
 }
 ```
 
@@ -58,12 +64,16 @@ func LoadConfig(path string) (*Config, error)
 ```
 
 Reads the YAML file at `path`, unmarshals it into `Config`, applies defaults
-(`log_level: "info"`, `health_addr: "127.0.0.1:9000"`), and validates all
-required fields. Returns a descriptive error for any missing required field or
-invalid enumerated value.
+(`log_level: "info"`, `health_addr: "127.0.0.1:9000"`, and for NETWORK rules
+`protocol: "both"`, `direction: "inbound"`), then validates all required fields.
+Returns a descriptive error for any missing required field or invalid enumerated
+value.
 
 **Required fields:** `dashboard_addr`, `tls.cert_path`, `tls.key_path`,
 `tls.ca_path`.
+
+**NETWORK rule validation:** `protocol` must be one of `tcp`, `udp`, `both`;
+`direction` must be one of `inbound`, `outbound`, `both`.
 
 ---
 
@@ -170,10 +180,10 @@ type HealthStatus struct {
 **File:** `internal/agent/network_watcher.go`
 
 `NetworkWatcher` implements the `Watcher` interface for NETWORK-type tripwire
-rules.  It polls `/proc/net/tcp` and `/proc/net/tcp6` on a configurable
-interval, compares each snapshot against the previous one, and emits an
-`AlertEvent` whenever a new TCP ESTABLISHED connection is detected on a
-monitored local port.
+rules.  It polls `/proc/net/tcp`, `/proc/net/tcp6`, `/proc/net/udp`, and
+`/proc/net/udp6` on a configurable interval, compares each snapshot against
+the previous one, and emits an `AlertEvent` whenever a new connection matching
+the rule's protocol and direction filters is detected.
 
 ### Key types
 
@@ -182,14 +192,15 @@ monitored local port.
 type ConnKey struct {
     LocalAddr  string // "ip:port"
     RemoteAddr string // "ip:port"
-    Protocol   string // "tcp" or "tcp6"
+    Protocol   string // "tcp", "tcp6", "udp", or "udp6"
 }
 
-// ProcReader returns the current set of established connections.
-// The default implementation reads /proc/net/tcp*; inject a stub in tests.
+// ProcReader returns the current snapshot of active connections/sockets.
+// The default implementation reads /proc/net/tcp*, /proc/net/udp*.
+// Inject a stub in tests via NewNetworkWatcherWithReader.
 type ProcReader func() (map[ConnKey]struct{}, error)
 
-// ConnEntry is returned by ParseProcNetFile.
+// ConnEntry is returned by ParseProcNetFile and ParseProcNetUdpFile.
 type ConnEntry struct {
     LocalAddr  string
     RemoteAddr string
@@ -200,7 +211,7 @@ type ConnEntry struct {
 ### Constructors
 
 ```go
-// NewNetworkWatcher uses the real /proc/net/tcp* reader.
+// NewNetworkWatcher uses the real /proc/net reader.
 func NewNetworkWatcher(
     rules        []config.TripwireRule,
     logger       *slog.Logger,
@@ -221,39 +232,50 @@ func NewNetworkWatcherWithReader(
 - `Target` must be a valid port number in `[1, 65535]`; an error is returned
   if it is not.
 - `pollInterval <= 0` defaults to 1 second.
+- If `Protocol` or `Direction` are empty they default to `"both"` and
+  `"inbound"` respectively (matching `LoadConfig` defaults).
 
 ### AlertEvent detail fields
 
 | Key | Type | Description |
 |-----|------|-------------|
 | `local_addr` | `string` | Local "ip:port" of the connection |
-| `remote_addr` | `string` | Remote "ip:port" of the connection |
-| `protocol` | `string` | `"tcp"` or `"tcp6"` |
+| `remote_addr` | `string` | Remote "ip:port" (may be `"0.0.0.0:0"` for unconnected UDP) |
+| `protocol` | `string` | `"tcp"`, `"tcp6"`, `"udp"`, or `"udp6"` |
 
 ### Low-level helpers (exported for testing)
 
 ```go
-// ParseProcNetFile parses a /proc/net/tcp or /proc/net/tcp6 file.
-// Returns only ESTABLISHED connections (socket state 0x01).
+// ParseProcNetFile parses /proc/net/tcp or /proc/net/tcp6.
+// Returns only ESTABLISHED TCP connections (socket state 0x01).
 func ParseProcNetFile(path, proto string) ([]ConnEntry, error)
 
-// HexToAddr decodes a /proc/net hex address ("XXXXXXXX:PPPP" or
-// "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:PPPP") into a "host:port" string.
+// ParseProcNetUdpFile parses /proc/net/udp or /proc/net/udp6.
+// Returns active UDP sockets: state 0x07 (bound unconnected) and
+// state 0x01 (connected).  Zero remote addresses are preserved.
+func ParseProcNetUdpFile(path, proto string) ([]ConnEntry, error)
+
+// HexToAddr decodes a /proc/net hex address into a "host:port" string.
 func HexToAddr(hexAddr string) (string, error)
 ```
 
 ### How polling works
 
-1. Every `pollInterval` the watcher calls `ProcReader` to obtain the current
-   set of ESTABLISHED connections (`map[ConnKey]struct{}`).
-2. Entries in the current set that were **absent** from the previous snapshot
-   are classified as new connections.
-3. Each new connection is checked against every compiled rule.  A match on
-   local port fires an `AlertEvent` into the buffered events channel.
-4. The previous snapshot is replaced by the current one, so persistent
-   connections never re-fire.
-5. If the reader returns an error the poll is skipped and the previous snapshot
-   is retained; monitoring resumes on the next tick.
+1. Every `pollInterval` the watcher calls `ProcReader` to get the current
+   snapshot of active TCP connections and active UDP sockets
+   (`map[ConnKey]struct{}`).
+2. Entries **absent** from the previous snapshot are classified as new.
+3. For each new entry every compiled rule is evaluated:
+   - **Direction filter** – `"inbound"` matches the local port, `"outbound"`
+     matches the remote port, `"both"` matches either.
+   - **Protocol filter** – `"tcp"` matches `tcp`/`tcp6`; `"udp"` matches
+     `udp`/`udp6`; `"both"` matches all.
+   - If both filters pass, an `AlertEvent` is emitted into the buffered
+     events channel (capacity 64).
+4. The current snapshot replaces the previous one so persistent
+   connections/sockets never re-fire.
+5. Reader errors are logged and the previous snapshot is retained; monitoring
+   resumes on the next tick.
 
 ### Lifecycle
 
@@ -278,17 +300,41 @@ If no NETWORK rules are configured the goroutine exits immediately after
 |------|---------|-------------|
 | `-config` | `/etc/tripwire/config.yaml` | Path to the YAML configuration file |
 
+### Startup sequence
+
+1. Load and validate configuration via `config.LoadConfig`.
+2. Initialise the structured logger from `Config.LogLevel`.
+3. Create a single `NetworkWatcher` for all NETWORK-type rules (polls
+   `/proc/net/tcp*` and `/proc/net/udp*` every second) and register it with
+   the agent via `WithWatchers`.
+4. Build one `FileWatcher` per FILE-type rule via `buildFileWatchers` and
+   register them with the agent via `WithWatchers`.
+5. Start the agent orchestrator.
+6. Serve `/healthz` on `Config.HealthAddr`.
+
 ### Logging
 
 A structured JSON `slog.Logger` is initialised from `Config.LogLevel` and
 set as the default logger. All agent packages use the default logger or accept
 a `*slog.Logger` argument.
 
+### Watcher registration
+
+`cmd/agent/main.go` calls `buildFileWatchers(cfg, logger)` which iterates
+over all configured rules and creates one `watcher.FileWatcher` per `FILE`-type
+rule. The resulting slice is passed to `agent.WithWatchers(...)` so the
+orchestrator manages their lifecycle.
+
+```go
+func buildFileWatchers(cfg *config.Config, logger *slog.Logger) []agent.Watcher
+```
+
 ### Signal handling
 
 `SIGTERM` and `SIGINT` trigger graceful shutdown:
 
-1. `Agent.Stop()` is called — watchers, transport, and queue are closed.
+1. `Agent.Stop()` is called — watchers (including all `FileWatcher` instances),
+   transport, and queue are closed.
 2. The `/healthz` HTTP server is shut down with a 10-second timeout.
 3. The process exits 0.
 
@@ -321,6 +367,60 @@ tripwire rules.
 
 See [`file-watcher.md`](file-watcher.md) for the full FileWatcher reference
 and end-to-end SLA test documentation.
+
+**File:** `internal/watcher/network_watcher.go`
+
+### Types
+
+```go
+type Protocol  string // "tcp" | "udp" | "both"
+type Direction string // "inbound" | "outbound" | "both"
+
+type NetworkRule struct {
+    Name      string    // Rule identifier (copied to AlertEvent.RuleName)
+    Port      int       // Port to monitor (1–65535)
+    Protocol  Protocol  // Default: ProtocolTCP
+    Direction Direction // Default: DirectionInbound
+    Severity  string    // "INFO" | "WARN" | "CRITICAL"
+}
+```
+
+### NetworkWatcher
+
+```go
+func NewNetworkWatcher(rule NetworkRule, logger *slog.Logger) *NetworkWatcher
+func (w *NetworkWatcher) Start(ctx context.Context) error
+func (w *NetworkWatcher) Stop()
+func (w *NetworkWatcher) Events() <-chan agent.AlertEvent
+```
+
+`NetworkWatcher` implements `agent.Watcher` and monitors inbound TCP and/or UDP
+connections on a configured port using `net.Listen` (TCP) and
+`net.ListenPacket` (UDP). Each accepted connection or received datagram
+produces an `AlertEvent` with `TripwireType = "NETWORK"` and the following
+`Detail` keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `source_ip` | `string` | Remote IP address of the connection |
+| `destination_port` | `int` | Configured port that was contacted |
+| `protocol` | `string` | `"tcp"` or `"udp"` |
+
+#### Lifecycle
+
+- `Start` opens listener(s) and returns an error if any listener fails to
+  bind (e.g. port already in use, insufficient capability).
+- `Stop` closes all listeners, cancels the internal context, and blocks
+  until all goroutines have exited. The `Events()` channel is closed after
+  all goroutines return.
+- Calling `Start` on an already-running watcher is a no-op.
+- Calling `Stop` multiple times is safe.
+
+#### Event channel
+
+The events channel has a buffer of 64. If the buffer is full, events are
+dropped and a warning is logged. The channel is closed by `Stop` after all
+goroutines exit, so callers can range over it safely.
 
 ---
 
