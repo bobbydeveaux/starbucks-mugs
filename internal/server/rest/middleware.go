@@ -191,7 +191,7 @@ func JWTMiddleware(cfg JWTConfig, next http.Handler) http.Handler {
 				slog.String("remote_addr", r.RemoteAddr),
 				slog.String("error", err.Error()),
 			)
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			writeError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
 
@@ -301,10 +301,10 @@ func verifyRS256(token string, cfg JWTConfig) (*Claims, error) {
 	return &claims, nil
 }
 
-// writeJSONError writes an HTTP error response with a JSON body.
+// writeError writes an HTTP error response with a JSON body.
 // It sets the Content-Type header before writing the status code so that
 // the header is included even when ResponseWriter buffers are flushed early.
-func writeJSONError(w http.ResponseWriter, code int, detail string) {
+func writeError(w http.ResponseWriter, code int, detail string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	body := fmt.Sprintf(`{"error":%q}`, detail)
