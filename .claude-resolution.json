@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 2,
-  "summary": "Resolved two conflicts: accepted deletion of .claude-output.json (ephemeral CI metadata removed by main branch), and merged both versions of docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md which covered different sprint tasks (Task 1: OIDC auth/API client scaffold from HEAD; Tasks 2-3: WebSocket integration and multi-host selector from origin/main).",
-  "strategyUsed": "For .claude-output.json: accepted their deletion since it is ephemeral CI metadata. For dashboard-ui.md: preserved both branches' content by merging all sections into a single comprehensive document — combined the header metadata, kept all sections from both sides (Project Structure, Route, WebSocket Integration, Authentication, API Client, Multi-Host Selector, Development, Testing, Dependencies, Related Docs), and unified the testing table to cover all test files from both tasks."
+  "summary": "Resolved conflicts in fileguard/core/redaction.py and tests/unit/test_redaction.py by merging both implementations",
+  "strategyUsed": "Preserved configurable token API from HEAD branch while incorporating byte-offset-aware span detection from origin/main; merged test suites to cover both behaviors"
 }

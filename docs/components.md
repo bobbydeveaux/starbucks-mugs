@@ -1,6 +1,245 @@
 # React Components
 
-This document describes the React components and hooks for both the Costa vs Starbucks drink comparison and the Ferrari vs Lamborghini car catalog.
+This document describes the React components and hooks for both the Costa vs Starbucks drink comparison, the Ferrari vs Lamborghini car catalog, and the TripWire cybersecurity alert dashboard.
+
+---
+
+## TripWire Dashboard (Alert Filtering)
+
+The TripWire dashboard UI consists of several components, hooks, and utilities that work together to display and filter real-time security alerts from the TripWire REST API.
+
+### Architecture
+
+```
+AlertDashboardPage
+├── QueryClientProvider      (TanStack Query)
+├── FilterProvider           (src/contexts/FilterContext.tsx)
+│   ├── AlertFilters         (src/components/AlertFilters.tsx)
+│   └── AlertTable           (src/components/AlertTable.tsx)
+└── useAlerts / useHosts     (src/hooks/useAlerts.ts)
+```
+
+### Types (`src/types/alert.ts`)
+
+| Type | Description |
+|------|-------------|
+| `TripwireType` | `'FILE' \| 'NETWORK' \| 'PROCESS'` |
+| `Severity` | `'INFO' \| 'WARN' \| 'CRITICAL'` |
+| `HostStatus` | `'ONLINE' \| 'OFFLINE' \| 'DEGRADED'` |
+| `Alert` | Single alert event from an agent |
+| `Host` | Registered monitoring host |
+| `AlertQueryParams` | Query parameters for GET /api/v1/alerts |
+| `AlertsResponse` | Paginated response from /api/v1/alerts |
+| `AlertFilterState` | Active filter state for the dashboard UI |
+
+### API Client (`src/api/alerts.ts`)
+
+Type-safe REST API wrapper for the dashboard server.
+
+| Function | Description |
+|----------|-------------|
+| `fetchAlerts(params?, signal?)` | Fetches paginated/filtered alerts from GET /api/v1/alerts |
+| `fetchHosts(signal?)` | Fetches all registered hosts from GET /api/v1/hosts |
+
+### FilterContext (`src/contexts/FilterContext.tsx`)
+
+React context that manages dashboard filter state and exposes setters. Must wrap any component tree that uses `useFilterContext()`.
+
+```tsx
+<FilterProvider>
+  <AlertFilters />
+  <AlertTable data={...} />
+</FilterProvider>
+```
+
+Context value exposes: `filters`, `setSeverity`, `setTripwireType`, `setHostId`, `setFrom`, `setTo`, `setLimit`, `setOffset`, `resetFilters`.
+
+### useAlerts / useHosts (`src/hooks/useAlerts.ts`)
+
+TanStack Query-powered hooks for fetching alert and host data.
+
+```ts
+const { data, isLoading, isFetching, error } = useAlerts(filters, {
+  refetchInterval: 30_000,  // poll every 30 seconds
+});
+
+const { data: hostsData } = useHosts();
+```
+
+### AlertFilters (`src/components/AlertFilters.tsx`)
+
+**File:** `src/components/AlertFilters.tsx`
+
+Renders a toolbar of filter controls for the alert dashboard. Reads/writes filter state via `useFilterContext()`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `hosts` | `Host[]` | Registered hosts for the host filter dropdown |
+| `hostsLoading` | `boolean` | Disables the host dropdown while loading |
+
+Controls:
+- Severity select (All / Critical / Warning / Info)
+- Tripwire type select (All / File / Network / Process)
+- Host select (populated dynamically from the hosts API)
+- Reset filters button (visible only when at least one filter is active)
+
+### AlertTable (`src/components/AlertTable.tsx`)
+
+**File:** `src/components/AlertTable.tsx`
+
+Displays a paginated list of security alerts. Reads pagination state from `useFilterContext()`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `data` | `AlertsResponse \| undefined` | Paginated alerts response |
+| `isLoading` | `boolean` | Shows loading skeleton |
+| `isFetching` | `boolean` | Shows background-refresh indicator |
+| `error` | `Error \| null` | Shows error message |
+
+States: loading, error, empty, table with optional pagination controls.
+
+### AlertDashboardPage (`src/pages/AlertDashboardPage.tsx`)
+
+**Route:** `/dashboard`
+
+Top-level page component that wraps `QueryClientProvider` and `FilterProvider`. Polls for new alerts every 30 seconds. Header shows the total alert count; body contains `AlertFilters` + `AlertTable`.
+
+---
+
+## Tripwire Real-Time Security Dashboard
+
+### TrendChart
+
+**File:** `src/components/TrendChart.tsx`
+
+Renders a real-time alert volume trend as a stacked Recharts `AreaChart` with one area series per severity level (INFO / WARN / CRITICAL). Data is aggregated client-side from a flat `Alert[]` array so the chart stays in sync with WebSocket-pushed events without additional API round-trips.
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `alerts` | `Alert[]` | — | Raw alert objects to bin and visualise |
+| `from` | `Date` | — | Inclusive window start for bucket alignment |
+| `to` | `Date` | — | Inclusive window end for bucket alignment |
+| `timeRange` | `TimeRange` | — | Active preset shown in the `TimeRangeSelector` |
+| `onTimeRangeChange` | `(range: TimeRange) => void` | — | Called when the user selects a different preset |
+| `loading` | `boolean` | `false` | Shows a loading overlay while the REST fetch is in flight |
+| `error` | `string \| null` | `null` | Shows an error overlay when non-null |
+| `className` | `string` | `''` | Extra CSS classes applied to the outermost `<section>` |
+
+#### Features
+
+- **Three severity series** — INFO (blue `#3B82F6`), WARN (amber `#F59E0B`), CRITICAL (red `#EF4444`)
+- **Automatic bucket sizing** — hourly buckets for windows ≤ 24 h; daily buckets for longer windows
+- **Zero-gap X axis** — every bucket in [from, to] is always present, even when empty
+- **Reactive updates** — re-renders within one cycle when the `alerts` prop changes (e.g. WebSocket push)
+- **Three states** — loading spinner, error message, empty-state copy, and the chart itself
+- **TimeRangeSelector** — five preset buttons (1h / 6h / 24h / 7d / 30d) with `aria-pressed` toggling
+- **Accessible** — root `<section aria-label="Alert volume trend chart">`, group label on selector
+
+#### Usage
+
+```tsx
+import { TrendChart } from './components/TrendChart';
+
+<TrendChart
+  alerts={alerts}
+  from={from}
+  to={to}
+  timeRange={filters.timeRange}
+  onTimeRangeChange={(range) => setFilters(f => ({ ...f, timeRange: range }))}
+  loading={loading}
+  error={error}
+/>
+```
+
+---
+
+### DashboardPage
+
+**File:** `src/pages/DashboardPage.tsx`
+
+Wires the `useAlerts` hook to `TrendChart`. Mounted at the `/dashboard` route.
+
+#### Features
+
+- Severity filter (`ALL | INFO | WARN | CRITICAL`) and tripwire-type filter (`ALL | FILE | NETWORK | PROCESS`)
+- Alert count badge in the top nav updates in real time
+
+---
+
+### useWebSocket
+
+**File:** `src/hooks/useWebSocket.ts`
+
+Manages a WebSocket connection with automatic exponential-backoff reconnection (1 s → 30 s cap) and optional bearer-token auth via `?token=<value>`.
+
+#### Signature
+
+```ts
+function useWebSocket<T>(options: UseWebSocketOptions<T>): void
+```
+
+#### UseWebSocketOptions
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | `string` | Full WebSocket URL |
+| `token` | `string?` | Optional bearer token |
+| `onMessage` | `(msg: WebSocketMessage<T>) => void` | Called for every successfully parsed JSON frame |
+| `enabled` | `boolean` | `true` — set `false` to skip connecting |
+
+---
+
+### aggregateAlertsByTime
+
+**File:** `src/utils/aggregateAlerts.ts`
+
+Aggregates a flat alert list into uniformly-spaced `TrendBucket` objects for recharts.
+
+#### Signature
+
+```ts
+function aggregateAlertsByTime(alerts: Alert[], from: Date, to: Date): TrendBucket[]
+```
+
+#### TrendBucket shape
+
+```ts
+interface TrendBucket {
+  time: string;    // X-axis label ("14:00" or "Feb 25")
+  timeMs: number;  // Epoch ms — used for sort order
+  INFO: number;
+  WARN: number;
+  CRITICAL: number;
+}
+```
+
+#### timeRangeToDates
+
+```ts
+function timeRangeToDates(preset: TimeRange, now?: Date): { from: Date; to: Date }
+```
+
+Converts a `TimeRange` preset string to absolute `[from, to]` dates relative to `now` (defaults to `new Date()`).
+
+---
+
+### Tripwire TypeScript Types
+
+**File:** `src/types.ts`
+
+| Type | Description |
+|------|-------------|
+| `Severity` | `'INFO' \| 'WARN' \| 'CRITICAL'` |
+| `TripwireType` | `'FILE' \| 'NETWORK' \| 'PROCESS'` |
+| `HostStatus` | `'ONLINE' \| 'OFFLINE' \| 'DEGRADED'` |
+| `Alert` | Full alert entity: `alert_id`, `host_id`, `timestamp`, `tripwire_type`, `rule_name`, `event_detail`, `severity`, `received_at` |
+| `Host` | Registered monitoring host: `host_id`, `hostname`, `ip_address`, `platform`, `agent_version`, `last_seen`, `status` |
+| `TimeRange` | `'1h' \| '6h' \| '24h' \| '7d' \| '30d'` |
+| `AlertFilters` | `{ hostIds, severity, tripwireType, timeRange }` — passed to `useAlerts` |
+
+---
 
 ## DrinkCard
 

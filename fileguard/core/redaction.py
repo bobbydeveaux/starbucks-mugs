@@ -90,13 +90,16 @@ class RedactionEngine:
     def redact(self, context: ScanContext) -> str:
         """Redact PII spans in ``context.extracted_text``.
 
-        Reads :class:`~fileguard.core.pii_detector.PIIFinding` objects from
-        ``context.findings``, locates each matched span within
-        ``context.extracted_text``, merges overlapping/adjacent spans, and
-        returns a new string with those spans replaced by :attr:`token`.
-
-        The ``context`` object is **not** mutated; callers may inspect the
-        original ``context.extracted_text`` after calling this method.
+        Steps
+        -----
+        1. Build a reverse map ``{byte_offset: char_index}`` from
+           ``context.byte_offsets``.
+        2. For each PII finding in ``context.findings``, locate the
+           corresponding character span in ``extracted_text`` — using the
+           reverse map when ``offset != -1``, or a substring search
+           otherwise.
+        3. Merge overlapping / adjacent spans.
+        4. Apply substitutions left-to-right to reconstruct the output.
 
         Args:
             context: Populated :class:`~fileguard.core.scan_context.ScanContext`
@@ -129,7 +132,13 @@ class RedactionEngine:
             )
             return text
 
-        spans = self._collect_spans(text, pii_findings)
+        # Build reverse map: byte_offset → first char index at that offset
+        byte_to_char: dict[int, int] = {}
+        for char_idx, byte_off in enumerate(context.byte_offsets):
+            if byte_off not in byte_to_char:
+                byte_to_char[byte_off] = char_idx
+
+        spans = self._collect_spans(text, pii_findings, byte_to_char)
         merged = self._merge_spans(spans)
         result = self._apply_replacements(text, merged)
 
@@ -149,38 +158,75 @@ class RedactionEngine:
     def _collect_spans(
         self,
         text: str,
-        findings: list[PIIFinding],
+        findings: list,
+        byte_to_char: dict[int, int],
     ) -> list[tuple[int, int]]:
-        """Return character spans for every occurrence of each finding match.
+        """Convert PIIFinding objects into (start, end) character spans.
 
-        Each unique ``finding.match`` value is searched across the full text
-        using a literal (``re.escape``d) pattern.  All occurrences—not just
-        the first—are included so that repeated PII values in the same
-        document are all redacted.
+        For each finding, the primary lookup path uses the ``byte_to_char``
+        reverse map (built from ``context.byte_offsets``) when
+        ``finding.offset != -1`` and the offset is present in the map.  If
+        the mapped character position does not match the expected text, or if
+        ``offset == -1``, a fallback regex search finds all occurrences of
+        the match string across the full text (ensuring repeated PII values
+        are all captured).
 
         Args:
             text: The extracted text to search.
             findings: PII findings whose ``match`` values locate spans.
+            byte_to_char: Reverse map from byte offset to character index.
 
         Returns:
             Unsorted list of ``(start, end)`` half-open character intervals.
         """
         spans: list[tuple[int, int]] = []
+
         # Deduplicate match strings to avoid redundant searches.
         seen: set[str] = set()
         for finding in findings:
-            match_str = finding.match
+            match_str: str = getattr(finding, "match", "")
+            byte_offset: int = getattr(finding, "offset", -1)
+
             if not match_str or match_str in seen:
                 continue
             seen.add(match_str)
-            for m in re.finditer(re.escape(match_str), text):
-                spans.append((m.start(), m.end()))
-                logger.debug(
-                    "RedactionEngine: span (%d, %d) for match %r",
-                    m.start(),
-                    m.end(),
-                    match_str,
-                )
+
+            span_found_via_offset = False
+
+            # --- primary path: use byte-offset reverse map ------------------
+            if byte_offset != -1 and byte_offset in byte_to_char:
+                char_start = byte_to_char[byte_offset]
+                char_end = char_start + len(match_str)
+                # Validate that the text slice actually matches
+                if text[char_start:char_end] == match_str:
+                    spans.append((char_start, char_end))
+                    logger.debug(
+                        "RedactionEngine: span (%d, %d) for match %r (via byte offset)",
+                        char_start,
+                        char_end,
+                        match_str,
+                    )
+                    span_found_via_offset = True
+                else:
+                    # Offset map mismatch — fall through to regex search
+                    logger.debug(
+                        "RedactionEngine: byte-offset mismatch for match=%r at char=%d; "
+                        "falling back to regex search",
+                        match_str,
+                        char_start,
+                    )
+
+            # --- fallback path: regex search for all occurrences ------------
+            if not span_found_via_offset:
+                for m in re.finditer(re.escape(match_str), text):
+                    spans.append((m.start(), m.end()))
+                    logger.debug(
+                        "RedactionEngine: span (%d, %d) for match %r (via regex)",
+                        m.start(),
+                        m.end(),
+                        match_str,
+                    )
+
         return spans
 
     @staticmethod

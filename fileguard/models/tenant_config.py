@@ -63,3 +63,6 @@ class TenantConfig(Base):
     compliance_reports: Mapped[list["ComplianceReport"]] = relationship(  # noqa: F821
         "ComplianceReport", back_populates="tenant", cascade="all, delete-orphan"
     )
+    quarantined_files: Mapped[list["QuarantinedFile"]] = relationship(  # noqa: F821
+        "QuarantinedFile", back_populates="tenant", cascade="all, delete-orphan"
+    )

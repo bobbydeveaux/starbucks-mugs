@@ -2,6 +2,7 @@
 
 from fileguard.models.batch_job import BatchJob
 from fileguard.models.compliance_report import ComplianceReport
+from fileguard.models.quarantined_file import QuarantinedFile
 from fileguard.models.scan_event import ScanEvent
 from fileguard.models.tenant_config import TenantConfig
 
@@ -10,4 +11,5 @@ __all__ = [
     "ScanEvent",
     "BatchJob",
     "ComplianceReport",
+    "QuarantinedFile",
 ]

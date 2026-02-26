@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fileguard.api.handlers.reports import router as reports_router
 from fileguard.api.middleware.auth import AuthMiddleware
 from fileguard.api.middleware.logging import RequestLoggingMiddleware
+from fileguard.api.routes.redacted import router as redacted_router
 from fileguard.api.routes.reports import router as reports_router
 from fileguard.config import settings
 
@@ -25,6 +26,7 @@ app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(reports_router)
+app.include_router(redacted_router)
 
 # Redis client stored on app state so it can be accessed by routes and tests
 app.state.redis = None
