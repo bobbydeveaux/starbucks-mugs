@@ -1,9 +1,10 @@
 {
-  "prNumber": 298,
+  "prNumber": 300,
   "baseBranch": "main",
-  "headBranch": "feature/286-fileguard-sprint-3-issue-286",
+  "headBranch": "feature/175-fileguard-sprint-3-issue-175",
   "conflictedFiles": [
-    "fileguard/config.py"
+    "fileguard/core/patterns/__init__.py",
+    "fileguard/core/patterns/uk_patterns.py"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }

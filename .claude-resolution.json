@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in fileguard/config.py by preserving both sets of configuration additions: Google Cloud DLP and AWS Macie settings from HEAD, and compliance report settings (REPORTS_DIR, REPORT_CADENCE) from origin/main.",
-  "strategyUsed": "preserved both changes — both sides added distinct, non-overlapping configuration blocks for different features, so all settings were kept together"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in fileguard/core/patterns/__init__.py and fileguard/core/patterns/uk_patterns.py. Both files had divergent implementations of the UK PII pattern library. The origin/main version defines the API (PatternDefinition, BUILTIN_PATTERNS, get_patterns, load_custom_patterns) that is already used by the staged pii_detector.py and test_pii_detector.py files, so the origin/main version was chosen for both files.",
+  "strategyUsed": "chose origin/main for both conflicted files — the origin/main API (PatternDefinition dataclass, BUILTIN_PATTERNS public constant, get_patterns/load_custom_patterns functions, pattern names PHONE/POSTCODE) is the one required by the already-staged pii_detector.py and test_pii_detector.py; the HEAD version used incompatible names (PatternEntry, _BUILTIN_PATTERNS, load_patterns, UK_PHONE, UK_POSTCODE)"
 }
