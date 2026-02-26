@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json. Kept HEAD's version which accurately describes this branch's PR (#270): WebSocket handler and gRPC service review feedback fixes (closes #228). The origin/main version described a different PR (GitHub Actions build matrix, closes #231) which is unrelated to this feature branch.",
-  "strategyUsed": "Chose HEAD for all conflict sections: HEAD's prTitle, prBody, and filesChanged accurately reflect this branch's work (WebSocket/gRPC fixes). HEAD's docsReviewed (grpc-alert-service.md, LLD.md, README.md) and completedTasks [1,2,3,4,5] are retained. origin/main's conflicting sections described a separate PR's artifacts and were discarded to avoid mixing unrelated PR metadata."
+  "summary": "Resolved conflict in docs/concepts/fileguard/README.md. The conflict was in the project structure tree: HEAD referenced report.py/reports.py (Celery-based) while origin/main referenced compliance_report.py (read-only service). Both sets of files exist in the repo, so both were preserved in the merged result.",
+  "strategyUsed": "preserved both changes — kept all file references from both branches (schemas/report.py + schemas/compliance_report.py, services/reports.py + services/compliance_report.py, celery_app.py, test_report_service.py + test_compliance_report_api.py) since all files genuinely exist in the working tree"
 }

@@ -336,6 +336,67 @@ If no NETWORK rules are configured the goroutine exits immediately after
 
 ---
 
+## Package: `internal/transport`
+
+**File:** `internal/transport/grpc_client.go`
+
+`GRPCClient` implements the `agent.Transport` interface and manages a
+persistent bidirectional `StreamAlerts` gRPC connection to the dashboard
+server.
+
+### Key behaviour
+
+| Property | Description |
+|----------|-------------|
+| mTLS | Client presents a CA-signed certificate; server certificate is verified against the same CA. |
+| RegisterAgent | Called once per connection; sets `hostID` embedded in every `AgentEvent`. |
+| Queue drain on reconnect | All pending SQLite queue events are sent in FIFO order before live events. Each event is ACKed in the queue only after a server ACK. |
+| Exponential backoff | On any stream error the client waits an exponentially increasing interval (±25 % jitter, ceiling `MaxBackoff`) before reconnecting. `ReconnectTotal` increments on each attempt. |
+| Metrics | `AlertsSentTotal()`, `ReconnectTotal()`, and `QueueDepth()` are atomic; never block. |
+
+### DrainQueue interface
+
+```go
+// DrainQueue is satisfied by *queue.SQLiteQueue.
+type DrainQueue interface {
+    Dequeue(ctx context.Context, n int) ([]queue.PendingEvent, error)
+    Ack(ctx context.Context, ids []int64) error
+    Depth() int
+}
+```
+
+### ClientConfig
+
+```go
+type ClientConfig struct {
+    Addr         string        // gRPC address "host:port". Required.
+    CertPath     string        // PEM client certificate. Required unless Insecure.
+    KeyPath      string        // PEM client private key. Required unless Insecure.
+    CAPath       string        // PEM CA certificate. Required unless Insecure.
+    ServerName   string        // TLS SNI override (default: hostname from Addr).
+    Hostname     string        // Sent in RegisterAgent (default: os.Hostname()).
+    Platform     string        // OS label (e.g. "linux"). Sent in RegisterAgent.
+    AgentVersion string        // Semantic version. Sent in RegisterAgent.
+    MaxBackoff   time.Duration // Reconnect ceiling (default: 60 s).
+    Insecure     bool          // Disable TLS. For tests only; never in production.
+}
+```
+
+### Stream lifecycle (per connection)
+
+1. **Dial** — `grpc.NewClient` with mTLS credentials.
+2. **RegisterAgent** — unary RPC with 10 s timeout; sets `hostID`.
+3. **StreamAlerts** — opens bidirectional stream.
+4. **Queue drain** — `Dequeue` up to 50 events per batch; `Send` + `Recv ACK` +
+   `Ack` per event; repeat until queue is empty.
+5. **Live events** — reads from `liveCh` (capacity 256); `Send`s events to
+   server; a background goroutine receives ACKs and increments
+   `AlertsSentTotal`.
+6. On any error — close stream, increment `ReconnectTotal`, apply back-off,
+   goto 1.
+
+---
+
 ## Binary: `cmd/agent/main.go`
 
 ### CLI flags
@@ -343,22 +404,24 @@ If no NETWORK rules are configured the goroutine exits immediately after
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-config` | `/etc/tripwire/config.yaml` | Path to the YAML configuration file |
+| `-queue-path` | `/var/lib/tripwire/queue.db` | Path to the SQLite alert queue database |
 
 ### Startup sequence
 
 1. Load and validate configuration via `config.LoadConfig`.
 2. Initialise the structured logger from `Config.LogLevel`.
-3. Create a single `NetworkWatcher` for all NETWORK-type rules (polls
+3. **Open the SQLite alert queue** at `-queue-path` via `queue.New`.
+4. **Create the `GRPCClient`** via `transport.New`, wired to the queue and
+   the dashboard address/TLS settings from configuration.
+5. Create a single `NetworkWatcher` for all NETWORK-type rules (polls
    `/proc/net/tcp*` and `/proc/net/udp*` every second) and register it with
    the agent via `WithWatchers`.
-4. Build one `FileWatcher` per FILE-type rule via `buildFileWatchers` and
+6. Build one `FileWatcher` per FILE-type rule via `buildFileWatchers` and
    register them with the agent via `WithWatchers`.
-5. Create a `transport.GRPCTransport` from the TLS configuration and register
-   it with the agent via `WithTransport`. The transport connects to the
-   dashboard using mTLS and reconnects automatically with exponential backoff.
-   See [`agent-transport.md`](agent-transport.md) for full details.
-6. Start the agent orchestrator.
-7. Serve `/healthz` on `Config.HealthAddr`.
+7. Wire the queue and transport into the agent via `WithQueue` and
+   `WithTransport`.
+8. Start the agent orchestrator.
+9. Serve `/healthz` on `Config.HealthAddr`.
 
 ### Logging
 

@@ -1,9 +1,9 @@
 {
-  "prNumber": 270,
+  "prNumber": 294,
   "baseBranch": "main",
-  "headBranch": "feature/228-tripwire-cybersecurity-tool-sprint-4-issue-228",
+  "headBranch": "feature/289-fileguard-sprint-3-issue-289",
   "conflictedFiles": [
-    ".claude-output.json"
+    "docs/concepts/fileguard/README.md"
   ],
   "conflictCount": 1
 }
