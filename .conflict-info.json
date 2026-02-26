@@ -3,8 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/186-fileguard-sprint-3-issue-186",
   "conflictedFiles": [
-    "docs/concepts/fileguard/README.md",
-    "fileguard/schemas/report.py"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
   "conflictCount": 2
 }
