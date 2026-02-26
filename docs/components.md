@@ -1,6 +1,110 @@
 # React Components
 
-This document describes the React components and hooks for both the Costa vs Starbucks drink comparison and the Ferrari vs Lamborghini car catalog.
+This document describes the React components and hooks for both the Costa vs Starbucks drink comparison, the Ferrari vs Lamborghini car catalog, and the TripWire cybersecurity alert dashboard.
+
+---
+
+## TripWire Dashboard (Alert Filtering)
+
+The TripWire dashboard UI consists of several components, hooks, and utilities that work together to display and filter real-time security alerts from the TripWire REST API.
+
+### Architecture
+
+```
+AlertDashboardPage
+├── QueryClientProvider      (TanStack Query)
+├── FilterProvider           (src/contexts/FilterContext.tsx)
+│   ├── AlertFilters         (src/components/AlertFilters.tsx)
+│   └── AlertTable           (src/components/AlertTable.tsx)
+└── useAlerts / useHosts     (src/hooks/useAlerts.ts)
+```
+
+### Types (`src/types/alert.ts`)
+
+| Type | Description |
+|------|-------------|
+| `TripwireType` | `'FILE' \| 'NETWORK' \| 'PROCESS'` |
+| `Severity` | `'INFO' \| 'WARN' \| 'CRITICAL'` |
+| `HostStatus` | `'ONLINE' \| 'OFFLINE' \| 'DEGRADED'` |
+| `Alert` | Single alert event from an agent |
+| `Host` | Registered monitoring host |
+| `AlertQueryParams` | Query parameters for GET /api/v1/alerts |
+| `AlertsResponse` | Paginated response from /api/v1/alerts |
+| `AlertFilterState` | Active filter state for the dashboard UI |
+
+### API Client (`src/api/alerts.ts`)
+
+Type-safe REST API wrapper for the dashboard server.
+
+| Function | Description |
+|----------|-------------|
+| `fetchAlerts(params?, signal?)` | Fetches paginated/filtered alerts from GET /api/v1/alerts |
+| `fetchHosts(signal?)` | Fetches all registered hosts from GET /api/v1/hosts |
+
+### FilterContext (`src/contexts/FilterContext.tsx`)
+
+React context that manages dashboard filter state and exposes setters. Must wrap any component tree that uses `useFilterContext()`.
+
+```tsx
+<FilterProvider>
+  <AlertFilters />
+  <AlertTable data={...} />
+</FilterProvider>
+```
+
+Context value exposes: `filters`, `setSeverity`, `setTripwireType`, `setHostId`, `setFrom`, `setTo`, `setLimit`, `setOffset`, `resetFilters`.
+
+### useAlerts / useHosts (`src/hooks/useAlerts.ts`)
+
+TanStack Query-powered hooks for fetching alert and host data.
+
+```ts
+const { data, isLoading, isFetching, error } = useAlerts(filters, {
+  refetchInterval: 30_000,  // poll every 30 seconds
+});
+
+const { data: hostsData } = useHosts();
+```
+
+### AlertFilters (`src/components/AlertFilters.tsx`)
+
+**File:** `src/components/AlertFilters.tsx`
+
+Renders a toolbar of filter controls for the alert dashboard. Reads/writes filter state via `useFilterContext()`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `hosts` | `Host[]` | Registered hosts for the host filter dropdown |
+| `hostsLoading` | `boolean` | Disables the host dropdown while loading |
+
+Controls:
+- Severity select (All / Critical / Warning / Info)
+- Tripwire type select (All / File / Network / Process)
+- Host select (populated dynamically from the hosts API)
+- Reset filters button (visible only when at least one filter is active)
+
+### AlertTable (`src/components/AlertTable.tsx`)
+
+**File:** `src/components/AlertTable.tsx`
+
+Displays a paginated list of security alerts. Reads pagination state from `useFilterContext()`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `data` | `AlertsResponse \| undefined` | Paginated alerts response |
+| `isLoading` | `boolean` | Shows loading skeleton |
+| `isFetching` | `boolean` | Shows background-refresh indicator |
+| `error` | `Error \| null` | Shows error message |
+
+States: loading, error, empty, table with optional pagination controls.
+
+### AlertDashboardPage (`src/pages/AlertDashboardPage.tsx`)
+
+**Route:** `/dashboard`
+
+Top-level page component that wraps `QueryClientProvider` and `FilterProvider`. Polls for new alerts every 30 seconds. Header shows the total alert count; body contains `AlertFilters` + `AlertTable`.
+
+---
 
 ## DrinkCard
 
