@@ -115,6 +115,8 @@ fileguard/              Python package (FastAPI application)
 ├── main.py             Application entry point + middleware registration
 ├── config.py           Pydantic Settings configuration
 ├── api/
+│   ├── handlers/
+│   │   └── reports.py  GET /v1/reports (list) and GET /v1/reports/{id}/download
 │   └── middleware/
 │       ├── auth.py     Bearer-token authentication middleware
 │       └── rate_limit.py Redis-backed sliding-window rate limiter
@@ -128,7 +130,8 @@ fileguard/              Python package (FastAPI application)
 │   ├── batch_job.py      SQLAlchemy ORM model for batch_job table
 │   └── compliance_report.py  SQLAlchemy ORM model for compliance_report table
 ├── schemas/
-│   └── tenant.py         Pydantic TenantConfig schema (request.state.tenant)
+│   ├── tenant.py         Pydantic TenantConfig schema (request.state.tenant)
+│   └── report.py         Pydantic ReportSummary / ReportListResponse schemas
 ├── services/
 │   └── audit.py          AuditService: HMAC-signed scan event persistence + SIEM forwarding
 └── db/
@@ -154,12 +157,77 @@ tests/
 │   ├── test_audit_service.py         Unit tests for AuditService (HMAC, SIEM, DB mock)
 │   └── test_document_extractor.py    Unit tests for DocumentExtractor
 └── integration/
-    └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
+    ├── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
+    └── test_reports_api.py               Integration tests for reports list + download API
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
 alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
+```
+
+## Compliance Reports API
+
+`fileguard/api/handlers/reports.py` exposes two endpoints for retrieving stored compliance reports.
+
+### GET /v1/reports
+
+Returns a paginated list of compliance report metadata records scoped to the authenticated tenant.
+
+**Query parameters**
+
+| Parameter    | Type   | Default | Description |
+|---|---|---|---|
+| `page`       | int    | 1       | 1-based page number (min 1) |
+| `page_size`  | int    | 20      | Records per page (min 1, max 100) |
+| `format`     | string | —       | Filter by report format: `pdf` or `json` |
+| `start_date` | string | —       | ISO-8601 lower bound on `period_start` |
+| `end_date`   | string | —       | ISO-8601 upper bound on `period_end` |
+
+**Response (200)**
+
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "tenant_id": "uuid",
+      "period_start": "2026-01-01T00:00:00+00:00",
+      "period_end": "2026-01-31T23:59:59+00:00",
+      "format": "pdf",
+      "file_uri": "/reports/2026-01.pdf",
+      "generated_at": "2026-02-01T00:05:00+00:00"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+### GET /v1/reports/{id}/download
+
+Downloads the stored report artifact.  The response Content-Type is resolved in
+priority order:
+
+1. `format` query parameter (`pdf` or `json`)
+2. `Accept` request header (`application/pdf` or `application/json`)
+3. The `format` column stored on the `ComplianceReport` row
+
+Returns `404` when the report ID does not exist **or** belongs to a different tenant
+(cross-tenant isolation).
+
+```bash
+# Download as PDF (forced via query param)
+curl -H "Authorization: Bearer <token>" \
+     "http://localhost:8000/v1/reports/<id>/download?format=pdf" \
+     -o report.pdf
+
+# Download using Accept header
+curl -H "Authorization: Bearer <token>" \
+     -H "Accept: application/json" \
+     "http://localhost:8000/v1/reports/<id>/download" \
+     -o report.json
 ```
 
 ## AV Engine Adapter
