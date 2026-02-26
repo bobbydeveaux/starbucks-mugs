@@ -1,82 +1,14 @@
 ## Code Review - Changes Requested
 
-## ❌ BLOCKING ISSUES FOUND
+**Review decision: `changes_requested` / blocking issue flagged.**
 
-### Summary
+The sole blocker is the accidental inclusion of `go1.22.0.linux-amd64.tar.gz` (69 MB binary). The developer needs to:
 
-The React/TypeScript feature implementation for issue #46 is well-executed — clean architecture, correct state management, good test coverage (9/9 tests passing), and solid accessibility choices. However, there is one blocking repository issue that must be resolved before merge.
+1. Remove the file from the branch (`git rm go1.22.0.linux-amd64.tar.gz`)
+2. Add `*.tar.gz` to `.gitignore`
+3. Force-push to rewrite the commit (or add a fixup commit) so the blob never enters `main`'s history
 
----
-
-## BLOCKING: `node_modules` committed to git
-
-**11,711 files** from `node_modules/` are tracked by git because `.gitignore` does not include `node_modules`. This is responsible for the 2,341,042 line additions shown in the PR diff.
-
-The current `.gitignore` only contains:
-```
-# Claude Code worker state files
-.claude-output.json
-
-# Worker temporary state files (auto-added by COO)
-.claude-state.json
-```
-
-**Why this blocks merge:**
-- Makes the repository effectively unauditable — no reviewer can meaningfully assess a 2.3M-line diff
-- Every future `npm install` or dependency update will produce multi-thousand-line diffs
-- Committed `node_modules` can harbour silently modified packages that bypass the integrity checks `npm ci` would normally perform (supply-chain risk)
-- Balloons clone and CI times
-
-**Fix required:**
-1. Add `node_modules/` to `.gitignore`
-2. Run `git rm -r --cached node_modules` to untrack the directory
-3. Commit the `.gitignore` change (without the `node_modules` files)
-
----
-
-## Non-Blocking Issues
-
-### Code Quality
-
-**`aria-pressed` on `<article>` elements** (`src/components/DrinkCard.tsx:37`)
-
-`aria-pressed` is a toggle-button state and is semantically incorrect on a non-interactive `<article>` element. The `<button>` inside already carries `aria-pressed` correctly (line 75). The attribute on `<article>` was added as a test hook (used in `App.test.tsx:184`), but it misrepresents the element's role to screen readers.
-
-Suggestion: use a `data-selected` attribute on the article for test selection instead, and rely only on the button's `aria-pressed` for accessibility.
-
-**`selectedIds` not memoized** (`src/App.tsx:44-47`)
-
-The `selectedIds` object literal is recreated on every render, causing `DrinkCatalog` and all `BrandSection` children to receive a new reference each time, defeating any `React.memo` optimisation that might be added later. Consider `useMemo`.
-
-**No deselect mechanism**
-
-Clicking "Selected ✓" on an already-selected card calls `onSelect(drink)` again, which replaces the selection with itself — no-op. There is no way to deselect a drink without using the "Clear" button (which resets both brands). This may be intentional per the spec, but it is worth confirming with the product owner.
-
-### Documentation
-
-**HLD version discrepancy** (`docs/concepts/costa-vs-starbucks/HLD.md:125`)
-
-The HLD states "Vite 5" but the project uses Vite 6 (`"vite": "^6.0.1"` in `package.json`). Minor doc inaccuracy.
-
-**`docsUpdated` is empty** (`.claude-output.json`)
-
-Docs were reviewed but not updated. The HLD's data file paths (`drinks/starbucks.json` vs the actual `public/data/starbucks.json`) and the Vite version mismatch suggest the docs weren't refreshed to match the implementation. Non-blocking for this sprint task, but worth a follow-up.
-
-### Security (Informational)
-
-**`'unsafe-inline'` in CSP** (`index.html:9`)
-
-`style-src 'self' 'unsafe-inline'` is present for Tailwind compatibility. This is a standard trade-off for Tailwind CSS and acceptable here, but worth noting if the CSP is later tightened.
-
----
-
-## What Works Well
-
-- **State management** is clean: `useCallback`-wrapped handlers, `useMemo`-filtered drinks, and immutable state updates are all correct
-- **Same-brand replacement guard** is elegantly implemented via computed property key (`[drink.brand]: drink`) — no explicit branching needed
-- **Cancellation guard** (`let cancelled = false`) in `useDrinks` correctly prevents stale state updates on unmount
-- **Test suite** covers the acceptance criteria comprehensively: selection, same-brand replacement, cross-brand, clear, error handling, `aria-pressed` propagation, and search filtering
-- **`fetchBrand` error handling** distinguishes network errors from malformed responses cleanly
+The `NetworkWatcher` code, tests, and documentation are well-done and will be ready to merge once the binary is removed.
 
 **Action Required**: Please address the blocking issues above before merging.
 

@@ -1,226 +1,112 @@
-"""Abstract plugin interface for anti-virus engine adapters.
+"""Abstract plugin interface for antivirus engine adapters.
 
-All AV engine adapters (ClamAV, Sophos, CrowdStrike, etc.) must implement
-the :class:`AVEngineAdapter` abstract base class.  The pipeline discovers
-concrete adapters via a configurable class path so that commercial engines
-can be plugged in without modifying the core scanning pipeline.
+All concrete AV engine implementations (ClamAV, Sophos, CrowdStrike, …) must
+implement :class:`AVEngineAdapter`.  The scan pipeline depends only on this
+interface, enabling drop-in engine replacement without modifying pipeline code.
 
 Usage::
 
-    from fileguard.core.av_adapter import AVEngineAdapter, ScanResult, AVEngineError
+    from fileguard.core.av_adapter import AVEngineAdapter, AVEngineError, ScanResult
 
-    class MyClamAVAdapter(AVEngineAdapter):
-        def scan(self, data: bytes) -> ScanResult:
-            ...
-
-        def is_available(self) -> bool:
-            ...
-
-        def engine_name(self) -> str:
-            return "clamav"
-
-See :class:`AVEngineAdapter` for the full interface contract, including the
-fail-secure requirements that all adapters must uphold.
+    class MyEngine(AVEngineAdapter):
+        async def scan(self, data: bytes) -> ScanResult: ...
+        async def is_available(self) -> bool: ...
+        def engine_name(self) -> str: ...
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
-
-
-# ---------------------------------------------------------------------------
-# Threat severity
-# ---------------------------------------------------------------------------
-
-
-class AVThreatSeverity(str, Enum):
-    """Severity level assigned to a detected AV threat."""
-
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-# ---------------------------------------------------------------------------
-# Result types
-# ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class AVThreat:
-    """A single threat detected by the AV engine.
-
-    Attributes:
-        name: Threat / signature name returned by the engine
-            (e.g. ``"Win.Trojan.EICAR-1"``).
-        severity: Severity classification of the detected threat.
-        category: Optional category string provided by the engine
-            (e.g. ``"Trojan"``, ``"Ransomware"``).  ``None`` when the
-            engine does not supply category metadata.
-    """
-
-    name: str
-    severity: AVThreatSeverity = AVThreatSeverity.HIGH
-    category: str | None = None
-
-
-@dataclass(frozen=True)
-class ScanResult:
-    """Result of a single AV engine scan invocation.
-
-    Attributes:
-        is_clean: ``True`` when no threats were detected; ``False`` when
-            one or more :attr:`threats` are present.
-        threats: Immutable tuple of detected :class:`AVThreat` objects.
-            Always empty when :attr:`is_clean` is ``True``.
-        engine_name: Identifier string for the engine that produced this
-            result (mirrors :meth:`AVEngineAdapter.engine_name`).
-        engine_version: Optional version string for the AV engine or its
-            signature database.  ``None`` when the engine does not expose
-            version information.
-        scan_duration_ms: Approximate elapsed scan time in milliseconds.
-            ``None`` when the engine does not expose timing information.
-
-    Raises:
-        ValueError: On construction when *is_clean* is ``True`` but
-            *threats* is non-empty, as this would be an inconsistent state.
-    """
-
-    is_clean: bool
-    threats: tuple[AVThreat, ...] = field(default_factory=tuple)
-    engine_name: str = ""
-    engine_version: str | None = None
-    scan_duration_ms: int | None = None
-
-    def __post_init__(self) -> None:
-        if self.is_clean and self.threats:
-            raise ValueError(
-                "ScanResult cannot be marked clean while threats are present."
-            )
-
-
-# ---------------------------------------------------------------------------
-# Exception hierarchy
-# ---------------------------------------------------------------------------
+from typing import Optional
 
 
 class AVEngineError(Exception):
-    """Base exception for all AV engine adapter errors.
+    """Raised when an AV engine adapter encounters an unrecoverable error.
 
-    Concrete adapters must raise this exception (or a subclass) whenever
-    the underlying engine encounters an error.  The scan pipeline treats
-    any :class:`AVEngineError` as a *fail-secure* condition and returns a
-    ``rejected`` verdict to the caller.
+    This exception signals that the scan *could not be completed*, not that the
+    file is clean.  Callers must treat :class:`AVEngineError` as a hard failure
+    and apply fail-secure disposition (block / reject) rather than silently
+    passing the file through.
 
-    Do **not** catch and suppress :class:`AVEngineError` inside an adapter;
-    let it propagate so the pipeline can quarantine or block the file
-    appropriately.
+    The original cause is always chained via ``__cause__`` so that log
+    aggregation systems can surface the root error without losing context.
     """
 
 
-class AVEngineUnavailableError(AVEngineError):
-    """Raised when the AV engine daemon or service cannot be reached.
+@dataclass
+class ScanResult:
+    """Result of a single file scan performed by an :class:`AVEngineAdapter`.
 
-    This is distinct from a successful scan that returns threats.  The
-    engine is considered *unavailable* when the adapter cannot establish a
-    connection, receives a timeout, or detects that the underlying process
-    has crashed.
-
-    :meth:`AVEngineAdapter.is_available` must return ``False`` in the same
-    scenario where this error would be raised by :meth:`AVEngineAdapter.scan`.
+    Attributes:
+        is_clean: ``True`` if no threats were detected; ``False`` if the engine
+            found a threat.
+        threat_name: The threat identifier returned by the engine (e.g.
+            ``"Win.Test.EICAR_HDB-1"``).  ``None`` when *is_clean* is ``True``.
+        engine_name: Human-readable engine identifier (e.g. ``"clamav"``).
+        raw_response: The raw response string from the engine, preserved for
+            audit logging and debugging.
     """
 
-
-class AVEngineScanError(AVEngineError):
-    """Raised when the AV engine accepts a connection but returns an error.
-
-    Examples:
-
-    - The engine responds with an ``ERROR`` status code.
-    - The response payload is malformed or cannot be parsed.
-    - An internal engine error occurs mid-scan.
-    """
-
-
-# ---------------------------------------------------------------------------
-# Abstract adapter interface
-# ---------------------------------------------------------------------------
+    is_clean: bool
+    threat_name: Optional[str] = field(default=None)
+    engine_name: str = field(default="")
+    raw_response: str = field(default="")
 
 
 class AVEngineAdapter(ABC):
-    """Abstract base class for all AV engine adapters.
+    """Abstract base class for antivirus engine adapters.
 
-    Each supported AV engine (ClamAV, Sophos, CrowdStrike, …) is integrated
-    by subclassing :class:`AVEngineAdapter` and implementing the three
-    abstract methods below.  Customer-provided implementations are discovered
-    at runtime via the ``AV_ENGINE_CLASS_PATH`` configuration setting so that
-    commercial engine SDKs can be bundled separately and loaded dynamically.
+    Concrete implementations connect to an AV daemon or cloud API, perform
+    scans, and translate engine-specific responses into :class:`ScanResult`
+    objects.
 
-    Fail-secure contract
-    --------------------
-    Adapters must **never** return :class:`ScanResult` with ``is_clean=True``
-    when an error or ambiguous engine response is encountered.  Instead they
-    must raise :class:`AVEngineError` (or a subclass) so that the calling
-    pipeline can apply the fail-secure policy (reject and block the file).
-
-    Thread safety
-    -------------
-    Implementations should document whether their instances are thread-safe.
-    The default worker pool invokes :meth:`scan` from multiple threads;
-    adapters that maintain per-instance state (e.g. a socket connection)
-    must synchronise access or document that a fresh adapter instance is
-    required per thread.
+    **Fail-secure contract:** :meth:`scan` must *never* return a clean
+    :class:`ScanResult` when the scan cannot be completed.  Any communication
+    failure or unexpected engine response must raise :class:`AVEngineError`
+    instead.  :meth:`is_available` must *never* raise; it returns ``False``
+    for all error conditions.
     """
 
     @abstractmethod
-    def scan(self, data: bytes) -> ScanResult:
-        """Scan *data* for threats and return a structured result.
-
-        The implementation must inspect all of *data* in a single call;
-        partial scans are not supported by the interface.
+    async def scan(self, data: bytes) -> ScanResult:
+        """Scan raw file bytes and return a structured verdict.
 
         Args:
-            data: Raw file bytes to inspect.  The adapter may receive any
-                MIME type and must not assume a particular file format.
+            data: The raw file content to scan.  For large files, callers
+                should stream via a wrapper; adapters may impose a maximum
+                chunk size internally.
 
         Returns:
-            A :class:`ScanResult` describing the outcome.  The
-            ``engine_name`` field should be populated with the same value
-            as :meth:`engine_name`.
+            :class:`ScanResult` with ``is_clean=True`` for clean files.
+            :class:`ScanResult` with ``is_clean=False`` and ``threat_name``
+            set when a threat is detected.
 
         Raises:
-            AVEngineUnavailableError: If the underlying engine process or
-                daemon cannot be reached before or during the scan.
-            AVEngineScanError: If the engine is reachable but returns an
-                error status or malformed response.
+            :class:`AVEngineError`: If the engine is unreachable, returns an
+                error status, or produces an unrecognised response.  The
+                exception **must not** be suppressed; the pipeline must apply
+                fail-secure disposition.
         """
 
     @abstractmethod
-    def is_available(self) -> bool:
-        """Return ``True`` if the engine is ready to accept scan requests.
+    async def is_available(self) -> bool:
+        """Check whether the AV engine is reachable and ready to accept scans.
 
-        This method is intended for health-check use and **must not raise**
-        :class:`AVEngineError`; it should catch connectivity errors
-        internally and return ``False`` instead.  The scan pipeline calls
-        this method before routing files to the engine.
+        This method is intended for health-check endpoints and pre-flight
+        validation before submitting scan batches.
 
         Returns:
-            ``True`` when the engine daemon is reachable and responsive.
-            ``False`` when the engine is unavailable for any reason.
+            ``True`` if the engine can accept scan requests right now.
+            ``False`` for *any* error condition (connection refused, timeout,
+            unexpected response, …).  This method must **never** raise.
         """
 
     @abstractmethod
     def engine_name(self) -> str:
-        """Return a short, stable identifier for this engine.
-
-        The value is recorded in :class:`ScanResult` objects and audit log
-        entries.  It must be a non-empty, lowercase, hyphen-separated ASCII
-        string (e.g. ``"clamav"``, ``"sophos-sav"``,
-        ``"crowdstrike-falcon"``).
+        """Return a short, human-readable engine identifier.
 
         Returns:
-            A non-empty, stable engine identifier string.
+            Lowercase string used in :class:`ScanResult` and log output,
+            e.g. ``"clamav"``, ``"sophos"``, ``"crowdstrike"``.
         """

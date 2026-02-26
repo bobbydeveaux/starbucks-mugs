@@ -1,11 +1,11 @@
 {
-  "prNumber": 188,
+  "prNumber": 211,
   "baseBranch": "main",
-  "headBranch": "feature/123-tripwire-cybersecurity-tool-sprint-2-issue-123",
+  "headBranch": "feature/141-fileguard-sprint-2-issue-141",
   "conflictedFiles": [
     ".claude-output.json",
-    ".claude-resolution.json",
-    ".conflict-info.json"
+    "fileguard/core/__init__.py",
+    "fileguard/core/av_adapter.py"
   ],
   "conflictCount": 3
 }
