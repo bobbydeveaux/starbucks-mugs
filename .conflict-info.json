@@ -3,8 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/144-fileguard-sprint-2-issue-144",
   "conflictedFiles": [
-    ".claude-output.json",
-    "docs/concepts/fileguard/middleware.md"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
   "conflictCount": 2
 }

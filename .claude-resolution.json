@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 2,
-  "summary": "Resolved two merge conflicts: accepted main's deletion of .claude-output.json (a generated metadata file not intended for the repo), and resolved the pytest command conflict in middleware.md by choosing 'pytest tests/ -v' to run all tests including integration tests, which are fully offline per the documentation.",
-  "strategyUsed": "For .claude-output.json: accepted theirs (deletion) since the file is a generated artifact that main correctly removed. For docs/concepts/fileguard/middleware.md: chose origin/main's 'pytest tests/ -v' over HEAD's 'pytest tests/unit/ -v' to preserve full test coverage including integration tests, which the documentation confirms are fully offline (SQLite in-memory, no external services required)."
+  "summary": "Resolved 2 conflicted metadata files (.claude-resolution.json and .conflict-info.json). The .claude-resolution.json file had conflict markers between two prior AI-assisted merge session summaries (HEAD described a fileguard/middleware.md pytest command resolution; origin/main described an earlier metadata file merge). The .conflict-info.json file had no conflict markers and already contained the correct current-session metadata (PR #204, feature/144-fileguard-sprint-2-issue-144).",
+  "strategyUsed": "For .claude-resolution.json: wrote a fresh resolution summary for the current session rather than attempting to merge two stale prior-session descriptions. For .conflict-info.json: the file already contained the correct origin/main content (matching the current PR and branch context) with no conflict markers, so it was staged as-is."
 }
