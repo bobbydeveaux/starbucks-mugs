@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 3,
-  "summary": "Resolved 3 conflicted metadata files from previous CI-assisted merge runs: accepted origin/main deletion of .claude-output.json; resolved .claude-resolution.json by writing fresh resolution metadata; staged .conflict-info.json which had no conflict markers but was unmerged. No actual code files were conflicted in this merge.",
-  "strategyUsed": "accepted deletion for .claude-output.json (deleted by origin/main); wrote new .claude-resolution.json capturing the current resolution; staged clean .conflict-info.json as-is. All real code changes (fileguard cloud PII adapters, prometheus SIEM alerts/tests, adapter __init__ exports) were non-conflicting and staged automatically by git."
+  "filesResolved": 2,
+  "summary": "Resolved two conflicts: accepted deletion of .claude-output.json (ephemeral CI metadata removed by main branch), and merged both versions of docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md which covered different sprint tasks (Task 1: OIDC auth/API client scaffold from HEAD; Tasks 2-3: WebSocket integration and multi-host selector from origin/main).",
+  "strategyUsed": "For .claude-output.json: accepted their deletion since it is ephemeral CI metadata. For dashboard-ui.md: preserved both branches' content by merging all sections into a single comprehensive document — combined the header metadata, kept all sections from both sides (Project Structure, Route, WebSocket Integration, Authentication, API Client, Multi-Host Selector, Development, Testing, Dependencies, Related Docs), and unified the testing table to cover all test files from both tasks."
 }
