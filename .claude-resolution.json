@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by adopting the origin/main version, which contains the gRPC server task metadata. The origin/main version is consistent with the new files being merged in (cmd/server/main.go, internal/server/grpc/server.go, proto/alert.pb.go, etc.). The HEAD version contained eBPF process watcher metadata which belongs to a prior task already completed on this branch.",
-  "strategyUsed": "chose origin/main for .claude-output.json — its metadata (gRPC server bootstrap with mTLS) corresponds to the new files being incorporated from origin/main into this branch; the HEAD version described the eBPF process watcher task which was already merged previously"
+  "summary": "Resolved conflict in .claude-output.json by keeping the origin/main version. Our branch had deleted this file, but origin/main contains valid gRPC server task metadata that corresponds to the new files being merged in (cmd/server/main.go, internal/server/grpc/server.go, proto/alert.pb.go, etc.). Keeping the file preserves the task completion record for the gRPC server bootstrap task.",
+  "strategyUsed": "chose theirs (origin/main) for .claude-output.json — the file was deleted on our branch but the origin/main version contains metadata for the gRPC server bootstrap task which directly corresponds to the new source files being incorporated from origin/main"
 }

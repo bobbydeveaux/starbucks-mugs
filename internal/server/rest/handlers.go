@@ -9,6 +9,13 @@ import (
 	"github.com/tripwire/agent/internal/server/storage"
 )
 
+// writeError writes an HTTP error response with a JSON body containing an
+// "error" field. It is a thin wrapper around writeJSONError for use in handler
+// functions.
+func writeError(w http.ResponseWriter, code int, msg string) {
+	writeJSONError(w, code, msg)
+}
+
 // Server holds the dependencies needed by the REST handlers.
 type Server struct {
 	store Store
