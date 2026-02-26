@@ -487,6 +487,362 @@ collect:
 	}
 }
 
+// ---------------------------------------------------------------------------
+// ParseProcNetUdpFile tests
+// ---------------------------------------------------------------------------
+
+func TestParseProcNetUdpFile_BoundUnconnectedSockets(t *testing.T) {
+	// State 0x07 = active unconnected UDP socket.  Remote address is all zeros.
+	content := `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   101        0 11111 2 0000000000000000 0
+   1: 00000000:0035 00000000:0000 00 00000000:00000000 00:00000000 00000000   101        0 11112 2 0000000000000000 0
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "udp")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("writing temp file: %v", err)
+	}
+
+	conns, err := agent.ParseProcNetUdpFile(path, "udp")
+	if err != nil {
+		t.Fatalf("ParseProcNetUdpFile: %v", err)
+	}
+	// Only state 0x07 is included; state 0x00 (free) is excluded.
+	if len(conns) != 1 {
+		t.Fatalf("got %d connections, want 1; conns=%+v", len(conns), conns)
+	}
+	if conns[0].Protocol != "udp" {
+		t.Errorf("protocol = %q, want %q", conns[0].Protocol, "udp")
+	}
+	// Local port 0x0035 = 53 (DNS).
+	if conns[0].LocalAddr != "0.0.0.0:53" {
+		t.Errorf("LocalAddr = %q, want %q", conns[0].LocalAddr, "0.0.0.0:53")
+	}
+	// Remote address decoded from all-zeros.
+	if conns[0].RemoteAddr != "0.0.0.0:0" {
+		t.Errorf("RemoteAddr = %q, want %q", conns[0].RemoteAddr, "0.0.0.0:0")
+	}
+}
+
+func TestParseProcNetUdpFile_ConnectedSocket(t *testing.T) {
+	// State 0x01 = connected UDP socket with a specific remote address.
+	// 0x0100007F = 127.0.0.1 little-endian; port 0x1F90 = 8080.
+	content := `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000:1F90 0100007F:0035 01 00000000:00000000 00:00000000 00000000     0        0 22222 2 0000000000000000 0
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "udp")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("writing temp file: %v", err)
+	}
+
+	conns, err := agent.ParseProcNetUdpFile(path, "udp")
+	if err != nil {
+		t.Fatalf("ParseProcNetUdpFile: %v", err)
+	}
+	if len(conns) != 1 {
+		t.Fatalf("got %d connections, want 1", len(conns))
+	}
+	if conns[0].LocalAddr != "0.0.0.0:8080" {
+		t.Errorf("LocalAddr = %q, want %q", conns[0].LocalAddr, "0.0.0.0:8080")
+	}
+	if conns[0].RemoteAddr != "127.0.0.1:53" {
+		t.Errorf("RemoteAddr = %q, want %q", conns[0].RemoteAddr, "127.0.0.1:53")
+	}
+}
+
+func TestParseProcNetUdpFile_OtherStatesExcluded(t *testing.T) {
+	// States other than 0x01 and 0x07 should be excluded.
+	content := `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000:0035 00000000:0000 0A 00000000:00000000 00:00000000 00000000   101        0 33333 2 0000000000000000 0
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "udp")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("writing temp file: %v", err)
+	}
+
+	conns, err := agent.ParseProcNetUdpFile(path, "udp")
+	if err != nil {
+		t.Fatalf("ParseProcNetUdpFile: %v", err)
+	}
+	if len(conns) != 0 {
+		t.Errorf("got %d connections for non-active state 0x0A, want 0", len(conns))
+	}
+}
+
+func TestParseProcNetUdpFile_NonExistentFile(t *testing.T) {
+	_, err := agent.ParseProcNetUdpFile("/nonexistent/path/udp", "udp")
+	if err == nil {
+		t.Fatal("expected error for non-existent file, got nil")
+	}
+}
+
+func TestParseProcNetUdpFile_HeaderOnly(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "udp")
+	if err := os.WriteFile(path, []byte("  sl  local_address rem_address   st\n"), 0o644); err != nil {
+		t.Fatalf("writing temp file: %v", err)
+	}
+
+	conns, err := agent.ParseProcNetUdpFile(path, "udp")
+	if err != nil {
+		t.Fatalf("ParseProcNetUdpFile: %v", err)
+	}
+	if len(conns) != 0 {
+		t.Errorf("got %d connections for header-only file, want 0", len(conns))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Protocol filter tests
+// ---------------------------------------------------------------------------
+
+// TestNetworkWatcher_ProtocolFilter_TCPOnly verifies that a rule with
+// protocol="tcp" does not fire on UDP connections.
+func TestNetworkWatcher_ProtocolFilter_TCPOnly(t *testing.T) {
+	call := 0
+	reader := agent.ProcReader(func() (map[agent.ConnKey]struct{}, error) {
+		call++
+		if call == 1 {
+			return map[agent.ConnKey]struct{}{}, nil
+		}
+		// Second poll: new connection appears on port 53 but it's UDP.
+		return map[agent.ConnKey]struct{}{
+			{LocalAddr: "0.0.0.0:53", RemoteAddr: "0.0.0.0:0", Protocol: "udp"}: {},
+		}, nil
+	})
+
+	rules := []config.TripwireRule{
+		{Name: "dns-tcp", Type: "NETWORK", Target: "53", Severity: "WARN", Protocol: "tcp"},
+	}
+	w, err := agent.NewNetworkWatcherWithReader(rules, silentLogger(), 20*time.Millisecond, reader)
+	if err != nil {
+		t.Fatalf("NewNetworkWatcherWithReader: %v", err)
+	}
+
+	if err := w.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	evts := drainFor(w.Events(), 200*time.Millisecond)
+	w.Stop()
+
+	if len(evts) != 0 {
+		t.Errorf("tcp-only rule fired on UDP connection: got %d events, want 0", len(evts))
+	}
+}
+
+// TestNetworkWatcher_ProtocolFilter_UDPOnly verifies that a rule with
+// protocol="udp" does not fire on TCP connections.
+func TestNetworkWatcher_ProtocolFilter_UDPOnly(t *testing.T) {
+	call := 0
+	reader := agent.ProcReader(func() (map[agent.ConnKey]struct{}, error) {
+		call++
+		if call == 1 {
+			return map[agent.ConnKey]struct{}{}, nil
+		}
+		// Second poll: new TCP connection on port 53.
+		return map[agent.ConnKey]struct{}{
+			{LocalAddr: "0.0.0.0:53", RemoteAddr: "10.0.0.1:44444", Protocol: "tcp"}: {},
+		}, nil
+	})
+
+	rules := []config.TripwireRule{
+		{Name: "dns-udp", Type: "NETWORK", Target: "53", Severity: "WARN", Protocol: "udp"},
+	}
+	w, err := agent.NewNetworkWatcherWithReader(rules, silentLogger(), 20*time.Millisecond, reader)
+	if err != nil {
+		t.Fatalf("NewNetworkWatcherWithReader: %v", err)
+	}
+
+	if err := w.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	evts := drainFor(w.Events(), 200*time.Millisecond)
+	w.Stop()
+
+	if len(evts) != 0 {
+		t.Errorf("udp-only rule fired on TCP connection: got %d events, want 0", len(evts))
+	}
+}
+
+// TestNetworkWatcher_ProtocolFilter_BothMatchesTCPAndUDP verifies that a rule
+// with protocol="both" fires on both TCP and UDP connections.
+func TestNetworkWatcher_ProtocolFilter_BothMatchesTCPAndUDP(t *testing.T) {
+	call := 0
+	reader := agent.ProcReader(func() (map[agent.ConnKey]struct{}, error) {
+		call++
+		if call == 1 {
+			return map[agent.ConnKey]struct{}{}, nil
+		}
+		// Second poll: one TCP and one UDP connection on port 53.
+		return map[agent.ConnKey]struct{}{
+			{LocalAddr: "0.0.0.0:53", RemoteAddr: "10.0.0.1:44444", Protocol: "tcp"}: {},
+			{LocalAddr: "0.0.0.0:53", RemoteAddr: "0.0.0.0:0", Protocol: "udp"}:     {},
+		}, nil
+	})
+
+	rules := []config.TripwireRule{
+		{Name: "dns-both", Type: "NETWORK", Target: "53", Severity: "WARN", Protocol: "both"},
+	}
+	w, err := agent.NewNetworkWatcherWithReader(rules, silentLogger(), 20*time.Millisecond, reader)
+	if err != nil {
+		t.Fatalf("NewNetworkWatcherWithReader: %v", err)
+	}
+
+	if err := w.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer w.Stop()
+
+	// Collect until 2 events arrive or timeout.
+	var evts []agent.AlertEvent
+	deadline := time.After(2 * time.Second)
+collect:
+	for {
+		select {
+		case evt, ok := <-w.Events():
+			if !ok {
+				break collect
+			}
+			evts = append(evts, evt)
+			if len(evts) >= 2 {
+				break collect
+			}
+		case <-deadline:
+			break collect
+		}
+	}
+
+	if len(evts) < 2 {
+		t.Errorf("protocol=both rule: got %d events, want at least 2 (one TCP, one UDP)", len(evts))
+	}
+}
+
+// TestNetworkWatcher_EmitsEventOnNewUDPSocket verifies that a new active UDP
+// socket on a monitored port triggers an AlertEvent with the correct fields.
+func TestNetworkWatcher_EmitsEventOnNewUDPSocket(t *testing.T) {
+	call := 0
+	reader := agent.ProcReader(func() (map[agent.ConnKey]struct{}, error) {
+		call++
+		if call == 1 {
+			return map[agent.ConnKey]struct{}{}, nil
+		}
+		// Second poll: new unconnected UDP socket on port 161 (SNMP).
+		return map[agent.ConnKey]struct{}{
+			{LocalAddr: "0.0.0.0:161", RemoteAddr: "0.0.0.0:0", Protocol: "udp"}: {},
+		}, nil
+	})
+
+	rules := []config.TripwireRule{
+		{Name: "snmp-watch", Type: "NETWORK", Target: "161", Severity: "CRITICAL", Protocol: "udp"},
+	}
+	w, err := agent.NewNetworkWatcherWithReader(rules, silentLogger(), 20*time.Millisecond, reader)
+	if err != nil {
+		t.Fatalf("NewNetworkWatcherWithReader: %v", err)
+	}
+
+	if err := w.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer w.Stop()
+
+	evt := expectEvent(t, w.Events(), 2*time.Second)
+
+	if evt.TripwireType != "NETWORK" {
+		t.Errorf("TripwireType = %q, want %q", evt.TripwireType, "NETWORK")
+	}
+	if evt.RuleName != "snmp-watch" {
+		t.Errorf("RuleName = %q, want %q", evt.RuleName, "snmp-watch")
+	}
+	if evt.Severity != "CRITICAL" {
+		t.Errorf("Severity = %q, want %q", evt.Severity, "CRITICAL")
+	}
+	if evt.Detail["local_addr"] != "0.0.0.0:161" {
+		t.Errorf("Detail[local_addr] = %v, want %q", evt.Detail["local_addr"], "0.0.0.0:161")
+	}
+	if evt.Detail["protocol"] != "udp" {
+		t.Errorf("Detail[protocol] = %v, want %q", evt.Detail["protocol"], "udp")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Direction filter tests
+// ---------------------------------------------------------------------------
+
+// TestNetworkWatcher_DirectionFilter_Outbound verifies that a rule with
+// direction="outbound" matches the remote port instead of the local port.
+func TestNetworkWatcher_DirectionFilter_Outbound(t *testing.T) {
+	call := 0
+	reader := agent.ProcReader(func() (map[agent.ConnKey]struct{}, error) {
+		call++
+		if call == 1 {
+			return map[agent.ConnKey]struct{}{}, nil
+		}
+		// Outbound connection: local ephemeral port 54321, remote port 22 (SSH).
+		return map[agent.ConnKey]struct{}{
+			{LocalAddr: "10.0.0.1:54321", RemoteAddr: "192.168.1.100:22", Protocol: "tcp"}: {},
+		}, nil
+	})
+
+	rules := []config.TripwireRule{
+		{Name: "ssh-outbound", Type: "NETWORK", Target: "22", Severity: "WARN", Protocol: "tcp", Direction: "outbound"},
+	}
+	w, err := agent.NewNetworkWatcherWithReader(rules, silentLogger(), 20*time.Millisecond, reader)
+	if err != nil {
+		t.Fatalf("NewNetworkWatcherWithReader: %v", err)
+	}
+
+	if err := w.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer w.Stop()
+
+	evt := expectEvent(t, w.Events(), 2*time.Second)
+	if evt.RuleName != "ssh-outbound" {
+		t.Errorf("RuleName = %q, want %q", evt.RuleName, "ssh-outbound")
+	}
+}
+
+// TestNetworkWatcher_DirectionFilter_InboundDoesNotMatchRemote verifies that
+// direction="inbound" does not fire when the rule port matches only the remote
+// (outbound connection).
+func TestNetworkWatcher_DirectionFilter_InboundDoesNotMatchRemote(t *testing.T) {
+	call := 0
+	reader := agent.ProcReader(func() (map[agent.ConnKey]struct{}, error) {
+		call++
+		if call == 1 {
+			return map[agent.ConnKey]struct{}{}, nil
+		}
+		// Outbound connection: local ephemeral port, remote 22.
+		return map[agent.ConnKey]struct{}{
+			{LocalAddr: "10.0.0.1:54321", RemoteAddr: "192.168.1.100:22", Protocol: "tcp"}: {},
+		}, nil
+	})
+
+	rules := []config.TripwireRule{
+		// Inbound rule watching port 22 — should NOT match outbound connections.
+		{Name: "ssh-inbound", Type: "NETWORK", Target: "22", Severity: "WARN", Protocol: "tcp", Direction: "inbound"},
+	}
+	w, err := agent.NewNetworkWatcherWithReader(rules, silentLogger(), 20*time.Millisecond, reader)
+	if err != nil {
+		t.Fatalf("NewNetworkWatcherWithReader: %v", err)
+	}
+
+	if err := w.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	evts := drainFor(w.Events(), 200*time.Millisecond)
+	w.Stop()
+
+	if len(evts) != 0 {
+		t.Errorf("inbound rule fired on outbound connection: got %d events, want 0", len(evts))
+	}
+}
+
 // TestNetworkWatcher_ReaderErrorDoesNotCrash verifies that a transient error
 // from the ProcReader is tolerated and monitoring resumes on the next poll.
 func TestNetworkWatcher_ReaderErrorDoesNotCrash(t *testing.T) {

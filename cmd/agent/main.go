@@ -20,6 +20,9 @@ import (
 	"github.com/tripwire/agent/internal/watcher"
 )
 
+// networkPollInterval is how frequently the NetworkWatcher polls /proc/net/*.
+const networkPollInterval = time.Second
+
 func main() {
 	configPath := flag.String("config", "/etc/tripwire/config.yaml", "path to the TripWire agent YAML configuration file")
 	flag.Parse()
@@ -42,17 +45,24 @@ func main() {
 		slog.String("health_addr", cfg.HealthAddr),
 	)
 
-	// Build the list of watchers from configured rules.
-	fileWatchers := buildFileWatchers(cfg, logger)
+	// Create agent orchestrator with all registered watchers.
+	var agentOpts []agent.Option
 
-	// Create agent orchestrator and register file watchers.
-	// Queue and transport implementations are registered here as they are
-	// developed in subsequent sprints.
-	opts := []agent.Option{}
-	if len(fileWatchers) > 0 {
-		opts = append(opts, agent.WithWatchers(fileWatchers...))
+	// Instantiate a NetworkWatcher for all NETWORK-type rules.  The watcher
+	// silently filters non-NETWORK rules, so it is always safe to create.
+	netWatcher, err := agent.NewNetworkWatcher(cfg.Rules, logger, networkPollInterval)
+	if err != nil {
+		logger.Error("failed to create network watcher", slog.Any("error", err))
+		os.Exit(1)
 	}
-	ag := agent.New(cfg, logger, opts...)
+	agentOpts = append(agentOpts, agent.WithWatchers(netWatcher))
+
+	// Build the list of file watchers from configured rules and register them.
+	if fileWatchers := buildFileWatchers(cfg, logger); len(fileWatchers) > 0 {
+		agentOpts = append(agentOpts, agent.WithWatchers(fileWatchers...))
+	}
+
+	ag := agent.New(cfg, logger, agentOpts...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
