@@ -1,7 +1,7 @@
 {
-  "prNumber": 295,
+  "prNumber": 292,
   "baseBranch": "main",
-  "headBranch": "feature/287-fileguard-sprint-3-issue-287",
+  "headBranch": "feature/290-fileguard-sprint-3-issue-290",
   "conflictedFiles": [
     ".claude-output.json"
   ],
