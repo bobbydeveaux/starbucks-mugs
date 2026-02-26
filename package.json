@@ -15,9 +15,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/react-window": "^1.8.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.3",
+    "react-window": "^1.8.10",
     "recharts": "^2.13.3"
   },
   "devDependencies": {
