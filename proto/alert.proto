@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package alert;
+
+option go_package = "github.com/tripwire/agent/proto";
+
+// AgentRegistration is sent by an agent when it first connects to the
+// dashboard server. The server uses the agent_cn field (populated from
+// the mTLS client certificate Common Name) as the authoritative agent
+// identity; the remaining fields are informational metadata.
+message AgentRegistration {
+  // agent_cn is the Common Name extracted from the agent's mTLS certificate.
+  // Required.
+  string agent_cn = 1;
+
+  // hostname is the OS-reported hostname of the agent machine.
+  string hostname = 2;
+
+  // platform is the operating system platform string (e.g. "linux/amd64").
+  string platform = 3;
+
+  // agent_version is the human-readable version of the agent binary
+  // (e.g. "v0.2.0").
+  string agent_version = 4;
+
+  // ip_address is the dotted-decimal primary IP address of the agent.
+  string ip_address = 5;
+}
+
+// AgentEvent is a single alert event streamed from an agent to the dashboard.
+message AgentEvent {
+  // host_id is the UUID of the host that generated this event.
+  string host_id = 1;
+
+  // timestamp_ms is the Unix time in milliseconds when the event occurred
+  // on the agent host.
+  int64 timestamp_ms = 2;
+
+  // tripwire_type is the category of the sensor: FILE, NETWORK, or PROCESS.
+  string tripwire_type = 3;
+
+  // rule_name is the human-readable identifier of the tripwire rule that
+  // triggered.
+  string rule_name = 4;
+
+  // severity is the configured urgency level: INFO, WARN, or CRITICAL.
+  string severity = 5;
+
+  // event_detail is an opaque JSON payload carrying sensor-specific context
+  // (e.g. modified file path, network connection tuple, process argv).
+  bytes event_detail = 6;
+}
+
+// ServerAck is the server's per-event acknowledgement sent back to the agent
+// over the StreamAlerts bidirectional stream.
+message ServerAck {
+  // ok indicates whether the event was successfully processed and persisted.
+  bool ok = 1;
+
+  // alert_id is the UUID assigned to the persisted alert when ok is true.
+  // Empty when ok is false.
+  string alert_id = 2;
+
+  // error is a human-readable description of the failure when ok is false.
+  // Empty when ok is true.
+  string error = 3;
+}
+
+// AlertService is the gRPC service exposed by the TripWire dashboard server
+// for agent communication.
+service AlertService {
+  // RegisterAgent is a unary RPC called once per connection. The agent sends
+  // its registration metadata and the server responds with an ACK (or error).
+  rpc RegisterAgent(AgentRegistration) returns (ServerAck);
+
+  // StreamAlerts is a bidirectional streaming RPC. Agents continuously send
+  // AgentEvent messages; the server persists each valid event and sends back
+  // a ServerAck. Invalid events receive an error ACK and are not persisted.
+  rpc StreamAlerts(stream AgentEvent) returns (stream ServerAck);
+}
