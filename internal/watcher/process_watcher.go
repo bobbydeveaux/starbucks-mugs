@@ -1,5 +1,15 @@
 // Package watcher contains the concrete watcher implementations for the
 // TripWire agent: file, network, and process monitors.
+//
+// Platform support:
+//
+//   - Linux: NETLINK_CONNECTOR process connector (kernel-driven, zero-polling).
+//     The companion eBPF C program in internal/watcher/ebpf/process.bpf.c
+//     documents the equivalent BPF tracepoint implementation.
+//   - macOS: kqueue EVFILT_PROC / NOTE_EXEC with periodic ps(1) scan fallback.
+//   - Other: ps(1) polling at a fixed interval.
+//
+// ProcessWatcher is safe for concurrent use.
 package watcher
 
 import (
@@ -46,12 +56,20 @@ type processBackend interface {
 	run(done <-chan struct{}, events chan<- ProcessEvent) error
 }
 
+// backendStarter is an optional interface that processBackend implementations
+// may satisfy to perform privileged initialisation (e.g. opening a raw socket)
+// before the monitoring goroutine is launched. If the backend implements this
+// interface, Start calls start first and returns any error immediately —
+// preventing the background goroutine from launching on failure.
+type backendStarter interface {
+	start(ctx context.Context) error
+}
+
 // ProcessWatcher monitors process execution events and emits AlertEvents when
 // a process matching a configured PROCESS-type rule is started.
 //
-// It attempts to use an eBPF backend first (Linux >= 5.8). When eBPF is
-// unavailable it falls back to a platform-specific polling backend: /proc
-// scanning on Linux and sysctl-based process enumeration on macOS.
+// It uses the best available kernel interface for the current platform
+// (NETLINK_CONNECTOR on Linux, kqueue on macOS, ps(1) polling elsewhere).
 //
 // ProcessWatcher implements the Watcher interface and is safe for concurrent
 // use. Start may be called only once; Stop is idempotent.
@@ -95,9 +113,18 @@ func NewProcessWatcher(rules []config.TripwireRule, logger *slog.Logger) *Proces
 }
 
 // Start begins process monitoring in a background goroutine and returns
-// immediately. It is safe to call Start only once; the behaviour on subsequent
-// calls is undefined.
-func (pw *ProcessWatcher) Start(_ context.Context) error {
+// immediately. If the backend implements backendStarter, its start method is
+// called first; any error is returned without launching the goroutine.
+// It is safe to call Start only once; subsequent calls have undefined behaviour.
+func (pw *ProcessWatcher) Start(ctx context.Context) error {
+	// Allow the backend to perform privileged initialisation (e.g. opening a
+	// NETLINK_CONNECTOR socket on Linux) and surface errors before launching
+	// the background goroutine.
+	if s, ok := pw.backend.(backendStarter); ok {
+		if err := s.start(ctx); err != nil {
+			return err
+		}
+	}
 	pw.wg.Add(1)
 	go pw.run()
 	return nil
@@ -172,14 +199,32 @@ func (pw *ProcessWatcher) dispatch(pe ProcessEvent) {
 	}
 }
 
-// matchProcessName reports whether processName matches the rule target. The
-// comparison uses the basename of both strings so that a rule target of "bash"
-// matches "/bin/bash" and vice versa.
+// matchProcessName reports whether processName matches the rule target.
+//
+// Matching rules (in order):
+//  1. Empty target matches every process (catch-all wildcard).
+//  2. Exact string equality: target == processName.
+//  3. Basename equality: filepath.Base(target) == filepath.Base(processName).
+//  4. Glob pattern against basename: filepath.Match(target, basename).
+//  5. Glob pattern against full path: filepath.Match(target, processName).
 func matchProcessName(target, processName string) bool {
+	if target == "" {
+		return true // empty target is a catch-all wildcard
+	}
 	if target == processName {
 		return true
 	}
-	return filepath.Base(target) == filepath.Base(processName)
+	base := filepath.Base(processName)
+	if filepath.Base(target) == base {
+		return true
+	}
+	if ok, _ := filepath.Match(target, base); ok {
+		return true
+	}
+	if ok, _ := filepath.Match(target, processName); ok {
+		return true
+	}
+	return false
 }
 
 // emit sends an AlertEvent for the given process execution to the events

@@ -1,3 +1,14 @@
+// Stub/fallback implementation of ProcessWatcher for platforms that are
+// neither Linux nor macOS. It uses periodic ps(1) polling to detect new
+// process executions.
+//
+// On Linux the NETLINK_CONNECTOR implementation in process_watcher_linux.go
+// is compiled; on macOS the kqueue implementation in process_watcher_darwin.go
+// is compiled. This file covers Windows, BSDs, and any other POSIX platform.
+//
+// Platforms that do not ship a POSIX-compatible ps(1) will see an empty
+// process list. No PROCESS alerts will be emitted on such platforms.
+//
 //go:build !linux && !darwin
 
 package watcher

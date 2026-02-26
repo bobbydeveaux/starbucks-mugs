@@ -1,10 +1,10 @@
 # TripWire Agent — Process Watcher
 
-This document describes `ProcessWatcher`, the process execution monitor
-in the `internal/watcher` package. It satisfies the
-[`agent.Watcher`](agent-core.md#interfaces) interface and emits
-`AlertEvent`s with `TripwireType: "PROCESS"` whenever a watched process
-name is executed on the host.
+This document describes the process monitoring components that implement
+the [`agent.Watcher`](agent-core.md#interfaces) interface. The `ProcessWatcher`
+emits `AlertEvent`s with `TripwireType: "PROCESS"` whenever a watched process
+name is executed on the host, using kernel-level mechanisms to trace
+`execve`/`execveat` syscalls.
 
 ---
 
@@ -13,9 +13,13 @@ name is executed on the host.
 | Implementation | File | Platform | Mechanism |
 |----------------|------|----------|-----------|
 | `ProcessWatcher` | `process_watcher.go` | All | Platform backend (see below) |
-| Linux backend | `process_watcher_linux.go` | Linux | eBPF (stub) → /proc polling |
+| Linux backend | `process_watcher_linux.go` | Linux | NETLINK_CONNECTOR (kernel-driven) |
 | macOS backend | `process_watcher_darwin.go` | macOS | kqueue EVFILT_PROC + ps scan |
 | Other backend | `process_watcher_other.go` | Other | ps(1) polling |
+
+The companion eBPF C program in `internal/watcher/ebpf/process.bpf.c` documents
+the equivalent BPF tracepoint implementation for environments with BPF compiler
+tooling.
 
 ---
 
@@ -28,6 +32,8 @@ each platform to use the best available kernel interface.
 
 ```
 ProcessWatcher (process_watcher.go)
+    │
+    ├── Start()  ← optional backendStarter.start() for privileged init
     │
     ├── run()  ← background goroutine
     │       │
@@ -43,37 +49,32 @@ ProcessWatcher (process_watcher.go)
 
 **Linux (process_watcher_linux.go)**
 
-1. Attempt eBPF backend (`newEBPFBackend`). The eBPF loader
-   (task-tripwire-cybersecurity-tool-feat-process-watcher-1/2) returns
-   `errEBPFNotSupported` until the sub-package is integrated. When
-   available, eBPF provides zero-overhead exec tracing via
-   `execve`/`execveat` tracepoints on Linux ≥ 5.8.
-2. Fall back to `/proc` polling (`linuxProcBackend`): scans `/proc` at
-   500 ms intervals, detects new PIDs by comparing successive snapshots,
-   and reads `Name`, `PPid`, `Uid`, and `/proc/<pid>/cmdline` from each
-   entry. This is the "ptrace fallback" referenced in the task
-   specification — it achieves the same coverage as ptrace-based exec
-   tracing without requiring a persistent `ptrace(2)` relationship to
-   every process.
+Uses the **NETLINK_CONNECTOR** process connector to receive `PROC_EVENT_EXEC`
+notifications from the kernel. This mechanism delivers exec event notifications
+with zero polling overhead and is semantically equivalent to the eBPF tracepoint
+program.
+
+Privilege requirement: opening a `NETLINK_CONNECTOR` socket requires
+`CAP_NET_ADMIN` or root (uid 0). If the agent lacks these privileges, `Start`
+returns a descriptive error immediately.
 
 **macOS (process_watcher_darwin.go)**
 
 `darwinKqueueBackend` combines two mechanisms:
 
-- **kqueue EVFILT_PROC / NOTE_EXEC**: registers kevent filters on
-  known PIDs so that exec calls from already-tracked processes trigger
-  an immediate event (sub-interval latency).
+- **kqueue EVFILT_PROC / NOTE_EXEC**: registers kevent filters on known PIDs
+  so that exec calls from already-tracked processes trigger an immediate event.
 - **Periodic ps scan**: runs `ps -e -o pid=,ppid=,uid=,comm=` at 500 ms
-  intervals to discover processes started before their parent was
-  registered with kqueue.
+  intervals to discover processes started before their parent was registered
+  with kqueue.
 
 If `kqueue(2)` fails (extremely rare), falls back to scan-only mode.
 
 **Other platforms (process_watcher_other.go)**
 
-Parses `ps -e -o pid=,ppid=,uid=,comm=` at 500 ms intervals.
-Platforms that do not ship a POSIX-compatible `ps(1)` will see an empty
-process list. No PROCESS alerts will be emitted on such platforms.
+Parses `ps -e -o pid=,ppid=,uid=,comm=` at 500 ms intervals. Platforms that do
+not ship a POSIX-compatible `ps(1)` will see an empty process list. No PROCESS
+alerts will be emitted on such platforms.
 
 ---
 
@@ -103,12 +104,15 @@ func (pw *ProcessWatcher) Ready() <-chan struct{}
 Rule `Target` is matched against the process `Command` (name/basename)
 using the following logic:
 
-1. Exact string equality: `target == command`
-2. Basename equality: `filepath.Base(target) == filepath.Base(command)`
+1. Empty `Target`: matches every process (catch-all wildcard).
+2. Exact string equality: `target == command`
+3. Basename equality: `filepath.Base(target) == filepath.Base(command)`
+4. Glob pattern: `filepath.Match(target, basename)` or `filepath.Match(target, fullpath)`
 
 This means a rule with `Target: "bash"` matches both `"bash"` and
 `"/bin/bash"`. A rule with `Target: "/usr/sbin/sshd"` matches both
-`"/usr/sbin/sshd"` and `"sshd"`.
+`"/usr/sbin/sshd"` and `"sshd"`. A rule with `Target: "python*"` matches
+`"python3"`, `"python3.11"`, etc.
 
 ### `Ready()`
 
@@ -167,12 +171,17 @@ rules:
 
   - name: python-watch
     type: PROCESS
-    target: python3
+    target: "python*"    # glob: matches python3, python3.11, etc.
     severity: INFO
 
   - name: sshd-watch
     type: PROCESS
     target: /usr/sbin/sshd
+    severity: INFO
+
+  - name: any-process
+    type: PROCESS
+    target: ""           # empty = catch all execve events
     severity: INFO
 ```
 
@@ -203,23 +212,59 @@ if err := ag.Start(ctx); err != nil {
 
 ## eBPF integration (future)
 
-When
-[task-tripwire-cybersecurity-tool-feat-process-watcher-1](../../../docs/concepts/tripwire-cybersecurity-tool/tasks.yaml)
-(eBPF kernel program) and
-[task-tripwire-cybersecurity-tool-feat-process-watcher-2](../../../docs/concepts/tripwire-cybersecurity-tool/tasks.yaml)
-(Go userspace loader) are completed, the Linux backend's `newEBPFBackend`
-stub should be replaced with a call to the eBPF loader. The `ProcessWatcher`
-itself does not need to change — only `newEBPFBackend` in
+The eBPF kernel program in `internal/watcher/ebpf/process.bpf.c` attaches to
+`tracepoint/syscalls/sys_enter_execve` and `tracepoint/syscalls/sys_enter_execveat`
+hooks, capturing process events into a BPF ring buffer. The companion Go
+userspace loader in `internal/watcher/ebpf/process.go` reads from the ring
+buffer and converts events to `ExecEvent` structs.
+
+When the eBPF sub-package is fully integrated, the Linux backend's `newEBPFBackend`
+stub can be replaced with a call to the eBPF loader. The `ProcessWatcher`
+itself does not need to change — only the backend selection in
 `process_watcher_linux.go` needs updating.
 
-**Integration point:**
+### eBPF kernel requirements
 
-```go
-// In process_watcher_linux.go — replace the stub with:
-func newEBPFBackend(logger *slog.Logger) (processBackend, error) {
-    return ebpf.NewProcessLoader(logger) // from internal/watcher/ebpf/process.go
-}
+- Linux ≥ 5.8 — BPF ring buffer (`BPF_MAP_TYPE_RINGBUF`)
+- `CONFIG_BPF_SYSCALL=y`, `CONFIG_DEBUG_INFO_BTF=y` (for CO-RE)
+- `CAP_BPF` (Linux ≥ 5.8) or `CAP_SYS_ADMIN`
+
+---
+
+## Linux Runtime: NETLINK_CONNECTOR
+
 ```
+              kernel
+┌─────────────────────────────────────────┐
+│  Process calls execve(2) / execveat(2)  │
+│              ↓                           │
+│  Kernel CN connector emits              │
+│  PROC_EVENT_EXEC on NETLINK group 1     │
+└────────────────────┬────────────────────┘
+                     │ AF_NETLINK / SOCK_DGRAM
+              ┌──────▼──────┐
+              │ readLoop()  │  1-second timeout, checks done channel
+              └──────┬──────┘
+                     │ parseNetlinkMessages()
+                     │ handleNetlinkMessage()
+                     │ reads /proc/<pid>/status, comm, cmdline
+                     ↓
+              ProcessEvent ──► dispatch() ──► AlertEvent channel
+```
+
+### Privilege requirement
+
+Opening a `NETLINK_CONNECTOR` socket for process events requires `CAP_NET_ADMIN`
+or root (uid 0). If the agent lacks these privileges, `Start` returns a
+descriptive error.
+
+---
+
+## Non-Linux platforms
+
+On macOS, the `darwinKqueueBackend` provides kqueue-based monitoring with ps
+polling as a fallback. On Windows and other non-Linux/non-darwin systems,
+`ProcessWatcher.Start` uses a ps(1) polling backend.
 
 ---
 
@@ -234,6 +279,9 @@ go test -v ./internal/watcher/...
 
 # With race detector
 go test -race ./internal/watcher/...
+
+# Linux integration tests (requires root / CAP_NET_ADMIN)
+sudo go test -v -run TestProcessWatcher ./internal/watcher/...
 ```
 
 ---
@@ -263,3 +311,29 @@ go test -race ./internal/watcher/...
 
 All tests use an injected mock backend (`stubBackend`) so they run
 without root privileges and without spawning real processes.
+
+### Linux integration tests (`process_watcher_linux_test.go`)
+
+| Test | Description |
+|------|-------------|
+| `TestProcessWatcher_ImplementsWatcherInterface` | Compile-time agent.Watcher check |
+| `TestNewProcessWatcher_EventsChannelNonNil` | Events() non-nil before Start |
+| `TestNewProcessWatcher_FiltersNonProcessRules` | Non-PROCESS rules filtered |
+| `TestProcessWatcher_StartReturnsErrorWithoutPrivilege` | Error when lacking CAP_NET_ADMIN |
+| `TestProcessWatcher_StartStop` | Start/Stop lifecycle (requires root) |
+| `TestProcessWatcher_StartIdempotent` | Double Start is a no-op (requires root) |
+| `TestProcessWatcher_StopIdempotent` | Double Stop safe (requires root) |
+| `TestProcessWatcher_EventsChannelClosedAfterStop` | Channel closed after Stop (requires root) |
+| `TestProcessWatcher_ContextCancellation` | Context cancel triggers shutdown (requires root) |
+| `TestProcessWatcher_ExecveAlertEvent` | Real execve emits alert (requires root) |
+| `TestProcessWatcher_PatternFilter` | Pattern matching on real processes (requires root) |
+| `TestProcessWatcher_StructSizeConstants` | Netlink ABI struct sizes correct (requires root) |
+
+---
+
+## Related documents
+
+- [File Watcher](file-watcher.md) — inotify / kqueue / polling implementations
+- [Agent Core](agent-core.md) — Watcher interface and agent orchestrator
+- [Alert Queue](alert-queue.md) — durable event storage
+- [gRPC Alert Service](grpc-alert-service.md) — event transport to dashboard

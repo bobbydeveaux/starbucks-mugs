@@ -63,3 +63,10 @@ AGENTS.md
 *.tar.bz2
 *.tar.xz
 *.zip
+
+# eBPF build artifacts
+# vmlinux.h is generated from the running kernel's BTF; never commit it as it
+# is kernel-specific and too large (>3 MiB). process.bpf.o IS committed as a
+# pre-built stub so that 'go build' works without a BPF compiler toolchain.
+# Run 'make -C internal/watcher/ebpf' to replace it with the real object.
+internal/watcher/ebpf/vmlinux.h
