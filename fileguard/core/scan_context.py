@@ -49,6 +49,13 @@ class ScanContext:
             step decides whether an error is recoverable.
         metadata: Arbitrary key-value metadata attached by pipeline steps
             (e.g. page count from document extraction, redaction stats).
+        request_redaction: When ``True``, the scan pipeline will redact PII
+            spans in the extracted text and produce a
+            :attr:`redacted_file_url`.  Defaults to ``False``.
+        redacted_file_url: Time-limited signed URL pointing to the stored
+            redacted file.  Populated by the redaction pipeline step when
+            :attr:`request_redaction` is ``True`` and PII findings are
+            present.  ``None`` otherwise.
     """
 
     file_bytes: bytes
@@ -60,3 +67,5 @@ class ScanContext:
     findings: list[Any] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    request_redaction: bool = False
+    redacted_file_url: str | None = None
