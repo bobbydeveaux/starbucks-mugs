@@ -32,6 +32,9 @@ type mockStore struct {
 	alerts       []storage.Alert
 	upsertErr    error
 	batchErr     error
+	// returnHostID, when non-empty, is the host_id returned by UpsertHost to
+	// simulate an existing host being re-registered (stable UUID scenario).
+	returnHostID string
 }
 
 func (m *mockStore) UpsertHost(_ context.Context, h storage.Host) (string, error) {
@@ -41,8 +44,11 @@ func (m *mockStore) UpsertHost(_ context.Context, h storage.Host) (string, error
 		return "", m.upsertErr
 	}
 	m.hosts = append(m.hosts, h)
-	// Return the candidate host_id unchanged; in real DB the RETURNING clause
-	// resolves conflicts and returns the stable pre-existing UUID.
+	// Return returnHostID when set (simulates pre-existing host); otherwise
+	// echo back the candidate host_id supplied by the caller.
+	if m.returnHostID != "" {
+		return m.returnHostID, nil
+	}
 	return h.HostID, nil
 }
 
@@ -190,6 +196,49 @@ func TestRegisterAgent_EmptyHostname(t *testing.T) {
 	st, _ := grpcstatus.FromError(err)
 	if st.Code() != grpccode.InvalidArgument {
 		t.Errorf("expected InvalidArgument, got %s", st.Code())
+	}
+}
+
+// TestRegisterAgent_StableHostID verifies that on a reconnect (when
+// UpsertHost returns an existing host_id from the DB), the response carries
+// that pre-existing UUID rather than the freshly-generated candidate.  This
+// ensures alert correlation by host_id is preserved across agent restarts.
+func TestRegisterAgent_StableHostID(t *testing.T) {
+	existingID := "11111111-2222-3333-4444-555555555555"
+	store := &mockStore{returnHostID: existingID}
+	svc := svcgrpc.NewAlertService(store, newStubBroadcaster(), newLogger(), 300)
+
+	resp, err := svc.RegisterAgent(context.Background(), &alertpb.RegisterRequest{
+		Hostname:     "web-01",
+		Platform:     "linux",
+		AgentVersion: "1.0.1",
+	})
+	if err != nil {
+		t.Fatalf("RegisterAgent returned unexpected error: %v", err)
+	}
+	if resp.GetHostId() != existingID {
+		t.Errorf("host_id = %q; want pre-existing %q", resp.GetHostId(), existingID)
+	}
+}
+
+// TestRegisterAgent_HostIDIsUUID verifies that on first registration the
+// returned host_id is a non-empty string (specifically the UUID generated
+// internally, not the hostname).
+func TestRegisterAgent_HostIDIsUUID(t *testing.T) {
+	store := &mockStore{}
+	svc := svcgrpc.NewAlertService(store, newStubBroadcaster(), newLogger(), 300)
+
+	resp, err := svc.RegisterAgent(context.Background(), &alertpb.RegisterRequest{
+		Hostname: "db-01",
+	})
+	if err != nil {
+		t.Fatalf("RegisterAgent returned unexpected error: %v", err)
+	}
+	if resp.GetHostId() == "db-01" {
+		t.Error("host_id must not equal the hostname — it should be a UUID")
+	}
+	if resp.GetHostId() == "" {
+		t.Error("host_id must not be empty")
 	}
 }
 
