@@ -77,11 +77,28 @@ value.
 
 ---
 
-## Package: `internal/agent`
+## Package: `internal/watcher`
 
-**File:** `internal/agent/agent.go`
+**File:** `internal/watcher/watcher.go`
 
-### Interfaces
+The `internal/watcher` package defines the common abstractions shared by all
+watcher implementations. Placing them here keeps the dependency direction
+clean: concrete watchers depend only on `internal/watcher`, while the agent
+orchestrator depends on `internal/watcher` for the shared contract.
+
+### AlertEvent
+
+```go
+type AlertEvent struct {
+    TripwireType string         // "FILE" | "NETWORK" | "PROCESS"
+    RuleName     string
+    Severity     string         // "INFO" | "WARN" | "CRITICAL"
+    Timestamp    time.Time
+    Detail       map[string]any // type-specific metadata
+}
+```
+
+### Watcher interface
 
 ```go
 type Watcher interface {
@@ -89,7 +106,30 @@ type Watcher interface {
     Stop()
     Events() <-chan AlertEvent
 }
+```
 
+All watcher implementations (`FileWatcher`, `NetworkWatcher`, and the planned
+`ProcessWatcher`) satisfy this interface.
+
+---
+
+## Package: `internal/agent`
+
+**File:** `internal/agent/agent.go`
+
+### Re-exported types
+
+For backward compatibility and ergonomic imports, the agent package re-exports
+`AlertEvent` and `Watcher` as type aliases pointing to the `watcher` package:
+
+```go
+type AlertEvent = watcher.AlertEvent
+type Watcher    = watcher.Watcher
+```
+
+### Additional interfaces
+
+```go
 type Queue interface {
     Enqueue(ctx context.Context, evt AlertEvent) error
     Depth() int
