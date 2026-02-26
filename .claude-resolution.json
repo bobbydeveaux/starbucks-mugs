@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 4,
-  "summary": "Resolved 4 conflicts across 3 files plus 1 deletion: accepted origin/main's deletion of .claude-output.json (build artifact); resolved cmd/agent/main.go by adopting origin/main's unconditional NetworkWatcher creation (safe by design) plus the buildFileWatchers registration it added; resolved internal/config/config.go by using origin/main's cleaner variable names (validProtocols/validDirections), omitempty YAML tags, and 'both' as the default protocol; resolved agent-core.md by aligning docs with the chosen code defaults ('both' protocol default, inline defaults description) and merging startup sequence sections to include both network and file watcher steps.",
-  "strategyUsed": "Preferred origin/main for code-level decisions (unconditional watcher creation, variable naming, protocol default 'both', omitempty tags) as it is the more complete and idiomatic implementation; merged documentation sections to accurately reflect the resolved code behaviour from both branches."
+  "filesResolved": 2,
+  "summary": "Resolved 2 conflicts in metadata files (.claude-resolution.json and .conflict-info.json). Both files were modified independently in two previous resolution sessions: one session resolved 4 conflicts across cmd/agent/main.go, internal/config/config.go, and agent-core.md (adopting origin/main's unconditional NetworkWatcher creation, variable naming, and protocol defaults); another session resolved 1 conflict in fileguard/core/__init__.py (merging module docstring descriptions). The .conflict-info.json had no conflict markers and was staged as-is.",
+  "strategyUsed": "Preserved both prior resolution summaries by merging them into a combined description; chose the current branch's .conflict-info.json content (no markers present) as the authoritative state for conflict metadata."
 }

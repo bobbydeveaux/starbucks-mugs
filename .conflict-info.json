@@ -3,10 +3,8 @@
   "baseBranch": "main",
   "headBranch": "feature/163-tripwire-cybersecurity-tool-sprint-2-issue-163",
   "conflictedFiles": [
-    ".claude-output.json",
-    "cmd/agent/main.go",
-    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md",
-    "internal/config/config.go"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
-  "conflictCount": 4
+  "conflictCount": 2
 }
