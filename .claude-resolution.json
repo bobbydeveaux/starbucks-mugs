@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 1 conflicted file: .claude-output.json was deleted on main (origin/main) but present on the feature branch. Since this file contains automation metadata from a previous CI task and is not functional code, the deletion from main was accepted by staging the file removal.",
-  "strategyUsed": "accepted theirs (deletion) — .claude-output.json is CI/automation metadata with no functional impact; respecting the cleanup done on main is the correct resolution"
+  "filesResolved": 2,
+  "summary": "Resolved conflicts in middleware.go and middleware_test.go by adopting the origin/main implementation, which is a more complete, production-ready RS256 JWT middleware. The HEAD branch had a simpler implementation using the github.com/golang-jwt/jwt/v5 library, while origin/main implemented RS256 verification from scratch with richer features including JWTConfig struct, ParseRSAPublicKey helper, SkipPaths support, issuer/audience claim validation, and structured logging. The test file was updated correspondingly to use the external test package (rest_test) and the new JWTConfig-based API, along with more comprehensive test cases.",
+  "strategyUsed": "chose origin/main for both files: the main branch contained a significantly more feature-complete implementation (self-contained RS256 without external JWT library, configurable middleware, PEM key parsing, skip paths, issuer/audience validation, logging) that superseded the simpler HEAD implementation; tests were updated to match the new API and cover additional scenarios"
 }

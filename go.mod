@@ -7,6 +7,11 @@ require github.com/jackc/pgx/v5 v5.5.5
 require gopkg.in/yaml.v3 v3.0.1
 
 require (
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
+)
+
+require (
 	github.com/testcontainers/testcontainers-go v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
 )
