@@ -1,113 +1,192 @@
-/**
- * useWebSocket — manages a WebSocket connection with automatic exponential-
- * backoff reconnection.
- *
- * The hook connects on mount, reconnects after any close or error, and cleans
- * up the socket and any pending reconnect timer on unmount.
- */
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { WebSocketReadyState } from '../types';
 
-import { useEffect, useRef, useCallback } from 'react';
-
-export interface WebSocketMessage<T = unknown> {
-  type: string;
-  payload: T;
+/** Clamp value between min and max */
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
-export interface UseWebSocketOptions<T = unknown> {
-  /** Full WebSocket URL, e.g. "ws://localhost:8080/ws/alerts" */
-  url: string;
-  /** Optional bearer token appended as ?token=<value> */
+export interface UseWebSocketOptions {
+  /** Called for each incoming MessageEvent */
+  onMessage?: (event: MessageEvent) => void;
+  /**
+   * Maximum number of reconnect attempts before giving up.
+   * Defaults to `Infinity` (reconnect indefinitely).
+   */
+  reconnectAttempts?: number;
+  /**
+   * Base reconnect delay in milliseconds.  Each retry doubles the interval
+   * (exponential back-off), capped at 30 000 ms.  Defaults to 1 000 ms.
+   */
+  reconnectIntervalMs?: number;
+  /**
+   * Bearer token to authenticate the WebSocket connection.
+   *
+   * Browser WebSocket connections cannot carry custom HTTP headers, so the
+   * token is appended to the URL as the `token` query parameter
+   * (`ws://host/ws/alerts?token=<value>`).  The server's auth middleware or
+   * reverse proxy is expected to validate this parameter.
+   */
   token?: string;
-  /** Called for every successfully parsed JSON message */
-  onMessage: (msg: WebSocketMessage<T>) => void;
-  /** Set to false to skip connecting (useful when a prerequisite is missing) */
-  enabled?: boolean;
+  /**
+   * When `false` the hook will not attempt to reconnect after a disconnect.
+   * Defaults to `true`.
+   */
+  shouldReconnect?: boolean;
 }
 
-const MAX_RETRY_DELAY_MS = 30_000;
+export interface UseWebSocketReturn {
+  /** Current WebSocket ready state */
+  readyState: WebSocketReadyState;
+  /** Send a UTF-8 text message over the open connection (no-op if not OPEN) */
+  sendMessage: (data: string) => void;
+  /** Manually close the connection and cancel any pending reconnect timer */
+  disconnect: () => void;
+}
 
 /**
- * Compute exponential-backoff delay for the n-th retry attempt (0-indexed).
- * Caps at MAX_RETRY_DELAY_MS.
+ * Manages a WebSocket connection with automatic exponential-backoff
+ * reconnection.
+ *
+ * The hook dials `url` on mount and re-dials whenever it drops.  Each
+ * successive reconnect attempt waits `reconnectIntervalMs * 2^(attempt-1)`
+ * milliseconds (capped at 30 s).  If `token` is provided it is appended to
+ * the URL as `?token=<value>` because the browser WebSocket API does not
+ * support sending custom HTTP headers during the upgrade handshake.
+ *
+ * @param url  - WebSocket URL, e.g. `ws://localhost:8080/ws/alerts`
+ * @param options - Connection and reconnect options
+ *
+ * @example
+ * const { readyState } = useWebSocket('ws://localhost:8080/ws/alerts', {
+ *   token: bearerToken,
+ *   onMessage: (e) => console.log(e.data),
+ * });
  */
-function backoffDelay(attempt: number): number {
-  return Math.min(1_000 * 2 ** attempt, MAX_RETRY_DELAY_MS);
-}
+export function useWebSocket(
+  url: string,
+  options: UseWebSocketOptions = {},
+): UseWebSocketReturn {
+  const {
+    onMessage,
+    reconnectAttempts = Infinity,
+    reconnectIntervalMs = 1_000,
+    token,
+    shouldReconnect = true,
+  } = options;
 
-export function useWebSocket<T = unknown>({
-  url,
-  token,
-  onMessage,
-  enabled = true,
-}: UseWebSocketOptions<T>): void {
+  const [readyState, setReadyState] = useState<WebSocketReadyState>('CLOSED');
+
   const wsRef = useRef<WebSocket | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intentionalCloseRef = useRef(false);
 
-  // Keep onMessage in a ref so changing the callback never triggers reconnect
+  // Keep the latest callbacks in refs to avoid stale closures without
+  // re-triggering the connection effect.
   const onMessageRef = useRef(onMessage);
-  useEffect(() => {
-    onMessageRef.current = onMessage;
-  });
+  onMessageRef.current = onMessage;
 
-  const connect = useCallback(() => {
-    if (!enabled) return;
+  // connectRef holds the latest connect function so the onclose handler can
+  // schedule the next attempt without a circular useCallback dependency.
+  const connectRef = useRef<() => void>(() => undefined);
 
-    const fullUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+  /** Build the full URL, appending the token as a query parameter if provided. */
+  const buildUrl = useCallback((): string => {
+    if (!token) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}token=${encodeURIComponent(token)}`;
+  }, [url, token]);
 
-    let ws: WebSocket;
-    try {
-      ws = new WebSocket(fullUrl);
-    } catch {
-      // If the URL is invalid, schedule a retry anyway
-      timerRef.current = setTimeout(connect, backoffDelay(attemptRef.current++));
-      return;
+  const connect = useCallback((): void => {
+    // Tear down any existing socket before opening a new one.
+    const prev = wsRef.current;
+    if (prev) {
+      prev.onopen = null;
+      prev.onclose = null;
+      prev.onerror = null;
+      prev.onmessage = null;
+      prev.close();
     }
 
+    const ws = new WebSocket(buildUrl());
     wsRef.current = ws;
+    setReadyState('CONNECTING');
 
     ws.onopen = () => {
       attemptRef.current = 0;
+      setReadyState('OPEN');
     };
 
     ws.onmessage = (event: MessageEvent) => {
-      try {
-        const msg = JSON.parse(event.data as string) as WebSocketMessage<T>;
-        onMessageRef.current(msg);
-      } catch {
-        // Ignore non-JSON frames
-      }
+      onMessageRef.current?.(event);
     };
 
     ws.onerror = () => {
-      // onerror is always followed by onclose; let onclose handle retry
-      ws.close();
+      // onerror is always followed by onclose; let onclose drive reconnect.
+      setReadyState('CLOSED');
     };
 
     ws.onclose = () => {
-      wsRef.current = null;
-      if (!enabled) return;
-      const delay = backoffDelay(attemptRef.current++);
-      timerRef.current = setTimeout(connect, delay);
+      setReadyState('CLOSED');
+
+      if (intentionalCloseRef.current) return;
+      if (!shouldReconnect) return;
+      if (attemptRef.current >= reconnectAttempts) return;
+
+      attemptRef.current++;
+      const delay = clamp(
+        reconnectIntervalMs * 2 ** (attemptRef.current - 1),
+        reconnectIntervalMs,
+        30_000,
+      );
+      timerRef.current = setTimeout(() => connectRef.current(), delay);
     };
-  }, [url, token, enabled]);
+  }, [buildUrl, reconnectAttempts, reconnectIntervalMs, shouldReconnect]);
+
+  // Sync connectRef to the latest connect function.
+  connectRef.current = connect;
 
   useEffect(() => {
+    intentionalCloseRef.current = false;
     connect();
 
     return () => {
-      // Prevent the close handler from scheduling a reconnect after unmount
-      const ws = wsRef.current;
-      if (ws) {
-        ws.onclose = null;
-        ws.onerror = null;
-        ws.close();
-        wsRef.current = null;
-      }
+      intentionalCloseRef.current = true;
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        ws.close();
+        wsRef.current = null;
+      }
     };
   }, [connect]);
+
+  const sendMessage = useCallback((data: string): void => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(data);
+    }
+  }, []);
+
+  const disconnect = useCallback((): void => {
+    intentionalCloseRef.current = true;
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    const ws = wsRef.current;
+    if (ws) {
+      ws.close();
+    }
+    setReadyState('CLOSED');
+  }, []);
+
+  return { readyState, sendMessage, disconnect };
 }

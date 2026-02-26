@@ -1,118 +1,99 @@
-/**
- * useAlerts — fetches alerts from the REST API and patches in live alert
- * events delivered over the WebSocket connection.
- *
- * The hook re-fetches whenever the filters change. WebSocket events are
- * prepended to the front of the list without triggering an extra API call,
- * keeping the feed and trend chart up-to-date within one render cycle.
- */
-
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Alert, AlertFilters } from '../types';
+import { useState, useCallback, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
-import { timeRangeToDates } from '../utils/aggregateAlerts';
+import type { TripwireAlert, WsAlertMessage, WebSocketReadyState } from '../types';
 
-export interface UseAlertsResult {
-  alerts: Alert[];
-  loading: boolean;
-  error: string | null;
-  /** Computed window start; consumed by TrendChart for binning */
-  from: Date;
-  /** Computed window end; consumed by TrendChart for binning */
-  to: Date;
+export interface UseAlertsOptions {
+  /**
+   * WebSocket URL for the live alert stream.
+   * Example: `ws://localhost:8080/ws/alerts`
+   */
+  wsUrl: string;
+  /**
+   * Bearer token forwarded to {@link useWebSocket} as a query parameter.
+   * Required by the server's auth middleware when running without a TLS-
+   * terminating reverse proxy.
+   */
+  token?: string;
+  /**
+   * Maximum number of alerts to retain in memory.  When the list exceeds
+   * this limit the oldest entries (tail of the array) are dropped.
+   * Defaults to `1000`.
+   */
+  maxAlerts?: number;
 }
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
-const WS_BASE = (import.meta.env.VITE_WS_BASE as string | undefined) ?? '';
-
-function buildApiUrl(filters: AlertFilters, from: Date, to: Date): string {
-  const params = new URLSearchParams();
-  params.set('from', from.toISOString());
-  params.set('to', to.toISOString());
-
-  if (filters.hostIds.length > 0) {
-    // REST API supports a single host_id filter; use the first selected host
-    params.set('host_id', filters.hostIds[0]);
-  }
-  if (filters.severity !== 'ALL') {
-    params.set('severity', filters.severity);
-  }
-  if (filters.tripwireType !== 'ALL') {
-    params.set('type', filters.tripwireType);
-  }
-  params.set('limit', '1000');
-
-  return `${API_BASE}/api/v1/alerts?${params.toString()}`;
+export interface UseAlertsReturn {
+  /**
+   * Live alert list ordered newest-first.  Prepended on every incoming
+   * WebSocket message without triggering a full list re-render (consumers
+   * should use a virtualized list component such as AlertFeed).
+   */
+  alerts: TripwireAlert[];
+  /** Current WebSocket connection state */
+  wsState: WebSocketReadyState;
+  /** Discard all alerts from the in-memory list */
+  clearAlerts: () => void;
 }
 
-export function useAlerts(filters: AlertFilters): UseAlertsResult {
-  const { from, to } = timeRangeToDates(filters.timeRange);
+/**
+ * Maintains a live, capped in-memory list of TripWire security alerts sourced
+ * from the WebSocket stream at `wsUrl`.
+ *
+ * Alerts are prepended (newest-first) on each incoming WebSocket message.
+ * Non-alert frames and malformed JSON are silently ignored.  The list is
+ * capped at `maxAlerts` entries to prevent unbounded memory growth during
+ * long-running sessions.
+ *
+ * The hook delegates connection management to {@link useWebSocket}, which
+ * handles automatic exponential-backoff reconnection and bearer-token auth.
+ *
+ * @example
+ * const { alerts, wsState } = useAlerts({
+ *   wsUrl: 'ws://localhost:8080/ws/alerts',
+ *   token: bearerToken,
+ * });
+ */
+export function useAlerts({
+  wsUrl,
+  token,
+  maxAlerts = 1_000,
+}: UseAlertsOptions): UseAlertsReturn {
+  const [alerts, setAlerts] = useState<TripwireAlert[]>([]);
 
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Hold maxAlerts in a ref so the callback closure always sees the current
+  // value without needing to be re-created on every render.
+  const maxAlertsRef = useRef(maxAlerts);
+  maxAlertsRef.current = maxAlerts;
 
-  const abortRef = useRef<AbortController | null>(null);
-
-  const fetchAlerts = useCallback(async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setLoading(true);
-    setError(null);
-
+  const handleMessage = useCallback((event: MessageEvent) => {
+    let parsed: WsAlertMessage;
     try {
-      const res = await fetch(buildApiUrl(filters, from, to), {
-        signal: controller.signal,
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
-
-      const data = (await res.json()) as Alert[];
-      setAlerts(data);
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return;
-      setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
-    } finally {
-      setLoading(false);
+      parsed = JSON.parse(event.data as string) as WsAlertMessage;
+    } catch {
+      // Ignore non-JSON frames (e.g. ping/pong text frames).
+      return;
     }
-  }, [
-    // Re-fetch whenever any filter value changes; stringify arrays to get
-    // a stable reference comparison with useCallback's dependency check.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    filters.timeRange,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    filters.severity,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    filters.tripwireType,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    filters.hostIds.join(','),
-  ]);
 
-  useEffect(() => {
-    void fetchAlerts();
-    return () => abortRef.current?.abort();
-  }, [fetchAlerts]);
+    // Only process well-formed alert messages.
+    if (parsed.type !== 'alert' || !parsed.data?.alert_id) return;
 
-  // Patch in live alerts from the WebSocket without a full re-fetch
-  const handleWsMessage = useCallback(
-    (msg: { type: string; payload: unknown }) => {
-      if (msg.type === 'alert') {
-        const alert = msg.payload as Alert;
-        setAlerts((prev) => [alert, ...prev]);
-      }
-    },
-    [],
-  );
+    const incoming = parsed.data;
 
-  useWebSocket({
-    url: `${WS_BASE}/ws/alerts`,
-    onMessage: handleWsMessage,
-    enabled: WS_BASE !== '' || API_BASE !== '',
+    setAlerts((prev) => {
+      const next = [incoming, ...prev];
+      // Cap the list to prevent unbounded memory growth.
+      return next.length > maxAlertsRef.current
+        ? next.slice(0, maxAlertsRef.current)
+        : next;
+    });
+  }, []);
+
+  const { readyState } = useWebSocket(wsUrl, {
+    onMessage: handleMessage,
+    token,
   });
 
-  return { alerts, loading, error, from, to };
+  const clearAlerts = useCallback(() => setAlerts([]), []);
+
+  return { alerts, wsState: readyState, clearAlerts };
 }

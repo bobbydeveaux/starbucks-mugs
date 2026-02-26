@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in fileguard/config.py by preserving both sets of configuration additions: Google Cloud DLP and AWS Macie settings from HEAD, and compliance report settings (REPORTS_DIR, REPORT_CADENCE) from origin/main.",
-  "strategyUsed": "preserved both changes — both sides added distinct, non-overlapping configuration blocks for different features, so all settings were kept together"
+  "filesResolved": 3,
+  "summary": "Resolved 3 conflicted files (src/App.tsx, src/hooks/useAlerts.ts, src/hooks/useWebSocket.ts) by choosing the origin/main versions, which are consistent with the existing tests and TripwireDashboardPage component. Also fixed duplicate type exports in src/types.ts that resulted from the auto-merge.",
+  "strategyUsed": "Chose origin/main for all three conflicts: (1) App.tsx uses TripWireDashboardPage (capital W) which is the host-monitoring dashboard added by the feature branch; (2) useWebSocket uses the richer origin/main implementation that returns readyState/sendMessage/disconnect and takes URL+options pattern — consistent with useWebSocket.test.ts; (3) useAlerts uses the origin/main WebSocket-only implementation with TripwireAlert type and { wsUrl, token, maxAlerts } options — consistent with useAlerts.test.ts and TripwireDashboardPage (lowercase w). Additionally cleaned up duplicate Severity/TripwireType/HostStatus/Host exports in src/types.ts that the auto-merge created by concatenating both branches' type definitions."
 }
