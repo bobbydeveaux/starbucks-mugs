@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in fileguard/core/adapters/__init__.py. The feature branch had a comprehensive version exporting ClamAVAdapter, CloudPIIAdapter, CloudPIIBackendError, GoogleDLPAdapter, and AWSMacieAdapter from well-named modules (google_dlp_adapter, aws_macie_adapter, etc.). Main had a minimal version only exporting GoogleDLPAdapter and AWSMacieAdapter from shorter module names (dlp_adapter, macie_adapter). Preserved the feature branch's complete version since all referenced adapter files exist on disk.",
-  "strategyUsed": "kept HEAD (feature branch) version — it preserves more functionality by including the ClamAV adapter and CloudPIIAdapter base class exports, while main only re-exported two classes with shorter module names; all underlying adapter files exist on disk so no imports are broken"
+  "filesResolved": 3,
+  "summary": "Resolved 3 conflicted metadata files from previous CI-assisted merge runs: accepted origin/main deletion of .claude-output.json; resolved .claude-resolution.json by writing fresh resolution metadata; staged .conflict-info.json which had no conflict markers but was unmerged. No actual code files were conflicted in this merge.",
+  "strategyUsed": "accepted deletion for .claude-output.json (deleted by origin/main); wrote new .claude-resolution.json capturing the current resolution; staged clean .conflict-info.json as-is. All real code changes (fileguard cloud PII adapters, prometheus SIEM alerts/tests, adapter __init__ exports) were non-conflicting and staged automatically by git."
 }

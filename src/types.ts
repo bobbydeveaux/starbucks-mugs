@@ -139,6 +139,68 @@ export interface CarCatalogEnvelope {
 }
 
 // ---------------------------------------------------------------------------
+// TripWire CyberSecurity Tool — types
+// ---------------------------------------------------------------------------
+
+/** Tripwire sensor type that triggered the alert */
+export type TripwireType = 'FILE' | 'NETWORK' | 'PROCESS';
+
+/** Alert severity level */
+export type Severity = 'INFO' | 'WARN' | 'CRITICAL';
+
+/** Agent connection status as reported by the dashboard */
+export type HostStatus = 'ONLINE' | 'OFFLINE' | 'DEGRADED';
+
+/** Current state of a managed WebSocket connection */
+export type WebSocketReadyState = 'CONNECTING' | 'OPEN' | 'CLOSING' | 'CLOSED';
+
+/**
+ * A single security alert pushed from the TripWire dashboard via WebSocket or
+ * retrieved via the REST `/api/v1/alerts` endpoint.
+ */
+export interface TripwireAlert {
+  /** UUID primary key */
+  alert_id: string;
+  /** UUID of the host that generated this alert */
+  host_id: string;
+  /** Human-readable hostname, e.g. "web-01" */
+  hostname: string;
+  /** ISO 8601 event occurrence timestamp (agent clock) */
+  timestamp: string;
+  /** Sensor type that triggered the alert */
+  tripwire_type: TripwireType;
+  /** Name of the rule that matched */
+  rule_name: string;
+  /** Alert severity */
+  severity: Severity;
+  /** Optional flexible payload: path, pid, port, user, etc. */
+  event_detail?: Record<string, unknown>;
+}
+
+/**
+ * Host inventory entry returned by `/api/v1/hosts`.
+ */
+export interface TripwireHost {
+  host_id: string;
+  hostname: string;
+  ip_address: string;
+  platform: string;
+  agent_version: string;
+  /** ISO 8601 timestamp of the last gRPC heartbeat */
+  last_seen: string;
+  status: HostStatus;
+}
+
+/**
+ * Top-level JSON envelope pushed to browser WebSocket clients when a new
+ * alert is ingested.  `type` is always `"alert"`.
+ */
+export interface WsAlertMessage {
+  type: 'alert';
+  data: TripwireAlert;
+}
+
+// ---------------------------------------------------------------------------
 // Ferrari vs Lamborghini — Hook / application state
 // ---------------------------------------------------------------------------
 
