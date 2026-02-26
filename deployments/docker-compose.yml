@@ -1,0 +1,107 @@
+# TripWire dashboard — local development stack
+#
+# Usage:
+#   docker compose up --build          # first run (builds the server image)
+#   docker compose up                  # subsequent runs (uses cached image)
+#   docker compose down                # stop containers (data volume is kept)
+#   docker compose down -v             # stop containers and remove volumes
+#
+# Services:
+#   server   — TripWire dashboard server
+#              gRPC mTLS  :4443  (agents)
+#              HTTP REST  :8080  (/healthz, /api/v1/*)
+#   postgres — PostgreSQL 16 (alert / host / rule / audit storage)
+#
+# Volumes:
+#   postgres_data — PostgreSQL data directory (persists across restarts)
+#
+# TLS certificates:
+#   The server entrypoint auto-generates self-signed development certificates
+#   in /etc/tripwire/ when none are present.  To use operator-signed certs:
+#     1. Generate them with deployments/certs/generate_ca.sh and
+#        deployments/certs/generate_agent_cert.sh.
+#     2. Mount the cert directory as a read-only volume:
+#          volumes:
+#            - /etc/tripwire/dashboard:/etc/tripwire:ro
+#     3. Set GENERATE_DEV_CERTS: "false".
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # TripWire Dashboard Server
+  # ─────────────────────────────────────────────────────────────────────────
+  server:
+    build:
+      # Build context is the repository root so all Go source, migrations, and
+      # the entrypoint script are accessible to the Dockerfile.
+      context: ..
+      dockerfile: deployments/Dockerfile.server
+    image: tripwire-server:local
+    ports:
+      - "8080:8080"   # HTTP REST API + unauthenticated /healthz
+      - "4443:4443"   # gRPC mTLS  (TripWire agents connect here)
+    environment:
+      # PostgreSQL connection string used by both the migration runner (psql)
+      # and the dashboard server (pgxpool).
+      DSN: "postgres://tripwire:tripwire@postgres:5432/tripwire?sslmode=disable"
+
+      # pg_isready host/port for the migration pre-flight readiness check.
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+
+      # Server listener addresses.
+      GRPC_ADDR: ":4443"
+      HTTP_ADDR: ":8080"
+
+      # Log verbosity.  Set to "debug" for detailed request traces.
+      LOG_LEVEL: info
+
+      # Run `db/migrations/*.up.sql` files against the database before starting
+      # the server.  The entrypoint tracks applied versions in schema_migrations
+      # so re-running `docker compose up` is safe.
+      RUN_MIGRATIONS: "true"
+
+      # Auto-generate a self-signed CA + server certificate pair for local
+      # development when no certs are mounted.  Set to "false" and mount real
+      # certs via a volume for production-like testing.
+      GENERATE_DEV_CERTS: "true"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # PostgreSQL 16
+  # ─────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      # Expose on the host for direct access with psql or a DB GUI.
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: tripwire
+      POSTGRES_PASSWORD: tripwire
+      POSTGRES_DB: tripwire
+    volumes:
+      # Named volume preserves data across `docker compose down` restarts.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tripwire -d tripwire"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  # postgres_data persists the PostgreSQL data directory across container
+  # restarts.  Run `docker compose down -v` to wipe it completely.
+  postgres_data:
+    driver: local
