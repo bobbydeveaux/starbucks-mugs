@@ -1,10 +1,9 @@
 {
-  "prNumber": 233,
+  "prNumber": 232,
   "baseBranch": "main",
-  "headBranch": "feature/223-tripwire-cybersecurity-tool-sprint-3-issue-223",
+  "headBranch": "feature/221-tripwire-cybersecurity-tool-sprint-3-issue-221",
   "conflictedFiles": [
-    "internal/server/rest/middleware.go",
-    "internal/server/rest/middleware_test.go"
+    ".claude-output.json"
   ],
-  "conflictCount": 2
+  "conflictCount": 1
 }
