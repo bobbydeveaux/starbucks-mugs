@@ -45,5 +45,17 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     MAX_FILE_SIZE_MB: int = 50
 
+    # Google Cloud DLP (optional — required when pii_backend=google_dlp)
+    GOOGLE_DLP_PROJECT_ID: str = ""
+    GOOGLE_DLP_CREDENTIALS_FILE: str = ""
+    GOOGLE_DLP_MIN_LIKELIHOOD: str = "LIKELY"
+    GOOGLE_DLP_TIMEOUT: float = 30.0
+
+    # AWS Macie (optional — required when pii_backend=aws_macie)
+    MACIE_STAGING_BUCKET: str = ""
+    MACIE_REGION: str = "eu-west-2"
+    MACIE_POLL_INTERVAL: float = 5.0
+    MACIE_JOB_TIMEOUT: float = 300.0
+
 
 settings = Settings()
