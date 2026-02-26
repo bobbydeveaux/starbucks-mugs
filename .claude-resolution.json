@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by keeping the HEAD version, which contains the branch-specific metadata for feature/172-fileguard-sprint-2-issue-172 (fileguard AuditService with HMAC-SHA256 signing). The origin/main version contained output from a different already-merged PR (TripWire audit logger, issue #169), which is not relevant to this branch.",
-  "strategyUsed": "chose ours (HEAD) — the conflicted file is a branch-specific Claude output metadata file; HEAD contains the correct data for this PR (issue #172, fileguard sprint 2), while origin/main contained stale output from a different merged PR (issue #169)"
+  "filesResolved": 4,
+  "summary": "Resolved 4 conflicts from merging origin/main into feature/164-fileguard-sprint-2-issue-164 (PR #208). Three 'both added' file conflicts were resolved by keeping the HEAD (feature branch) versions: fileguard/core/__init__.py, fileguard/core/document_extractor.py, and tests/unit/test_document_extractor.py. The .claude-output.json deletion (deleted by us in HEAD, present in origin/main) was resolved by staging the deletion.",
+  "strategyUsed": "For the three 'both added' Python files: chose HEAD (feature branch) versions over origin/main versions. The HEAD implementation of DocumentExtractor uses module-level functions (_extract_txt, _extract_json, _extract_csv, _extract_pdf, _extract_docx, _extract_zip, _dispatch_sync, _guess_mime) with ExtractionResult.byte_offsets: list[int], plus ZIP safety limits (size, count, depth). The origin/main version used a different OffsetEntry dataclass approach with class methods. The HEAD tests are comprehensive and match the HEAD implementation API. For .claude-output.json: kept our deletion since the file is a CI artifact not needed on this branch."
 }

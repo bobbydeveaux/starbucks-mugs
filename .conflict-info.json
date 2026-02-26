@@ -1,9 +1,12 @@
 {
-  "prNumber": 190,
+  "prNumber": 208,
   "baseBranch": "main",
-  "headBranch": "feature/172-fileguard-sprint-2-issue-172",
+  "headBranch": "feature/164-fileguard-sprint-2-issue-164",
   "conflictedFiles": [
-    ".claude-output.json"
+    ".claude-output.json",
+    "fileguard/core/__init__.py",
+    "fileguard/core/document_extractor.py",
+    "tests/unit/test_document_extractor.py"
   ],
-  "conflictCount": 1
+  "conflictCount": 4
 }
