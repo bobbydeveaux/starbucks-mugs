@@ -1,9 +1,12 @@
 {
-  "prNumber": 243,
+  "prNumber": 238,
   "baseBranch": "main",
-  "headBranch": "feature/182-tripwire-cybersecurity-tool-sprint-3-issue-182",
+  "headBranch": "feature/218-tripwire-cybersecurity-tool-sprint-3-issue-218",
   "conflictedFiles": [
-    "internal/server/rest/router.go"
+    "docs/concepts/tripwire-cybersecurity-tool/process-watcher.md",
+    "internal/watcher/process_watcher.go",
+    "internal/watcher/process_watcher_linux.go",
+    "internal/watcher/process_watcher_other.go"
   ],
-  "conflictCount": 1
+  "conflictCount": 4
 }

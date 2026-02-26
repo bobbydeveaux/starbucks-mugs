@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in internal/server/rest/router.go where origin/main added an explanatory comment about the JWTMiddleware chi adapter wrapper. Both sides had identical functional code; only the comment was missing from HEAD.",
-  "strategyUsed": "kept both: preserved the explanatory comment from origin/main alongside the existing JWT middleware wrapper code from HEAD"
+  "filesResolved": 4,
+  "summary": "Resolved 4 conflicts across 3 Go source files and 1 documentation file. The Go conflicts involved two fundamentally different architectural approaches to the ProcessWatcher: HEAD used a processBackend interface with /proc polling on Linux, while origin/main used a NETLINK_CONNECTOR implementation with direct Start/Stop methods on the watcher struct. The resolution keeps HEAD's processBackend architecture (required by process_watcher_darwin.go and the internal test suite) while adopting origin/main's superior NETLINK_CONNECTOR implementation for Linux as a processBackend. A new optional backendStarter interface was introduced to allow the Linux backend to surface privilege errors through Start(), satisfying the unprivileged error path test from origin/main. The matchProcessName function was enhanced with empty-target wildcard and glob pattern support from origin/main. Documentation was merged from both branches.",
+  "strategyUsed": "preserved both: kept HEAD's processBackend interface architecture (compatible with darwin backend and existing internal tests), adopted main's NETLINK_CONNECTOR Linux implementation adapted as a processBackend + backendStarter, added optional backendStarter interface so Linux backend can surface CAP_NET_ADMIN errors from Start(), enhanced matchProcessName with empty wildcard and glob support, merged documentation comprehensively from both branches"
 }
