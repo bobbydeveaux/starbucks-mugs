@@ -1,538 +1,482 @@
-"""Unit tests for the ClamAV clamd socket adapter.
+"""Unit tests for fileguard/core/adapters/clamav_adapter.py.
 
-All tests are fully offline.  The ``clamd.ClamdNetworkSocket`` client is
-replaced by :mod:`unittest.mock` patches so no live clamd daemon is required.
+All tests are fully offline — the ``clamd`` client is replaced with mocks
+so no real ClamAV daemon is required.
 
-Coverage areas:
+Coverage targets:
 
-* ``_categorise_threat`` — threat name normalisation helper.
-* ``_parse_clamd_response`` — clamd response dict → (status, findings) parsing,
-  including fail-secure handling of ``ERROR`` results.
-* ``ClamAVAdapter.scan`` — file path scanning with clean, flagged, and all
-  failure modes (connection refused, timeout, clamd error, unexpected exception).
-* ``ClamAVAdapter.scan_bytes`` — in-memory stream scanning with the same
-  failure-mode coverage.
-* ``ClamAVAdapter.ping`` — health-check with successful, failure, and
-  unexpected-response scenarios.
-* Constructor defaults and ``_get_client`` wiring.
+* scan() returns a clean ScanResult on clamd ``OK`` response
+* scan() returns an infected ScanResult on clamd ``FOUND`` response
+* scan() raises AVEngineError on clamd ``ERROR`` response
+* scan() raises AVEngineError when the daemon is unreachable (ConnectionError)
+* scan() raises AVEngineError on an unexpected response structure
+* scan() raises AVEngineError on an unrecognised status token
+* is_available() returns True when PING succeeds
+* is_available() returns False (never raises) when PING fails
+* is_available() returns False for any arbitrary exception (not just ConnectionError)
+* Constructor stores socket_path and passes it to ClamdUnixSocket
+* Constructor falls back to TCP (ClamdNetworkSocket) when socket_path is None
+* engine_name() returns "clamav"
 """
 
 from __future__ import annotations
 
-import socket
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import clamd
 import pytest
 
-from fileguard.core.av_engine import Finding, ScanResult
-from fileguard.core.clamav_adapter import (
-    ClamAVAdapter,
-    _categorise_threat,
-    _parse_clamd_response,
+from fileguard.core.adapters.clamav_adapter import ClamAVAdapter
+from fileguard.core.av_adapter import AVEngineError, ScanResult
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+_SOCKET_PATH = "/var/run/clamav/clamd.ctl"
+_CLEAN_FILE = b"Hello, safe world!"
+_EICAR = (
+    b"X5O!P%@AP[4\\PZX54(P^)7CC)7}"
+    b"$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 )
 
 
 # ---------------------------------------------------------------------------
-# _categorise_threat
+# Helpers
 # ---------------------------------------------------------------------------
 
-
-def test_categorise_threat_returns_first_two_dot_components() -> None:
-    assert _categorise_threat("Win.Test.EICAR_HDB-1") == "Win.Test"
-
-
-def test_categorise_threat_with_exactly_two_components() -> None:
-    assert _categorise_threat("Trojan.Generic") == "Trojan.Generic"
+def _make_clamd_client(response: dict) -> MagicMock:
+    """Return a mock clamd client whose instream() returns *response*."""
+    client = MagicMock()
+    client.instream.return_value = response
+    return client
 
 
-def test_categorise_threat_with_one_component_returns_full_name() -> None:
-    assert _categorise_threat("EICAR") == "EICAR"
+def _make_unix_adapter(**kwargs: Any) -> ClamAVAdapter:
+    """Return a ClamAVAdapter configured for Unix socket."""
+    return ClamAVAdapter(socket_path=_SOCKET_PATH, **kwargs)
 
 
-def test_categorise_threat_with_many_components() -> None:
-    # Only first two parts should be returned
-    assert _categorise_threat("Win.Trojan.PDF.Downloader.1") == "Win.Trojan"
-
-
-def test_categorise_threat_with_empty_string() -> None:
-    assert _categorise_threat("") == ""
+def _make_tcp_adapter(**kwargs: Any) -> ClamAVAdapter:
+    """Return a ClamAVAdapter configured for TCP."""
+    return ClamAVAdapter(host="clamav", port=3310, **kwargs)
 
 
 # ---------------------------------------------------------------------------
-# _parse_clamd_response
+# engine_name
 # ---------------------------------------------------------------------------
 
 
-def test_parse_ok_response_returns_clean_with_no_findings() -> None:
-    response: dict[str, tuple[str, str | None]] = {"/tmp/file.pdf": ("OK", None)}
-    status, findings = _parse_clamd_response(response)
-    assert status == "clean"
-    assert findings == []
-
-
-def test_parse_found_response_returns_flagged() -> None:
-    threat = "Win.Test.EICAR_HDB-1"
-    response: dict[str, tuple[str, str | None]] = {"/tmp/eicar.txt": ("FOUND", threat)}
-    status, findings = _parse_clamd_response(response)
-    assert status == "flagged"
-    assert len(findings) == 1
-
-
-def test_parse_found_response_finding_has_correct_fields() -> None:
-    threat = "Win.Test.EICAR_HDB-1"
-    response: dict[str, tuple[str, str | None]] = {"/tmp/eicar.txt": ("FOUND", threat)}
-    _, findings = _parse_clamd_response(response)
-    f = findings[0]
-    assert f.type == "av_threat"
-    assert f.match == threat
-    assert f.category == "Win.Test"
-    assert f.severity == "high"
-
-
-def test_parse_found_response_with_stream_key() -> None:
-    """instream responses use 'stream' as the key."""
-    response: dict[str, tuple[str, str | None]] = {"stream": ("FOUND", "Trojan.PDF.1")}
-    status, findings = _parse_clamd_response(response)
-    assert status == "flagged"
-    assert findings[0].category == "Trojan.PDF"
-
-
-def test_parse_error_response_returns_rejected_fail_secure() -> None:
-    """ERROR from clamd must produce a rejected verdict, never a pass-through."""
-    response: dict[str, tuple[str, str | None]] = {
-        "/tmp/file.pdf": ("ERROR", "access denied")
-    }
-    status, findings = _parse_clamd_response(response)
-    assert status == "rejected"
-    assert findings == []
-
-
-def test_parse_multiple_findings_from_archive() -> None:
-    """Multiple threats detected in a single response."""
-    response: dict[str, tuple[str, str | None]] = {
-        "/tmp/archive/file1.exe": ("FOUND", "Win.Trojan.1"),
-        "/tmp/archive/file2.bat": ("FOUND", "Win.Backdoor.2"),
-    }
-    status, findings = _parse_clamd_response(response)
-    assert status == "flagged"
-    assert len(findings) == 2
-    assert {f.match for f in findings} == {"Win.Trojan.1", "Win.Backdoor.2"}
-
-
-def test_parse_mixed_ok_and_found() -> None:
-    """If any file is FOUND, overall status is flagged."""
-    response: dict[str, tuple[str, str | None]] = {
-        "/tmp/file_clean.txt": ("OK", None),
-        "/tmp/file_infected.exe": ("FOUND", "Malware.Generic"),
-    }
-    status, findings = _parse_clamd_response(response)
-    assert status == "flagged"
-    assert len(findings) == 1
+class TestEngineName:
+    def test_returns_clamav(self) -> None:
+        adapter = _make_unix_adapter()
+        assert adapter.engine_name() == "clamav"
 
 
 # ---------------------------------------------------------------------------
-# ClamAVAdapter constructor and _get_client
+# Constructor / transport selection
 # ---------------------------------------------------------------------------
 
 
-def test_default_constructor_values() -> None:
-    adapter = ClamAVAdapter()
-    assert adapter._host == "clamav"
-    assert adapter._port == 3310
-    assert adapter._timeout == 30.0
+class TestConstructor:
+    def test_socket_path_stored(self) -> None:
+        adapter = ClamAVAdapter(socket_path=_SOCKET_PATH)
+        assert adapter._socket_path == _SOCKET_PATH
 
+    def test_unix_socket_client_when_socket_path_provided(self) -> None:
+        adapter = ClamAVAdapter(socket_path=_SOCKET_PATH, timeout=10)
+        with patch("fileguard.core.adapters.clamav_adapter.clamd") as mock_clamd:
+            adapter._get_client()
+            mock_clamd.ClamdUnixSocket.assert_called_once_with(_SOCKET_PATH, timeout=10)
+            mock_clamd.ClamdNetworkSocket.assert_not_called()
 
-def test_custom_constructor_values() -> None:
-    adapter = ClamAVAdapter(host="192.168.1.1", port=9999, timeout=5.0)
-    assert adapter._host == "192.168.1.1"
-    assert adapter._port == 9999
-    assert adapter._timeout == 5.0
+    def test_tcp_client_when_socket_path_is_none(self) -> None:
+        adapter = ClamAVAdapter(host="myhost", port=9999, timeout=15)
+        with patch("fileguard.core.adapters.clamav_adapter.clamd") as mock_clamd:
+            adapter._get_client()
+            mock_clamd.ClamdNetworkSocket.assert_called_once_with(
+                "myhost", 9999, timeout=15
+            )
+            mock_clamd.ClamdUnixSocket.assert_not_called()
 
-
-def test_get_client_passes_correct_args_to_clamd() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310, timeout=10.0)
-    with patch("fileguard.core.clamav_adapter.clamd.ClamdNetworkSocket") as mock_cls:
-        mock_cls.return_value = MagicMock()
-        adapter._get_client()
-        mock_cls.assert_called_once_with(host="localhost", port=3310, timeout=10.0)
-
-
-def test_engine_name_constant() -> None:
-    assert ClamAVAdapter.ENGINE_NAME == "clamav"
-
-
-# ---------------------------------------------------------------------------
-# ClamAVAdapter.scan — file path scanning
-# ---------------------------------------------------------------------------
-
-
-async def test_scan_path_clean_file_returns_clean_result() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        return_value={"/tmp/clean.pdf": ("OK", None)},
-    ):
-        result = await adapter.scan("/tmp/clean.pdf")
-
-    assert result.status == "clean"
-    assert result.findings == ()
-    assert result.engine == "clamav"
-    assert result.duration_ms >= 0
-
-
-async def test_scan_path_infected_file_returns_flagged() -> None:
-    threat = "Win.Test.EICAR_HDB-1"
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        return_value={"/tmp/eicar.txt": ("FOUND", threat)},
-    ):
-        result = await adapter.scan("/tmp/eicar.txt")
-
-    assert result.status == "flagged"
-    assert len(result.findings) == 1
-    assert result.findings[0].match == threat
-    assert result.findings[0].type == "av_threat"
-    assert result.findings[0].severity == "high"
-    assert result.engine == "clamav"
-
-
-async def test_scan_path_connection_refused_returns_rejected() -> None:
-    """Fail-secure: connection refused must return rejected, not raise."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        side_effect=ConnectionRefusedError("Connection refused"),
-    ):
-        result = await adapter.scan("/tmp/file.pdf")
-
-    assert result.status == "rejected"
-    assert result.findings == ()
-    assert result.engine == "clamav"
-
-
-async def test_scan_path_socket_timeout_returns_rejected() -> None:
-    """Fail-secure: socket timeout must return rejected."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        side_effect=socket.timeout("timed out"),
-    ):
-        result = await adapter.scan("/tmp/file.pdf")
-
-    assert result.status == "rejected"
-    assert result.findings == ()
-
-
-async def test_scan_path_clamd_connection_error_returns_rejected() -> None:
-    """Fail-secure: clamd.ConnectionError must return rejected."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        side_effect=clamd.ConnectionError("clamd unavailable"),
-    ):
-        result = await adapter.scan("/tmp/file.pdf")
-
-    assert result.status == "rejected"
-    assert result.findings == ()
-
-
-async def test_scan_path_unexpected_exception_returns_rejected() -> None:
-    """Fail-secure: any unexpected exception must return rejected."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        side_effect=RuntimeError("unexpected internal error"),
-    ):
-        result = await adapter.scan("/tmp/file.pdf")
-
-    assert result.status == "rejected"
-    assert result.findings == ()
-    assert result.engine == "clamav"
-
-
-async def test_scan_path_clamd_error_response_returns_rejected() -> None:
-    """Fail-secure: ERROR result in clamd response returns rejected."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        return_value={"/tmp/file.pdf": ("ERROR", "permission denied")},
-    ):
-        result = await adapter.scan("/tmp/file.pdf")
-
-    assert result.status == "rejected"
-    assert result.findings == ()
-
-
-async def test_scan_path_result_includes_duration_ms() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_path",
-        return_value={"/tmp/file.txt": ("OK", None)},
-    ):
-        result = await adapter.scan("/tmp/file.txt")
-
-    assert isinstance(result.duration_ms, int)
-    assert result.duration_ms >= 0
+    def test_default_host_port_timeout(self) -> None:
+        adapter = ClamAVAdapter()
+        assert adapter._host == "clamav"
+        assert adapter._port == 3310
+        assert adapter._timeout == 30
 
 
 # ---------------------------------------------------------------------------
-# ClamAVAdapter.scan_bytes — in-memory stream scanning
+# scan() — clean file (OK response)
 # ---------------------------------------------------------------------------
 
 
-async def test_scan_bytes_clean_data_returns_clean() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        return_value={"stream": ("OK", None)},
-    ):
-        result = await adapter.scan_bytes(b"safe file content")
+class TestScanClean:
+    @pytest.mark.asyncio
+    async def test_returns_scan_result_with_is_clean_true(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": ("OK", None)})
 
-    assert result.status == "clean"
-    assert result.findings == ()
-    assert result.engine == "clamav"
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_CLEAN_FILE)
 
+        assert isinstance(result, ScanResult)
+        assert result.is_clean is True
 
-async def test_scan_bytes_infected_data_returns_flagged() -> None:
-    threat = "Win.Test.EICAR_HDB-1"
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        return_value={"stream": ("FOUND", threat)},
-    ):
-        result = await adapter.scan_bytes(b"EICAR test string")
+    @pytest.mark.asyncio
+    async def test_threat_name_is_none_for_clean_file(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": ("OK", None)})
 
-    assert result.status == "flagged"
-    assert len(result.findings) == 1
-    assert result.findings[0].match == threat
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_CLEAN_FILE)
 
+        assert result.threat_name is None
 
-async def test_scan_bytes_connection_refused_returns_rejected() -> None:
-    """Fail-secure: stream scan connection error returns rejected."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        side_effect=ConnectionRefusedError("refused"),
-    ):
-        result = await adapter.scan_bytes(b"content")
+    @pytest.mark.asyncio
+    async def test_engine_name_is_clamav(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": ("OK", None)})
 
-    assert result.status == "rejected"
-    assert result.findings == ()
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_CLEAN_FILE)
 
+        assert result.engine_name == "clamav"
 
-async def test_scan_bytes_clamd_connection_error_returns_rejected() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        side_effect=clamd.ConnectionError("clamd not available"),
-    ):
-        result = await adapter.scan_bytes(b"content")
+    @pytest.mark.asyncio
+    async def test_raw_response_contains_ok(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": ("OK", None)})
 
-    assert result.status == "rejected"
-    assert result.findings == ()
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_CLEAN_FILE)
 
+        assert "OK" in result.raw_response
 
-async def test_scan_bytes_socket_timeout_returns_rejected() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        side_effect=socket.timeout("timed out"),
-    ):
-        result = await adapter.scan_bytes(b"content")
+    @pytest.mark.asyncio
+    async def test_instream_called_with_file_bytes(self) -> None:
+        """The clamd client must receive the exact bytes passed to scan()."""
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": ("OK", None)})
 
-    assert result.status == "rejected"
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            await adapter.scan(_CLEAN_FILE)
 
-
-async def test_scan_bytes_unexpected_exception_returns_rejected() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        side_effect=OSError("broken pipe"),
-    ):
-        result = await adapter.scan_bytes(b"content")
-
-    assert result.status == "rejected"
-    assert result.engine == "clamav"
-
-
-async def test_scan_bytes_clamd_error_response_returns_rejected() -> None:
-    """Fail-secure: ERROR in instream response returns rejected."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        return_value={"stream": ("ERROR", "size limit exceeded")},
-    ):
-        result = await adapter.scan_bytes(b"large content")
-
-    assert result.status == "rejected"
-    assert result.findings == ()
-
-
-async def test_scan_bytes_result_includes_duration_ms() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_scan_stream",
-        return_value={"stream": ("OK", None)},
-    ):
-        result = await adapter.scan_bytes(b"data")
-
-    assert isinstance(result.duration_ms, int)
-    assert result.duration_ms >= 0
+        # instream() is called once; the arg is an io.BytesIO wrapping the data
+        call_args = mock_client.instream.call_args
+        assert call_args is not None
+        file_obj = call_args.args[0]
+        assert file_obj.read() == _CLEAN_FILE
 
 
 # ---------------------------------------------------------------------------
-# ClamAVAdapter.ping
+# scan() — infected file (FOUND response)
 # ---------------------------------------------------------------------------
 
 
-async def test_ping_returns_true_when_clamd_responds_pong() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(adapter, "_sync_ping", return_value="PONG"):
-        result = await adapter.ping()
+class TestScanInfected:
+    _THREAT = "Win.Test.EICAR_HDB-1"
+    _RESPONSE = {"stream": ("FOUND", _THREAT)}
 
-    assert result is True
+    @pytest.mark.asyncio
+    async def test_returns_scan_result_with_is_clean_false(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client(self._RESPONSE)
 
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_EICAR)
 
-async def test_ping_returns_false_when_connection_refused() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_ping",
-        side_effect=ConnectionRefusedError("refused"),
-    ):
-        result = await adapter.ping()
+        assert result.is_clean is False
 
-    assert result is False
+    @pytest.mark.asyncio
+    async def test_threat_name_matches_clamd_response(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client(self._RESPONSE)
 
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_EICAR)
 
-async def test_ping_returns_false_on_clamd_connection_error() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_ping",
-        side_effect=clamd.ConnectionError("daemon not running"),
-    ):
-        result = await adapter.ping()
+        assert result.threat_name == self._THREAT
 
-    assert result is False
+    @pytest.mark.asyncio
+    async def test_engine_name_is_clamav(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client(self._RESPONSE)
 
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_EICAR)
 
-async def test_ping_returns_false_on_socket_timeout() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_ping",
-        side_effect=socket.timeout("timed out"),
-    ):
-        result = await adapter.ping()
+        assert result.engine_name == "clamav"
 
-    assert result is False
+    @pytest.mark.asyncio
+    async def test_raw_response_contains_found(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client(self._RESPONSE)
 
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_EICAR)
 
-async def test_ping_returns_false_on_unexpected_response() -> None:
-    """Any response other than 'PONG' must return False."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(adapter, "_sync_ping", return_value="UNEXPECTED"):
-        result = await adapter.ping()
-
-    assert result is False
-
-
-async def test_ping_returns_false_on_empty_response() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(adapter, "_sync_ping", return_value=""):
-        result = await adapter.ping()
-
-    assert result is False
-
-
-async def test_ping_returns_false_on_unexpected_exception() -> None:
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    with patch.object(
-        adapter,
-        "_sync_ping",
-        side_effect=RuntimeError("unexpected error"),
-    ):
-        result = await adapter.ping()
-
-    assert result is False
+        assert "FOUND" in result.raw_response
+        assert self._THREAT in result.raw_response
 
 
 # ---------------------------------------------------------------------------
-# ScanResult and Finding are frozen dataclasses
+# scan() — daemon returns ERROR status
 # ---------------------------------------------------------------------------
 
 
-def test_scan_result_is_immutable() -> None:
-    result = ScanResult(status="clean", findings=(), duration_ms=10, engine="clamav")
-    with pytest.raises(Exception):
-        result.status = "flagged"  # type: ignore[misc]
+class TestScanErrorStatus:
+    _ERROR_RESPONSE = {"stream": ("ERROR", "lstat() failed: No such file or directory")}
 
+    @pytest.mark.asyncio
+    async def test_raises_av_engine_error(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client(self._ERROR_RESPONSE)
 
-def test_finding_is_immutable() -> None:
-    finding = Finding(
-        type="av_threat",
-        category="Win.Test",
-        severity="high",
-        match="Win.Test.EICAR_HDB-1",
-    )
-    with pytest.raises(Exception):
-        finding.severity = "low"  # type: ignore[misc]
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError):
+                await adapter.scan(_CLEAN_FILE)
+
+    @pytest.mark.asyncio
+    async def test_error_message_contains_clamd_detail(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client(self._ERROR_RESPONSE)
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError) as exc_info:
+                await adapter.scan(_CLEAN_FILE)
+
+        assert "lstat() failed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_does_not_return_clean_result_on_error(self) -> None:
+        """Fail-secure: must never return clean when ERROR is received."""
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client(self._ERROR_RESPONSE)
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError):
+                await adapter.scan(_CLEAN_FILE)
 
 
 # ---------------------------------------------------------------------------
-# ClamAVAdapter implements AVEngineAdapter contract
+# scan() — daemon unreachable (ConnectionError)
 # ---------------------------------------------------------------------------
 
 
-def test_clamav_adapter_is_subclass_of_av_engine_adapter() -> None:
-    from fileguard.core.av_engine import AVEngineAdapter
+class TestScanDaemonDown:
+    @pytest.mark.asyncio
+    async def test_raises_av_engine_error_on_connection_error(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.instream.side_effect = clamd.ConnectionError("socket not found")
 
-    assert issubclass(ClamAVAdapter, AVEngineAdapter)
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError):
+                await adapter.scan(_CLEAN_FILE)
 
+    @pytest.mark.asyncio
+    async def test_av_engine_error_chains_connection_error(self) -> None:
+        adapter = _make_unix_adapter()
+        original = clamd.ConnectionError("refused")
+        mock_client = MagicMock()
+        mock_client.instream.side_effect = original
 
-def test_clamav_adapter_can_be_instantiated() -> None:
-    """ClamAVAdapter provides all abstract method implementations."""
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    assert adapter is not None
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError) as exc_info:
+                await adapter.scan(_CLEAN_FILE)
+
+        assert exc_info.value.__cause__ is original
+
+    @pytest.mark.asyncio
+    async def test_does_not_return_clean_result_when_daemon_is_down(self) -> None:
+        """Fail-secure: must raise, not return clean, when daemon is down."""
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.instream.side_effect = clamd.ConnectionError("refused")
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError):
+                await adapter.scan(_CLEAN_FILE)
+
+    @pytest.mark.asyncio
+    async def test_connection_desc_in_error_for_unix_socket(self) -> None:
+        adapter = ClamAVAdapter(socket_path="/run/clamd.ctl")
+        mock_client = MagicMock()
+        mock_client.instream.side_effect = clamd.ConnectionError("refused")
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError) as exc_info:
+                await adapter.scan(_CLEAN_FILE)
+
+        assert "unix:/run/clamd.ctl" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_connection_desc_in_error_for_tcp(self) -> None:
+        adapter = ClamAVAdapter(host="clamd-host", port=3310)
+        mock_client = MagicMock()
+        mock_client.instream.side_effect = clamd.ConnectionError("refused")
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError) as exc_info:
+                await adapter.scan(_CLEAN_FILE)
+
+        assert "tcp:clamd-host:3310" in str(exc_info.value)
 
 
 # ---------------------------------------------------------------------------
-# _sync_scan_stream passes BytesIO to clamd
+# scan() — unexpected / malformed response structure
 # ---------------------------------------------------------------------------
 
 
-def test_sync_scan_stream_passes_bytesio_to_instream() -> None:
-    """_sync_scan_stream wraps raw bytes in a BytesIO before calling clamd."""
-    import io
+class TestScanMalformedResponse:
+    @pytest.mark.asyncio
+    async def test_raises_av_engine_error_when_stream_key_missing(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"unexpected_key": ("OK", None)})
 
-    adapter = ClamAVAdapter(host="localhost", port=3310)
-    mock_client = MagicMock()
-    mock_client.instream.return_value = {"stream": ("OK", None)}
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError):
+                await adapter.scan(_CLEAN_FILE)
 
-    with patch.object(adapter, "_get_client", return_value=mock_client):
-        result = adapter._sync_scan_stream(b"test data")
+    @pytest.mark.asyncio
+    async def test_raises_av_engine_error_for_empty_stream_tuple(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": ()})
 
-    mock_client.instream.assert_called_once()
-    call_arg = mock_client.instream.call_args[0][0]
-    assert isinstance(call_arg, io.BytesIO)
-    assert result == {"stream": ("OK", None)}
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError):
+                await adapter.scan(_CLEAN_FILE)
+
+    @pytest.mark.asyncio
+    async def test_raises_av_engine_error_for_unknown_status_token(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": ("UNKNOWN_STATUS", None)})
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError) as exc_info:
+                await adapter.scan(_CLEAN_FILE)
+
+        assert "UNKNOWN_STATUS" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_raises_av_engine_error_when_stream_value_is_none(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = _make_clamd_client({"stream": None})
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            with pytest.raises(AVEngineError):
+                await adapter.scan(_CLEAN_FILE)
+
+
+# ---------------------------------------------------------------------------
+# is_available() — daemon reachable
+# ---------------------------------------------------------------------------
+
+
+class TestIsAvailableReachable:
+    @pytest.mark.asyncio
+    async def test_returns_true_when_ping_succeeds(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.ping.return_value = "PONG"
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.is_available()
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_ping_is_called_once(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.ping.return_value = "PONG"
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            await adapter.is_available()
+
+        mock_client.ping.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# is_available() — daemon unreachable (fail-safe: returns False, never raises)
+# ---------------------------------------------------------------------------
+
+
+class TestIsAvailableUnreachable:
+    @pytest.mark.asyncio
+    async def test_returns_false_when_connection_error(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.ping.side_effect = clamd.ConnectionError("refused")
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.is_available()
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_does_not_raise_when_connection_error(self) -> None:
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.ping.side_effect = clamd.ConnectionError("refused")
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            # Must return False, not raise
+            result = await adapter.is_available()
+
+        assert isinstance(result, bool)
+
+    @pytest.mark.asyncio
+    async def test_returns_false_for_any_exception(self) -> None:
+        """is_available() must suppress *all* exceptions, not just ConnectionError."""
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.ping.side_effect = RuntimeError("unexpected daemon failure")
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.is_available()
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_returns_false_on_timeout(self) -> None:
+        import socket
+
+        adapter = _make_unix_adapter()
+        mock_client = MagicMock()
+        mock_client.ping.side_effect = socket.timeout("timed out")
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.is_available()
+
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# TCP adapter — basic behaviour
+# ---------------------------------------------------------------------------
+
+
+class TestTcpAdapter:
+    @pytest.mark.asyncio
+    async def test_scan_clean_over_tcp(self) -> None:
+        adapter = _make_tcp_adapter()
+        mock_client = _make_clamd_client({"stream": ("OK", None)})
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.scan(_CLEAN_FILE)
+
+        assert result.is_clean is True
+
+    @pytest.mark.asyncio
+    async def test_is_available_true_over_tcp(self) -> None:
+        adapter = _make_tcp_adapter()
+        mock_client = MagicMock()
+        mock_client.ping.return_value = "PONG"
+
+        with patch.object(adapter, "_get_client", return_value=mock_client):
+            result = await adapter.is_available()
+
+        assert result is True
