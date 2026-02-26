@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved 2 conflicts for PR #203. In cmd/agent/main.go, HEAD added a NetworkWatcher for NETWORK-type rules (Protocol/Direction feature) while origin/main added FileWatchers for FILE-type rules via buildFileWatchers(). Both watchers handle different rule types and were preserved together. The .claude-output.json file was deleted by origin/main and that deletion was accepted.",
-  "strategyUsed": "Preserved both changes: kept the NetworkWatcher instantiation from HEAD and added the FileWatcher registration from origin/main, using the shared agentOpts slice so both watcher types are registered with the agent. Accepted origin/main's deletion of .claude-output.json as it is a generated artifact not needed in the repo."
+  "filesResolved": 1,
+  "summary": "Resolved 1 conflict in docs/concepts/tripwire-cybersecurity-tool/agent-core.md. The conflict was in the 'Package: internal/watcher' section: HEAD documented the listener-based NetworkWatcher (internal/watcher/network_watcher.go) while origin/main documented the FileWatcher with a pointer to file-watcher.md. Both components exist in the package, so both were preserved.",
+  "strategyUsed": "Preserved both changes: kept origin/main's FileWatcher description and file-watcher.md reference, then appended HEAD's NetworkWatcher documentation (types, constructor, lifecycle, event channel) since both implementations coexist in internal/watcher."
 }

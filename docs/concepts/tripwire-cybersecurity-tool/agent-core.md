@@ -368,6 +368,60 @@ tripwire rules.
 See [`file-watcher.md`](file-watcher.md) for the full FileWatcher reference
 and end-to-end SLA test documentation.
 
+**File:** `internal/watcher/network_watcher.go`
+
+### Types
+
+```go
+type Protocol  string // "tcp" | "udp" | "both"
+type Direction string // "inbound" | "outbound" | "both"
+
+type NetworkRule struct {
+    Name      string    // Rule identifier (copied to AlertEvent.RuleName)
+    Port      int       // Port to monitor (1–65535)
+    Protocol  Protocol  // Default: ProtocolTCP
+    Direction Direction // Default: DirectionInbound
+    Severity  string    // "INFO" | "WARN" | "CRITICAL"
+}
+```
+
+### NetworkWatcher
+
+```go
+func NewNetworkWatcher(rule NetworkRule, logger *slog.Logger) *NetworkWatcher
+func (w *NetworkWatcher) Start(ctx context.Context) error
+func (w *NetworkWatcher) Stop()
+func (w *NetworkWatcher) Events() <-chan agent.AlertEvent
+```
+
+`NetworkWatcher` implements `agent.Watcher` and monitors inbound TCP and/or UDP
+connections on a configured port using `net.Listen` (TCP) and
+`net.ListenPacket` (UDP). Each accepted connection or received datagram
+produces an `AlertEvent` with `TripwireType = "NETWORK"` and the following
+`Detail` keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `source_ip` | `string` | Remote IP address of the connection |
+| `destination_port` | `int` | Configured port that was contacted |
+| `protocol` | `string` | `"tcp"` or `"udp"` |
+
+#### Lifecycle
+
+- `Start` opens listener(s) and returns an error if any listener fails to
+  bind (e.g. port already in use, insufficient capability).
+- `Stop` closes all listeners, cancels the internal context, and blocks
+  until all goroutines have exited. The `Events()` channel is closed after
+  all goroutines return.
+- Calling `Start` on an already-running watcher is a no-op.
+- Calling `Stop` multiple times is safe.
+
+#### Event channel
+
+The events channel has a buffer of 64. If the buffer is full, events are
+dropped and a warning is logged. The channel is closed by `Stop` after all
+goroutines exit, so callers can range over it safely.
+
 ---
 
 ## Configuration file

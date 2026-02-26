@@ -1,10 +1,9 @@
 {
-  "prNumber": 203,
+  "prNumber": 196,
   "baseBranch": "main",
-  "headBranch": "feature/122-tripwire-cybersecurity-tool-sprint-2-issue-122",
+  "headBranch": "feature/121-tripwire-cybersecurity-tool-sprint-2-issue-121",
   "conflictedFiles": [
-    ".claude-output.json",
-    "cmd/agent/main.go"
+    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md"
   ],
-  "conflictCount": 2
+  "conflictCount": 1
 }
