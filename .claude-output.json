@@ -1,0 +1,29 @@
+{
+  "prTitle": "feat: alert filtering controls and TanStack Query integration",
+  "prBody": "## Summary\n\nImplements the complete TripWire dashboard UI feature for issue #259, addressing all points raised in the previous code review.\n\n### What was missing (per review feedback)\nThe previous attempt only deleted `.claude-output.json` without shipping any code. This PR delivers the full implementation.\n\n### Changes\n\n**TypeScript types** (`src/types/alert.ts`)\n- `TripwireType`, `Severity`, `HostStatus` string union types\n- `Alert`, `Host` data model interfaces\n- `AlertQueryParams`, `AlertsResponse`, `HostsResponse` API types\n- `AlertFilterState` and `DEFAULT_ALERT_FILTERS` for UI state\n\n**API client** (`src/api/alerts.ts`)\n- `fetchAlerts(params?, signal?)` — type-safe wrapper for `GET /api/v1/alerts`\n- `fetchHosts(signal?)` — type-safe wrapper for `GET /api/v1/hosts`\n- Builds query strings from filter params, omitting undefined values\n- Throws descriptive errors on non-2xx responses\n\n**FilterContext** (`src/contexts/FilterContext.tsx`)\n- React context managing all dashboard filter state\n- `FilterProvider` with `initialFilters` prop for testing\n- `useFilterContext()` hook (throws outside provider)\n- Setters: `setSeverity`, `setTripwireType`, `setHostId`, `setFrom`, `setTo`, `setLimit`, `setOffset`, `resetFilters`\n- Filter changes reset pagination offset to 0\n\n**useAlerts / useHosts hooks** (`src/hooks/useAlerts.ts`)\n- TanStack Query (`@tanstack/react-query` v5) with stable query key factories\n- `useAlerts(filters, { enabled?, refetchInterval? })` — 10s stale time, optional polling\n- `useHosts()` — 60s stale time (hosts change infrequently)\n- Both hooks surface `isLoading`, `isFetching`, `error`, `data`\n\n**AlertFilters component** (`src/components/AlertFilters.tsx`)\n- Severity, tripwire type, and host filter dropdowns\n- Reset button visible only when at least one filter is active\n- Fully accessible (labels, aria-label, role=group)\n- Host select disabled while host list is loading\n\n**AlertTable component** (`src/components/AlertTable.tsx`)\n- Paginated table with Previous/Next controls\n- Severity colour-coded badges (Critical=red, Warning=yellow, Info=blue)\n- Loading, error, and empty states\n- Background-refresh indicator bar\n\n**AlertDashboardPage** (`src/pages/AlertDashboardPage.tsx`)\n- Route: `/dashboard`\n- Wraps `QueryClientProvider` + `FilterProvider`\n- Polls for new alerts every 30 seconds\n- Header shows total alert count\n\n**App.tsx** — added `/dashboard` route\n\n**Tests** — 59 tests across 5 test files:\n- `src/api/alerts.test.ts` (10 tests)\n- `src/hooks/useAlerts.test.ts` (10 tests)\n- `src/contexts/FilterContext.test.tsx` (12 tests)\n- `src/components/AlertFilters.test.tsx` (16 tests)\n- `src/components/AlertTable.test.tsx` (11 tests)\n\n**Documentation** — `docs/components.md` updated with full dashboard architecture, component API tables, and usage examples.\n\nCloses #259",
+  "testsPass": true,
+  "filesChanged": [
+    "src/types/alert.ts",
+    "src/api/alerts.ts",
+    "src/api/alerts.test.ts",
+    "src/contexts/FilterContext.tsx",
+    "src/contexts/FilterContext.test.tsx",
+    "src/hooks/useAlerts.ts",
+    "src/hooks/useAlerts.test.ts",
+    "src/components/AlertFilters.tsx",
+    "src/components/AlertFilters.test.tsx",
+    "src/components/AlertTable.tsx",
+    "src/components/AlertTable.test.tsx",
+    "src/pages/AlertDashboardPage.tsx",
+    "src/App.tsx",
+    "package.json",
+    "package-lock.json"
+  ],
+  "docsUpdated": ["docs/components.md"],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/rest-api.md",
+    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/PRD.md"
+  ]
+}
