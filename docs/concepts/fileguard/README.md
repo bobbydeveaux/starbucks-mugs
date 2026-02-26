@@ -116,14 +116,21 @@ fileguard/              Python package (FastAPI application)
 ├── config.py           Pydantic Settings configuration
 ├── api/
 │   └── middleware/
-│       └── auth.py     Bearer-token authentication middleware
+│       ├── auth.py     Bearer-token authentication middleware
+│       └── rate_limit.py  Redis sliding-window rate limiting middleware
 ├── core/
-│   └── document_extractor.py  Multi-format text extractor with byte-offset mapping
+│   └── document_extractor.py  Multi-format text extractor with thread-pool execution
 ├── models/
-│   └── tenant_config.py SQLAlchemy ORM model for tenant_config table
+│   ├── tenant_config.py  SQLAlchemy ORM model for tenant_config table
+│   ├── scan_event.py     SQLAlchemy ORM model for scan_event table (append-only)
+│   ├── batch_job.py      SQLAlchemy ORM model for batch_job table
+│   └── compliance_report.py  SQLAlchemy ORM model for compliance_report table
 ├── schemas/
-│   └── tenant.py       Pydantic TenantConfig schema (request.state.tenant)
+│   └── tenant.py         Pydantic TenantConfig schema (request.state.tenant)
+├── services/
+│   └── audit.py          AuditService: HMAC-signed scan event persistence + SIEM forwarding
 └── db/
+    ├── base.py         Declarative base shared by all ORM models
     └── session.py      SQLAlchemy async session factory
 
 docker/
@@ -136,9 +143,15 @@ migrations/             Alembic migration environment
 └── versions/           Migration scripts
 
 tests/
-└── unit/
-    ├── test_auth_middleware.py  Unit tests for auth middleware & schemas
-    └── test_document_extractor.py  Unit tests for DocumentExtractor
+├── conftest.py         Shared fixtures (env vars, DB session)
+├── test_smoke.py       Smoke tests for FastAPI skeleton, config, Redis, DB session
+├── unit/
+│   ├── test_auth_middleware.py       Unit tests for auth middleware & schemas
+│   ├── test_rate_limit.py            Unit tests for Redis rate limiting middleware
+│   ├── test_audit_service.py         Unit tests for AuditService (HMAC, SIEM, DB mock)
+│   └── test_document_extractor.py    Unit tests for DocumentExtractor
+└── integration/
+    └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
@@ -146,65 +159,74 @@ alembic.ini             Alembic configuration
 .dockerignore           Docker build context exclusions
 ```
 
-## DocumentExtractor
+## Document Extraction
 
-`fileguard/core/document_extractor.py` provides text extraction from six document formats with a byte-offset map for PII span localisation.
+`fileguard/core/document_extractor.py` provides the `DocumentExtractor` class
+for multi-format text extraction used during the file scan pipeline.
 
 ### Supported formats
 
-| Format | MIME type | Library |
-|---|---|---|
-| PDF | `application/pdf` | pdfminer.six |
-| DOCX | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | python-docx |
-| CSV | `text/csv` | stdlib `csv` |
-| JSON | `application/json` | stdlib `json` |
-| TXT | `text/plain` | built-in decode |
-| ZIP | `application/zip` | stdlib `zipfile` (recursive) |
+| Format        | MIME type                                                                    |
+|---------------|------------------------------------------------------------------------------|
+| PDF           | `application/pdf`                                                            |
+| DOCX          | `application/vnd.openxmlformats-officedocument.wordprocessingml.document`    |
+| CSV           | `text/csv`                                                                   |
+| JSON          | `application/json`                                                           |
+| Plain text    | `text/plain`                                                                 |
+| ZIP (recursive) | `application/zip`                                                          |
+
+### Thread-pool execution
+
+All CPU-bound extraction is dispatched to a `ThreadPoolExecutor` via
+`asyncio.get_running_loop().run_in_executor()`, keeping the asyncio event loop
+unblocked.  The pool size is controlled by `THREAD_POOL_WORKERS` (default: 4).
 
 ### Usage
 
 ```python
 from fileguard.core.document_extractor import DocumentExtractor
 
-with DocumentExtractor(thread_pool_workers=4) as extractor:
-    result = extractor.extract(pdf_bytes, "report.pdf")
-    print(result.text)
-    for offset in result.offsets:
-        # offset.char_start / offset.char_end index into result.text
-        # offset.byte_start / offset.byte_end reference the original file bytes
-        span = result.text[offset.char_start:offset.char_end]
+extractor = DocumentExtractor()          # uses settings.THREAD_POOL_WORKERS
+
+result = await extractor.extract(file_bytes, "application/pdf")
+print(result.text)                       # normalised text
+
+for entry in result.offsets:
+    span = result.text[entry.text_start:entry.text_end]
+    print(f"bytes {entry.byte_start}–{entry.byte_end}: {span!r}")
 ```
 
-### ExtractionResult
+### Error handling
 
-| Field | Type | Description |
-|---|---|---|
-| `text` | `str` | Normalised Unicode text concatenated across all content |
-| `offsets` | `list[ByteOffset]` | Ordered list mapping text character spans to original byte ranges |
+`ExtractionError` is raised for unsupported MIME types or corrupt/malformed
+files.  ZIP members that fail extraction are skipped with a warning log — one
+corrupt member does not abort the whole archive.
 
-### ByteOffset
+## AuditService
 
-| Field | Type | Description |
-|---|---|---|
-| `char_start` | `int` | Inclusive start character index in `ExtractionResult.text` |
-| `char_end` | `int` | Exclusive end character index in `ExtractionResult.text` |
-| `byte_start` | `int` | Inclusive start byte offset in the original file data |
-| `byte_end` | `int` | Exclusive end byte offset in the original file data |
+`fileguard/services/audit.py` implements tamper-evident scan event logging:
 
-### Exceptions
+- **HMAC-SHA256 signing** over canonical fields `(id, file_hash, status, action_taken, created_at)` using `SECRET_KEY`
+- **Append-only persistence** — the `ScanEvent` model enforces no-UPDATE / no-DELETE at the application layer via SQLAlchemy event hooks
+- **Best-effort SIEM forwarding** to Splunk (HEC) or RiverSafe WatchTower; delivery failures are logged and suppressed so they never block the scan pipeline
 
-| Exception | When raised |
-|---|---|
-| `UnsupportedMIMETypeError` | File MIME type is not in the supported list |
-| `CorruptFileError` | File cannot be parsed (malformed PDF, invalid ZIP, non-JSON bytes, etc.) |
+```python
+from fileguard.services.audit import AuditService
 
-Both exceptions extend `DocumentExtractorError`.
-
-### ZIP safety limits
-
-| Parameter | Default | Description |
-|---|---|---|
-| `max_zip_depth` | 2 | Maximum recursive nesting depth |
-| `max_zip_files` | 1 000 | Maximum files processed per archive |
-
-Entries that exceed the depth limit or whose MIME type is unsupported are silently skipped; the archive as a whole still yields results from valid entries.
+service = AuditService(signing_key=settings.SECRET_KEY)
+event = await service.log_scan_event(
+    session=db_session,
+    tenant_id=tenant.id,
+    file_hash="abc123...",
+    file_name="report.pdf",
+    file_size_bytes=102400,
+    mime_type="application/pdf",
+    status="flagged",
+    action_taken="quarantine",
+    findings=[{"type": "pii", "category": "NHS_NUMBER", "severity": "high"}],
+    scan_duration_ms=1240,
+    siem_config=tenant.siem_config,  # optional
+)
+# Verify integrity later
+assert service.verify_hmac(event)
+```
