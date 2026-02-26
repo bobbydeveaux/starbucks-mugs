@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,6 +16,13 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// maxFrameSize is the maximum WebSocket payload length (in bytes) that the
+// server will accept from clients.  Frames exceeding this limit cause the
+// read loop to drop the connection rather than allocating unbounded memory.
+// Browser clients never send frames anywhere near this size; 64 KiB is a
+// conservative guard against misbehaving or malicious clients.
+const maxFrameSize = 64 * 1024 // 64 KiB
 
 // wsGUID is the fixed GUID defined in RFC 6455 §4.1 for computing the
 // Sec-WebSocket-Accept header value.
@@ -120,6 +128,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
+		defer func() {
+			// Recover from any panic inside readLoop (e.g. a bug that slips
+			// past the frame-size guard) so that a single bad client cannot
+			// crash the entire server process.
+			if r := recover(); r != nil {
+				h.logger.Error("websocket: readLoop panic recovered",
+					slog.Any("recover", r),
+					slog.String("client_id", clientID),
+				)
+			}
+		}()
 		readLoop(conn, h.logger, clientID)
 		closeOnce()
 	}()
@@ -235,7 +254,15 @@ func readLoop(conn net.Conn, logger *slog.Logger, clientID string) {
 			if _, err := buf.Read(ext[:]); err != nil {
 				return
 			}
-			length = int64(binary.BigEndian.Uint64(ext[:]))
+			// Guard against int64 overflow: binary.BigEndian.Uint64 returns a
+			// uint64; values > math.MaxInt64 would wrap to a negative int64 and
+			// cause make([]byte, length) to panic.  Reject any frame that
+			// exceeds maxFrameSize — browser clients never send frames this large.
+			rawLen := binary.BigEndian.Uint64(ext[:])
+			if rawLen > maxFrameSize {
+				return
+			}
+			length = int64(rawLen)
 		}
 
 		// Read and discard the 4-byte masking key if present.
@@ -246,10 +273,10 @@ func readLoop(conn net.Conn, logger *slog.Logger, clientID string) {
 			}
 		}
 
-		// Discard the payload.
+		// Discard the payload without allocating a full buffer; io.CopyN reads
+		// in small chunks and prevents memory exhaustion from large frames.
 		if length > 0 {
-			discarded := make([]byte, length)
-			if _, err := buf.Read(discarded); err != nil {
+			if _, err := io.CopyN(io.Discard, buf, length); err != nil {
 				return
 			}
 		}

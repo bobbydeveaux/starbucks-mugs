@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"time"
 
@@ -31,7 +32,10 @@ import (
 // Store is the subset of storage.Store methods used by the gRPC server.
 // Defined as an interface so tests can substitute a fake.
 type Store interface {
-	UpsertHost(ctx context.Context, h storage.Host) error
+	// UpsertHost persists the host record and returns the stable host_id that
+	// is stored in the database.  On a hostname conflict the existing host_id
+	// is returned so that alert correlation remains intact across reconnects.
+	UpsertHost(ctx context.Context, h storage.Host) (string, error)
 	GetHost(ctx context.Context, hostID string) (*storage.Host, error)
 	BatchInsertAlerts(ctx context.Context, alert storage.Alert) error
 }
@@ -57,17 +61,21 @@ func NewServer(store Store, broadcaster *ws.Broadcaster, logger *slog.Logger) *S
 // RegisterAgent handles the RegisterAgent RPC.
 //
 // It upserts the host record in PostgreSQL and returns the stable host_id
-// UUID that the agent must embed in every subsequent AgentEvent.
+// UUID that the agent must embed in every subsequent AgentEvent.  When an
+// agent reconnects under the same hostname, the existing host_id is returned
+// so that alert correlation with historical records is preserved.
 func (s *Server) RegisterAgent(ctx context.Context, req *alertpb.RegisterRequest) (*alertpb.RegisterResponse, error) {
 	if req.Hostname == "" {
 		return nil, status.Error(codes.InvalidArgument, "hostname is required")
 	}
 
-	hostID := uuid.NewString()
+	// Generate a candidate UUID.  UpsertHost will return the existing host_id
+	// if the hostname already exists, discarding this candidate.
+	candidateID := uuid.NewString()
 	now := time.Now().UTC()
 
 	h := storage.Host{
-		HostID:       hostID,
+		HostID:       candidateID,
 		Hostname:     req.Hostname,
 		Platform:     req.Platform,
 		AgentVersion: req.AgentVersion,
@@ -75,7 +83,11 @@ func (s *Server) RegisterAgent(ctx context.Context, req *alertpb.RegisterRequest
 		Status:       storage.HostStatusOnline,
 	}
 
-	if err := s.store.UpsertHost(ctx, h); err != nil {
+	// effectiveHostID is the UUID that is actually stored in the database.
+	// On the first registration it equals candidateID; on reconnects it is
+	// the original UUID that was assigned when the host first registered.
+	effectiveHostID, err := s.store.UpsertHost(ctx, h)
+	if err != nil {
 		s.logger.Error("grpc: UpsertHost failed",
 			slog.String("hostname", req.Hostname),
 			slog.Any("error", err),
@@ -85,13 +97,13 @@ func (s *Server) RegisterAgent(ctx context.Context, req *alertpb.RegisterRequest
 
 	s.logger.Info("agent registered",
 		slog.String("hostname", req.Hostname),
-		slog.String("host_id", hostID),
+		slog.String("host_id", effectiveHostID),
 		slog.String("platform", req.Platform),
 		slog.String("agent_version", req.AgentVersion),
 	)
 
 	return &alertpb.RegisterResponse{
-		HostId:      hostID,
+		HostId:       effectiveHostID,
 		ServerTimeUs: time.Now().UnixMicro(),
 	}, nil
 }
@@ -112,9 +124,21 @@ func (s *Server) StreamAlerts(stream alertpb.AlertService_StreamAlertsServer) er
 	for {
 		evt, err := stream.Recv()
 		if err != nil {
-			// io.EOF (or context cancellation) signals normal stream close.
-			s.logger.Debug("grpc: StreamAlerts stream closed", slog.Any("reason", err))
-			return nil
+			// io.EOF is the canonical end-of-stream signal from the gRPC
+			// runtime.  Context cancellation and deadline exceeded are also
+			// considered normal closure (e.g. agent restart, client timeout).
+			// All other errors are genuine transport failures and are returned
+			// so that the caller can observe and log them appropriately.
+			if err == io.EOF ||
+				err == context.Canceled ||
+				err == context.DeadlineExceeded ||
+				status.Code(err) == codes.Canceled ||
+				status.Code(err) == codes.DeadlineExceeded {
+				s.logger.Debug("grpc: StreamAlerts stream closed", slog.Any("reason", err))
+				return nil
+			}
+			s.logger.Error("grpc: StreamAlerts transport error", slog.Any("error", err))
+			return err
 		}
 
 		if err := s.handleEvent(ctx, stream, evt); err != nil {

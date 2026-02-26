@@ -30,12 +30,26 @@ func newFakeStore() *fakeStore {
 	return &fakeStore{hosts: make(map[string]storage.Host)}
 }
 
-func (f *fakeStore) UpsertHost(_ context.Context, h storage.Host) error {
+func (f *fakeStore) UpsertHost(_ context.Context, h storage.Host) (string, error) {
 	if f.upsertErr != nil {
-		return f.upsertErr
+		return "", f.upsertErr
+	}
+	// Check if a host with the same hostname already exists and return its
+	// stable host_id, mirroring the ON CONFLICT … RETURNING behaviour of the
+	// real PostgreSQL implementation.
+	for _, existing := range f.hosts {
+		if existing.Hostname == h.Hostname {
+			// Update mutable fields on the existing record.
+			existing.Platform = h.Platform
+			existing.AgentVersion = h.AgentVersion
+			existing.LastSeen = h.LastSeen
+			existing.Status = h.Status
+			f.hosts[existing.HostID] = existing
+			return existing.HostID, nil
+		}
 	}
 	f.hosts[h.HostID] = h
-	return nil
+	return h.HostID, nil
 }
 
 func (f *fakeStore) GetHost(_ context.Context, hostID string) (*storage.Host, error) {
@@ -136,6 +150,44 @@ func TestRegisterAgent_Success(t *testing.T) {
 		if h.Status != storage.HostStatusOnline {
 			t.Errorf("status: got %q, want %q", h.Status, storage.HostStatusOnline)
 		}
+	}
+}
+
+func TestRegisterAgent_StableHostIDOnReconnect(t *testing.T) {
+	t.Parallel()
+
+	store := newFakeStore()
+	srv := newTestServer(store)
+
+	ctx := context.Background()
+	req := &alertpb.RegisterRequest{
+		Hostname:     "web-01",
+		Platform:     "linux",
+		AgentVersion: "1.0.0",
+	}
+
+	// First registration — establishes the host record.
+	resp1, err := srv.RegisterAgent(ctx, req)
+	if err != nil {
+		t.Fatalf("first registration: unexpected error: %v", err)
+	}
+	if resp1.HostId == "" {
+		t.Fatal("first registration: expected non-empty host_id")
+	}
+
+	// Second registration with the same hostname (agent reconnect) — must
+	// return the same host_id so that alert correlation is preserved.
+	resp2, err := srv.RegisterAgent(ctx, req)
+	if err != nil {
+		t.Fatalf("second registration: unexpected error: %v", err)
+	}
+	if resp2.HostId != resp1.HostId {
+		t.Errorf("host_id changed on reconnect: first=%q second=%q", resp1.HostId, resp2.HostId)
+	}
+
+	// Exactly one host record must exist — not two.
+	if len(store.hosts) != 1 {
+		t.Errorf("expected 1 host record, got %d", len(store.hosts))
 	}
 }
 
