@@ -1,0 +1,14 @@
+{
+  "alreadyImplemented": true,
+  "prTitle": "chore: close duplicate - feature already exists",
+  "prBody": "## Summary\n\nThe `ScanContext` shared dataclass is already fully implemented in `fileguard/core/scan_context.py` and merged into `main`.\n\nThe implementation was introduced in PR #299 ([task-fileguard-feat-pii-detector-2]) as a dependency for the PIIDetector, and has since been used by:\n- `fileguard/core/pipeline.py` (ScanPipeline orchestration)\n- `fileguard/core/pii_detector.py` (PIIDetector)\n- `fileguard/core/disposition.py` (DispositionEngine)\n\nNo changes are required.\n\nCloses #281",
+  "explanation": "The requested functionality already exists with:\n- `fileguard/core/scan_context.py` — A fully-implemented `@dataclass` with fields: `file_bytes`, `mime_type`, `scan_id` (auto-UUID), `tenant_id`, `extracted_text`, `byte_offsets`, `findings`, `errors`, and `metadata`\n- Introduced in commit `f28edad4` as part of PR #299 (PIIDetector implementation)\n- Used by ScanPipeline, PIIDetector, DispositionEngine, and tested through `fileguard/tests/test_pipeline.py`\n- No changes are needed — the dataclass is complete, documented, and in active use",
+  "testsPass": true,
+  "filesChanged": [],
+  "docsUpdated": [],
+  "docsReviewed": [
+    "docs/concepts/fileguard/LLD.md",
+    "docs/concepts/fileguard/pipeline.md",
+    "fileguard/core/scan_context.py"
+  ]
+}
