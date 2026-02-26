@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 3,
-  "summary": "Resolved 3 conflicts: accepted origin/main's deletion of .claude-output.json (build artifact); resolved internal/watcher/watcher.go by choosing origin/main's EventType as uint32 with 4 constants (EventRead/Write/Create/Delete) required by platform-specific files; resolved internal/watcher/file_watcher.go by choosing origin/main's full FileWatcher implementation with Start/Stop/Events pattern that satisfies agent.Watcher.",
-  "strategyUsed": "Chose origin/main for all three conflicts: HEAD's Watcher interface with Watch/Stop/Events returning <-chan FileEvent was incompatible with agent.Watcher and existing platform implementations; HEAD's EventType as string with only 2 constants was incompatible with file_watcher_linux.go and file_watcher_other.go which require EventCreate and EventDelete; origin/main's FileWatcher with goroutine lifecycle management is the correct implementation that tests and platform files depend on."
+  "filesResolved": 1,
+  "summary": "Resolved 1 conflict in fileguard/core/__init__.py: merged two different module-level descriptions into a single docstring that captures the intent of both sides.",
+  "strategyUsed": "Preserved both changes: HEAD used a proper Python module docstring ('Core scan engine components for FileGuard.') and origin/main used a comment ('fileguard.core — pipeline components'). Combined them into a single docstring that covers both descriptions, preferring the docstring form as the more Pythonic and tooling-friendly approach."
 }
