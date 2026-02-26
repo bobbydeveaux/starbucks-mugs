@@ -1,11 +1,9 @@
 {
-  "prNumber": 272,
+  "prNumber": 295,
   "baseBranch": "main",
-  "headBranch": "feature/250-tripwire-cybersecurity-tool-sprint-4-issue-250",
+  "headBranch": "feature/287-fileguard-sprint-3-issue-287",
   "conflictedFiles": [
-    ".claude-output.json",
-    "cmd/agent/main.go",
-    "docs/concepts/tripwire-cybersecurity-tool/agent-core.md"
+    ".claude-output.json"
   ],
-  "conflictCount": 3
+  "conflictCount": 1
 }

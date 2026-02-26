@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 3,
-  "summary": "Resolved three conflicts: (1) cmd/agent/main.go — kept the 'queue' import from HEAD and removed the duplicate transport creation block that origin/main introduced, preserving the sprint-4 queue-drain implementation; (2) agent-core.md — kept HEAD's startup steps 7-9 that accurately describe wiring the SQLite queue and transport into the agent; (3) .claude-output.json — accepted our branch's deletion since the file is no longer needed.",
-  "strategyUsed": "preserved both changes where complementary; for semantic conflicts (duplicate transport creation, renumbered doc steps) chose HEAD because the feature branch implements the queue-drain capability that the entire sprint is built around"
+  "filesResolved": 1,
+  "summary": "Resolved one conflict: .claude-output.json was deleted by origin/main ('deleted by them'). Accepted the deletion because this is a transient Claude session output file that does not belong in the repository long-term; origin/main correctly removed it.",
+  "strategyUsed": "accepted theirs (deletion) — the file is ephemeral metadata from a previous Claude run and has no ongoing value in the codebase"
 }
