@@ -1,337 +1,267 @@
-GeneratedAt: "2026-02-26T08:18:58Z"
+GeneratedAt: "2026-02-26T10:36:45Z"
 Plan: tripwire-cybersecurity-tool-plan
 Sprints:
-- Features:
-  - FeatureID: tripwire-cybersecurity-tool-feat-process-watcher
-    FeatureTitle: Process Tripwire Watcher
-    Tasks:
-    - AcceptanceCriteria:
-      - BPF program compiles with clang/bpftool and passes the kernel verifier on
-        Linux >=5.8
-      - Ring buffer events contain PID, PPID, UID, and null-terminated command line
-        (argv joined)
-      - Program attaches to both execve and execveat tracepoints
-      AgentType: backend-engineer
-      Dependencies: []
-      Description: Write the eBPF C program that attaches to the execve/execveat syscall
-        tracepoints and collects PID, parent PID, UID/GID, and full argv into a ring
-        buffer. Define the shared event struct used by both kernel and userspace.
-      EstimatedEffort: M
-      Files:
-      - internal/watcher/ebpf/process.bpf.c
-      ID: task-tripwire-cybersecurity-tool-feat-process-watcher-1
-      Title: Implement eBPF kernel program for execve tracing
-    - AcceptanceCriteria:
-      - Loader detects kernel <5.8 and returns ErrNotSupported so callers can fall
-        back
-      - Ring buffer consumer runs in a goroutine and sends typed events on a channel
-        without dropping under burst load
-      - Close() detaches the BPF program and frees all resources without leaking goroutines
-      AgentType: backend-engineer
-      Dependencies:
-      - task-tripwire-cybersecurity-tool-feat-process-watcher-1
-      Description: Write the Go code that uses cilium/ebpf to load and pin the compiled
-        BPF object, reads events from the ring buffer, and converts raw kernel structs
-        into typed Go event values. Handle program loading errors and graceful teardown.
-      EstimatedEffort: M
-      Files:
-      - internal/watcher/ebpf/process.go
-      ID: task-tripwire-cybersecurity-tool-feat-process-watcher-2
-      Title: Implement eBPF Go userspace loader and event pump
-    - AcceptanceCriteria:
-      - ProcessWatcher implements the Watcher interface and integrates with the agent
-        event pipeline
-      - eBPF path is selected on Linux >=5.8; ptrace fallback is selected on older
-        kernels; unit tests mock both paths
-      - Only process names matching the configured watchlist emit alert events; non-matching
-        execve events are silently dropped
-      - Watch() and Close() are safe to call concurrently; no goroutine leak on shutdown
-      AgentType: backend-engineer
-      Dependencies:
-      - task-tripwire-cybersecurity-tool-feat-process-watcher-2
-      Description: Implement the ProcessWatcher struct satisfying the Watcher interface.
-        Attempt to start the eBPF loader; on ErrNotSupported or non-Linux platforms
-        fall back to a ptrace (Linux) or kqueue (macOS) polling mechanism. Emit alert
-        events with PID, PPID, user, and command line filtered against configured
-        process names.
-      EstimatedEffort: L
-      Files:
-      - internal/watcher/process_watcher.go
-      ID: task-tripwire-cybersecurity-tool-feat-process-watcher-3
-      Title: Implement ProcessWatcher with ptrace/kqueue fallback
-  - FeatureID: tripwire-cybersecurity-tool-feat-grpc-server
-    FeatureTitle: gRPC Alert Ingestion Service
-    Tasks:
-    - AcceptanceCriteria:
-      - gRPC server starts and listens with mTLS; connections without a valid client
-        cert are rejected
-      - Client cert CN is extracted and available in the gRPC context for each RPC
-        call
-      - Server wires into cmd/server/main.go with graceful shutdown
-      AgentType: backend-engineer
-      Dependencies: []
-      Description: Set up the gRPC server with mutual TLS configuration, loading server
-        and CA certificates from the PKI layer. Implement middleware to extract the
-        agent identity from the client certificate Common Name and inject it into
-        the request context for downstream handlers.
-      EstimatedEffort: M
-      Files:
-      - cmd/server/main.go
-      - internal/server/grpc/server.go
-      ID: task-tripwire-cybersecurity-tool-feat-grpc-server-1
-      Title: Bootstrap gRPC server with mTLS and cert CN extraction
-    - AcceptanceCriteria:
-      - RegisterAgent returns a successful response when called with a valid cert
-        CN; duplicate registration is idempotent
-      - StreamAlerts persists each valid AgentEvent to the alerts table and returns
-        an ACK with the generated alert ID
-      - Malformed or invalid AgentEvents are rejected with a descriptive error ACK
-        and not written to the database
-      - Unit tests cover happy path, validation failures, and DB error propagation
-      AgentType: backend-engineer
-      Dependencies:
-      - task-tripwire-cybersecurity-tool-feat-grpc-server-1
-      Description: 'Implement the AlertService gRPC handlers: RegisterAgent records
-        the agent identity and returns an acknowledgement, StreamAlerts receives a
-        bidirectional stream of AgentEvents, validates each event (required fields,
-        timestamp bounds, enum values), persists valid alerts to PostgreSQL via the
-        storage layer, and sends an ACK response per event. Invalid events receive
-        an error ACK without being persisted.'
-      EstimatedEffort: L
-      Files:
-      - internal/server/grpc/alert_service.go
-      ID: task-tripwire-cybersecurity-tool-feat-grpc-server-2
-      Title: Implement RegisterAgent and StreamAlerts RPC handlers with validation
-        and ACK
-    - AcceptanceCriteria:
-      - Each successfully persisted alert is published to the broadcaster without
-        blocking the StreamAlerts goroutine
-      - A slow or disconnected WebSocket consumer does not cause back-pressure on
-        the gRPC stream
-      - Integration test confirms an ingested event appears on a subscribed WebSocket
-        connection
-      AgentType: backend-engineer
-      Dependencies:
-      - task-tripwire-cybersecurity-tool-feat-grpc-server-2
-      Description: After a valid AgentEvent is persisted, publish the alert to the
-        WebSocket broadcaster so connected dashboard clients receive real-time updates.
-        Use a non-blocking send (drop or log on full channel) to prevent slow WebSocket
-        consumers from stalling the gRPC stream.
-      EstimatedEffort: S
-      Files:
-      - internal/server/grpc/alert_service.go
-      ID: task-tripwire-cybersecurity-tool-feat-grpc-server-3
-      Title: Fan persisted alerts to WebSocket broadcaster
-  - FeatureID: tripwire-cybersecurity-tool-feat-rest-api
-    FeatureTitle: REST API
-    Tasks:
-    - AcceptanceCriteria:
-      - Middleware rejects requests missing or malformed Authorization Bearer tokens
-        with HTTP 401
-      - Middleware validates RS256 signature and token expiry, passing valid requests
-        to the next handler
-      - Validated JWT claims are stored in request context and accessible by handlers
-      AgentType: backend-engineer
-      Dependencies: []
-      Description: Implement the RS256 JWT bearer token validation middleware in middleware.go.
-        The middleware must extract and validate Authorization header tokens using
-        RS256 algorithm, reject invalid/expired tokens with 401, and attach claims
-        to request context for downstream handlers.
-      EstimatedEffort: M
-      Files:
-      - internal/server/rest/middleware.go
-      ID: task-tripwire-cybersecurity-tool-feat-rest-api-1
-      Title: Implement RS256 JWT authentication middleware
-    - AcceptanceCriteria:
-      - GET /healthz returns 200 without authentication; all /api/v1/* routes return
-        401 without a valid JWT
-      - GET /api/v1/alerts filters results correctly by host, type, severity, and
-        time range query parameters
-      - GET /api/v1/hosts and GET /api/v1/audit return paginated JSON arrays with
-        appropriate HTTP status codes
-      - Invalid query parameters return 400 with a descriptive JSON error body
-      AgentType: backend-engineer
-      Dependencies:
-      - task-tripwire-cybersecurity-tool-feat-rest-api-1
-      Description: 'Wire up the chi router in router.go and implement all endpoint
-        handlers in handlers.go: GET /api/v1/alerts (with host, type, severity, and
-        time range query filters), GET /api/v1/hosts, GET /api/v1/audit, and GET /healthz.
-        Apply the JWT middleware to all /api routes. Handlers must query the storage
-        layer and return JSON responses.'
-      EstimatedEffort: M
-      Files:
-      - internal/server/rest/router.go
-      - internal/server/rest/handlers.go
-      ID: task-tripwire-cybersecurity-tool-feat-rest-api-2
-      Title: Implement chi router and API handlers
-  Sprint: 3
 - Features:
   - FeatureID: tripwire-cybersecurity-tool-feat-agent-transport
     FeatureTitle: gRPC mTLS Transport Client
     Tasks:
     - AcceptanceCriteria:
-      - proto/alert.proto compiles with protoc and both RPCs are present in the generated
-        Go bindings
-      - AlertEvent message includes all fields required by the LLD (host, timestamp,
-        severity, payload)
-      - Generated files proto/alert.pb.go and proto/alert_grpc.pb.go are checked in
-        and match the proto source
+      - alert.proto defines StreamAlerts (bidirectional) and RegisterAgent (unary)
+        with correct message types
+      - Generated alert.pb.go and alert_grpc.pb.go compile without errors
+      - go generate or Makefile target reproduces the generated files deterministically
       AgentType: backend-engineer
       Dependencies: []
-      Description: Write the alert.proto file defining the StreamAlerts bidirectional
-        stream and RegisterAgent unary RPC, including all message types (AlertEvent,
-        AgentRegistration, ServerAck). Commit the generated .pb.go and _grpc.pb.go
-        files alongside the source proto.
+      Description: Author the proto/alert.proto file defining the StreamAlerts bidirectional
+        stream and RegisterAgent unary RPC, including all request/response message
+        types. Run protoc to generate proto/alert.pb.go and proto/alert_grpc.pb.go.
+        Ensure generated code compiles cleanly.
       EstimatedEffort: S
       Files:
       - proto/alert.proto
       - proto/alert.pb.go
       - proto/alert_grpc.pb.go
       ID: task-tripwire-cybersecurity-tool-feat-agent-transport-1
-      Title: Define protobuf schema for StreamAlerts and RegisterAgent RPCs
+      Title: Define proto schema for StreamAlerts and RegisterAgent RPCs
     - AcceptanceCriteria:
-      - Client loads mTLS credentials from configured cert/key/CA paths and rejects
-        connections with invalid server certificates
-      - Exponential backoff retries with configurable base delay and max cap; reconnect_total
+      - Client dials with tls.Config using client cert/key and CA pool; connection
+        fails if certs are missing or invalid
+      - RegisterAgent RPC is called immediately after a successful dial
+      - Reconnection uses exponential backoff with configurable max interval; reconnect_total
         counter increments on each attempt
-      - On successful reconnect, all queued alerts are drained from SQLite and sent
-        before resuming live streaming
-      - Unit tests cover happy-path streaming, reconnect loop, and queue-flush ordering
-        using a mock gRPC server
+      - Prometheus metrics are registered and report correct values observable via
+        /metrics
       AgentType: backend-engineer
       Dependencies:
       - task-tripwire-cybersecurity-tool-feat-agent-transport-1
-      Description: Implement internal/transport/grpc_client.go with a GRPCClient struct
-        that establishes a mTLS connection using agent client certificates, opens
-        the StreamAlerts bidirectional stream, and calls RegisterAgent on connect.
-        On disconnect, apply exponential backoff before reconnecting and flush the
-        SQLite alert queue through the existing queue interface on each successful
-        reconnect.
-      EstimatedEffort: L
+      Description: Implement the GRPCClient struct in internal/transport/grpc_client.go
+        that dials the server using mTLS client certificates loaded from disk, calls
+        RegisterAgent on connect, and manages exponential-backoff reconnection loops
+        with jitter. Expose Prometheus counters and gauges for reconnect_total, alerts_sent_total,
+        and queue_depth.
+      EstimatedEffort: M
       Files:
       - internal/transport/grpc_client.go
       ID: task-tripwire-cybersecurity-tool-feat-agent-transport-2
-      Title: Implement gRPC transport client with mTLS and exponential-backoff reconnection
+      Title: Implement mTLS gRPC client with exponential-backoff reconnection
     - AcceptanceCriteria:
-      - All three metrics are registered on the default Prometheus registry and appear
-        in /metrics output
-      - queue_depth reflects the real-time SQLite queue row count and decreases to
-        0 after a flush
-      - alerts_sent_total increments once per successfully acknowledged alert sent
-        over the stream
-      - Integration test verifies metric values after a simulated disconnect-reconnect
-        cycle
+      - Alerts queued in SQLite while offline are sent in order after reconnect and
+        deleted on ACK
+      - alerts_sent_total increments for every successfully acknowledged alert; queue_depth
+        reflects current undelivered row count
+      - A server-side stream error causes the client to re-enter the backoff loop
+        without dropping queue entries
+      - Unit test with a mock gRPC server verifies queue drain ordering and metric
+        values
       AgentType: backend-engineer
       Dependencies:
       - task-tripwire-cybersecurity-tool-feat-agent-transport-2
-      Description: Register and instrument the three required Prometheus metrics—queue_depth
-        (gauge), alerts_sent_total (counter), reconnect_total (counter)—within the
-        GRPCClient. Update queue_depth whenever alerts are enqueued or dequeued, and
-        increment the other counters at the appropriate call sites.
-      EstimatedEffort: S
+      Description: Wire the StreamAlerts bidirectional stream into the GRPCClient
+        so it reads pending alerts from the SQLite queue, sends them upstream, and
+        removes them on server ACK. On each reconnect, flush any queued rows before
+        resuming live event forwarding. Update queue_depth gauge and alerts_sent_total
+        counter as records are drained and sent.
+      EstimatedEffort: L
       Files:
       - internal/transport/grpc_client.go
       ID: task-tripwire-cybersecurity-tool-feat-agent-transport-3
-      Title: Expose Prometheus metrics for transport layer
+      Title: Implement bidirectional StreamAlerts with SQLite queue drain on reconnect
   - FeatureID: tripwire-cybersecurity-tool-feat-websocket
     FeatureTitle: WebSocket Real-Time Broadcaster
     Tasks:
     - AcceptanceCriteria:
-      - Broadcast delivers JSON messages to all registered clients via buffered channels
-        without blocking the caller
-      - Slow or disconnected clients are evicted without affecting other subscribers
-      - Redis pub/sub path activates only when REDIS_URL is configured and falls back
-        gracefully when unavailable
-      - Unit tests cover fan-out, slow-client eviction, and Redis toggle
+      - Broadcaster.Publish fans out messages to all registered channels without blocking
+        on slow consumers
+      - Register returns a read-only channel; Unregister closes and removes it from
+        the map
+      - Unit tests cover concurrent register/unregister/publish without data races
+        (go test -race)
       AgentType: backend-engineer
       Dependencies: []
-      Description: Implement the Broadcaster struct in broadcaster.go with a sync.Map-based
-        client registry and goroutine-driven fan-out. Add a Redis pub/sub subscriber
-        path (configurable via env/config) that feeds the same fan-out loop for multi-instance
-        scale-out. Expose Register, Unregister, and Broadcast methods.
-      EstimatedEffort: M
+      Description: Implement the Broadcaster struct in broadcaster.go with a sync.Map
+        of subscriber channels for lock-free fan-out. Expose Register/Unregister for
+        client lifecycle and a Publish method that sends alert JSON to all active
+        channels. Include graceful shutdown via context cancellation.
+      EstimatedEffort: S
       Files:
       - internal/server/websocket/broadcaster.go
       ID: task-tripwire-cybersecurity-tool-feat-websocket-1
-      Title: Implement in-process channel broadcaster with optional Redis pub/sub
+      Title: Implement in-process channel broadcaster
     - AcceptanceCriteria:
       - GET /ws/alerts returns 101 Switching Protocols and receives alert JSON pushed
-        within 100 ms of insertion
-      - Closing the browser tab cleanly unregisters the client with no goroutine leak
-      - Concurrent connections (tested with 50 simultaneous clients) all receive every
-        broadcast message
-      - Integration test using httptest + gorilla/websocket client verifies end-to-end
-        message delivery
+        from Broadcaster.Publish
+      - Disconnected clients are automatically unregistered without leaking goroutines
+      - Integration test connects two concurrent clients and asserts both receive
+        the same published alert
       AgentType: backend-engineer
       Dependencies:
       - task-tripwire-cybersecurity-tool-feat-websocket-1
-      Description: Implement the ws://dashboard/ws/alerts handler in handler.go that
-        upgrades incoming HTTP connections using gorilla/websocket, registers each
-        connection with the Broadcaster, and pumps outbound messages until the client
-        disconnects or the server shuts down. Wire the handler into the existing router
-        and feed new alert events from the DB/alert pipeline into Broadcaster.Broadcast.
+      Description: Implement the HTTP handler in handler.go that upgrades connections
+        to ws://dashboard/ws/alerts using gorilla/websocket, registers each client
+        with the Broadcaster, and pumps messages from the client's channel to the
+        WebSocket write loop. Handle ping/pong keepalives and clean up on disconnect.
       EstimatedEffort: M
       Files:
       - internal/server/websocket/handler.go
       ID: task-tripwire-cybersecurity-tool-feat-websocket-2
-      Title: Implement WebSocket HTTP upgrade handler
+      Title: Implement WebSocket upgrade handler
   - FeatureID: tripwire-cybersecurity-tool-feat-deployment
     FeatureTitle: Deployment & CI/CD
     Tasks:
     - AcceptanceCriteria:
-      - docker compose up starts both services and dashboard server passes a /healthz
-        check
-      - PostgreSQL data is persisted in a named volume and survives container restart
-      - Environment variables for DB credentials and TLS cert paths are documented
-        and functional
+      - docker compose up starts server and PostgreSQL; server passes health check
+        within 30s
+      - Database migrations run automatically on container start
+      - Server container connects to PostgreSQL using environment-provided credentials
+      - docker compose down preserves data in named volume across restarts
       AgentType: devops-engineer
       Dependencies: []
-      Description: Write Dockerfile.server to produce a minimal Go server image and
-        a docker-compose.yml that wires the dashboard server together with a PostgreSQL
-        service, health checks, and named volumes. The compose file should accept
-        environment variables for secrets and expose the gRPC and HTTP/WebSocket ports.
+      Description: Create the Dockerfile.server for the dashboard backend and a Docker
+        Compose file that wires together the server container and PostgreSQL. Include
+        health checks, volume mounts for persistent data, and environment variable
+        configuration for database credentials and gRPC/REST ports.
       EstimatedEffort: M
       Files:
       - deployments/Dockerfile.server
       - deployments/docker-compose.yml
       ID: task-tripwire-cybersecurity-tool-feat-deployment-1
-      Title: Create Docker Compose stack for dashboard server and PostgreSQL
+      Title: Docker Compose and server container setup
     - AcceptanceCriteria:
-      - systemctl enable && start tripwire.service runs the agent and restarts it
-        on failure
-      - launchctl load com.tripwire.agent.plist runs the agent under launchd with
-        stdout/stderr routed to system log
-      - Unit files pass systemd-analyze verify and plutil -lint respectively with
-        no errors
+      - systemctl enable --now tripwire starts agent and survives reboot on Linux
+      - launchctl load com.tripwire.agent.plist starts agent at login on macOS
+      - Agent process is restarted automatically within 5s after a crash on both platforms
+      - Unit files pass systemd-analyze verify and launchd plist validation (plutil
+        -lint)
       AgentType: devops-engineer
       Dependencies: []
-      Description: Create a systemd unit file (tripwire.service) and a launchd plist
-        (com.tripwire.agent.plist) that install, start, and supervise the tripwire
-        agent binary on Linux and macOS respectively. Both files should set sensible
-        security hardening options, restart policies, and log routing.
+      Description: Write the systemd service unit for Linux and the launchd plist
+        for macOS to manage the tripwire agent process. Both should configure automatic
+        restart on failure, set appropriate working directories and log paths, and
+        reference the installed agent binary location.
       EstimatedEffort: S
       Files:
       - deployments/systemd/tripwire.service
       - deployments/launchd/com.tripwire.agent.plist
       ID: task-tripwire-cybersecurity-tool-feat-deployment-2
-      Title: Add systemd and launchd service units for agent lifecycle management
+      Title: Agent lifecycle unit files (systemd and launchd)
     - AcceptanceCriteria:
-      - Workflow triggers on tag push and produces four distinct binary artifacts
-        with correct GOOS/GOARCH naming
-      - All four binaries are statically linked (file output shows 'statically linked'
-        or 'Mach-O' with no dylib deps beyond libSystem)
-      - Binaries are attached to the GitHub Release created by the workflow
+      - Workflow runs on push to main and on semver tags; all four GOOS/GOARCH combinations
+        produce binaries
+      - Binaries are statically linked (ldd reports 'not a dynamic executable' on
+        Linux targets)
+      - Tagged releases automatically create a GitHub Release with all four binaries
+        attached
+      - Build matrix completes without platform-specific failures in CI
       AgentType: devops-engineer
       Dependencies: []
-      Description: Write a GitHub Actions workflow that uses a matrix strategy to
-        produce statically-compiled agent binaries for linux/amd64, linux/arm64, darwin/amd64,
-        and darwin/arm64 using CGO_ENABLED=0 and appropriate GOARCH/GOOS settings.
-        Binaries should be uploaded as release artifacts and attached to GitHub Releases
-        on tag push.
+      Description: Implement a GitHub Actions workflow that builds statically-compiled
+        agent binaries for linux/amd64, linux/arm64, darwin/amd64, and darwin/arm64
+        using a matrix strategy with CGO_ENABLED=0. Binaries should be attached as
+        release artifacts on tagged pushes and archived on every main-branch commit.
       EstimatedEffort: M
       Files:
       - .github/workflows/build.yml
       ID: task-tripwire-cybersecurity-tool-feat-deployment-3
-      Title: Implement GitHub Actions build matrix for cross-compiled agent release
-        artifacts
+      Title: GitHub Actions build matrix for cross-platform agent binaries
   Sprint: 4
+- Features:
+  - FeatureID: tripwire-cybersecurity-tool-feat-dashboard-ui
+    FeatureTitle: Real-Time Security Dashboard
+    Tasks:
+    - AcceptanceCriteria:
+      - Vite dev server starts with hot-reload; TypeScript compiles with strict mode
+      - OIDC login redirects correctly and stores bearer token in memory/localStorage;
+        unauthenticated requests redirect to login
+      - API client attaches Authorization header and exposes typed fetch helpers for
+        REST endpoints
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Initialize the Vite + React 18 + TypeScript project, configure
+        TanStack Query, and implement the API client with bearer token storage and
+        the OIDC login/callback flow. This provides the foundation all other tasks
+        build on.
+      EstimatedEffort: M
+      Files:
+      - dashboard-ui/vite.config.ts
+      - dashboard-ui/src/App.tsx
+      - dashboard-ui/src/api/client.ts
+      ID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-1
+      Title: Project scaffold, API client, and OIDC auth
+    - AcceptanceCriteria:
+      - useWebSocket reconnects automatically on disconnect and correctly applies
+        bearer token in the upgrade request
+      - New alerts appear in the feed within 200 ms of receipt without a full list
+        re-render
+      - AlertFeed virtualizes rows so DOM node count stays constant regardless of
+        alert volume
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-dashboard-ui-1
+      Description: Implement useWebSocket to manage the WS connection lifecycle (reconnect,
+        auth handshake) and patch incoming alert events into the TanStack Query cache.
+        Build the AlertFeed component using react-window virtualized list to render
+        the live stream without DOM thrashing.
+      EstimatedEffort: L
+      Files:
+      - dashboard-ui/src/hooks/useWebSocket.ts
+      - dashboard-ui/src/hooks/useAlerts.ts
+      - dashboard-ui/src/components/AlertFeed.tsx
+      ID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-2
+      Title: WebSocket hook and live alert feed component
+    - AcceptanceCriteria:
+      - Host list loads from REST API and updates on reconnect; each row shows online/offline
+        status
+      - Selecting or deselecting hosts updates a shared filter context and triggers
+        alert feed refetch
+      - Multi-host selection persists in URL query params so the view is bookmarkable
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-dashboard-ui-1
+      Description: Implement the HostList component that fetches host inventory via
+        TanStack Query and lets users toggle one or more hosts as active. Selected
+        host IDs flow into a shared filter context consumed by the alert feed and
+        trend chart.
+      EstimatedEffort: M
+      Files:
+      - dashboard-ui/src/components/HostList.tsx
+      ID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-3
+      Title: Multi-host selector and host status overview
+    - AcceptanceCriteria:
+      - All four filter dimensions (host, type, severity, time range) are functional
+        and reflected in API request params
+      - Filter changes debounce 300 ms before issuing a new network request
+      - Active filters are serialized into URL search params; reloading the page restores
+        filter state
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-dashboard-ui-3
+      Description: Build the AlertFilters component with controls for host, tripwire
+        type, severity, and time-range. Wire filters to TanStack Query so every change
+        triggers a debounced refetch against the REST alerts endpoint with the correct
+        query params.
+      EstimatedEffort: M
+      Files:
+      - dashboard-ui/src/components/AlertFilters.tsx
+      - dashboard-ui/src/hooks/useAlerts.ts
+      ID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-4
+      Title: Alert filtering controls and TanStack Query integration
+    - AcceptanceCriteria:
+      - Chart renders a line/area series per severity level with labeled axes and
+        a legend
+      - Chart updates within one render cycle when a new alert arrives via WebSocket
+      - Chart respects the active time-range filter and re-bins data client-side without
+        an extra API call
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-tripwire-cybersecurity-tool-feat-dashboard-ui-4
+      - task-tripwire-cybersecurity-tool-feat-dashboard-ui-2
+      Description: Implement TrendChart using recharts to display alert volume over
+        the selected time range, grouped by severity. The chart data is derived from
+        the same TanStack Query result set as the alert feed and re-renders reactively
+        when filters or new WS events change the cache.
+      EstimatedEffort: M
+      Files:
+      - dashboard-ui/src/components/TrendChart.tsx
+      ID: task-tripwire-cybersecurity-tool-feat-dashboard-ui-5
+      Title: Alert volume trend chart
+  Sprint: 5
