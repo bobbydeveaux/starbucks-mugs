@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved conflict in proto/alert.proto by adopting the origin/main schema, which is consistent with the existing generated Go bindings (alert.pb.go, alert_grpc.pb.go) and the gRPC service implementation (alert_service.go). The HEAD version used incompatible message names (AgentRegistration, ServerAck) and a different go_package path that would have broken the already-generated and implemented service code.",
-  "strategyUsed": "chose origin/main for proto/alert.proto — its message types (RegisterRequest, RegisterResponse, ServerCommand, AgentEvent with timestamp_us/event_detail_json) match the generated Go stubs and the AlertService implementation already committed to the branch; the HEAD schema was incompatible with those files"
+  "summary": "Resolved conflict in internal/server/rest/router.go where origin/main added an explanatory comment about the JWTMiddleware chi adapter wrapper. Both sides had identical functional code; only the comment was missing from HEAD.",
+  "strategyUsed": "kept both: preserved the explanatory comment from origin/main alongside the existing JWT middleware wrapper code from HEAD"
 }
