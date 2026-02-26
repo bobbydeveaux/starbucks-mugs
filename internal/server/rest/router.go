@@ -34,7 +34,11 @@ func NewRouter(srv *Server, pubKey *rsa.PublicKey) http.Handler {
 	// Authenticated API routes.
 	r.Route("/api/v1", func(r chi.Router) {
 		if pubKey != nil {
-			r.Use(JWTMiddleware(pubKey))
+			// JWTMiddleware uses stdlib-style (cfg, next) → Handler.
+			// Chi expects func(http.Handler) http.Handler so we wrap it.
+			r.Use(func(next http.Handler) http.Handler {
+				return JWTMiddleware(JWTConfig{PublicKey: pubKey}, next)
+			})
 		}
 
 		r.Get("/alerts", srv.handleGetAlerts)
