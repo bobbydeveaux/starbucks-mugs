@@ -10,13 +10,24 @@ syscalls using kernel-level mechanisms.
 
 The Process Watcher emits an `AlertEvent` (with `TripwireType: "PROCESS"`) whenever
 a configured process name pattern is matched against a newly exec'd process.
-It is designed as a two-layer system:
+It is designed as a two-layer system with two alternative Go userspace implementations:
 
 | Layer | File | Description |
 |-------|------|-------------|
 | eBPF kernel program | `internal/watcher/ebpf/process.bpf.c` | Attaches to execve/execveat tracepoints; writes events to a BPF ring buffer |
-| Go userspace (runtime) | `internal/watcher/process_watcher_linux.go` | Linux runtime; uses `NETLINK_CONNECTOR` for kernel-level execve notifications |
+| Go eBPF loader | `internal/watcher/ebpf/process.go` | Loads the eBPF object, reads the ring buffer, converts raw kernel events to AlertEvents |
+| Go NETLINK runtime | `internal/watcher/process_watcher_linux.go` | Linux runtime; uses `NETLINK_CONNECTOR` for kernel-level execve notifications (no BPF toolchain needed) |
 | Go stub | `internal/watcher/process_watcher_other.go` | Non-Linux: returns error on Start |
+
+### Choosing a runtime
+
+| | eBPF loader (`ebpf.ProcessWatcher`) | NETLINK_CONNECTOR (`watcher.ProcessWatcher`) |
+|---|---|---|
+| **Kernel req.** | Linux ≥ 5.8, `CAP_BPF` | Any Linux, `CAP_NET_ADMIN` |
+| **argv capture** | In-kernel (race-free) | /proc read (TOCTOU risk) |
+| **PPID / UID / GID** | Always available | Not available |
+| **BPF toolchain** | Required to compile .bpf.o | Not required |
+| **Deployment** | Build with `-tags bpf_embedded` | Standard build |
 
 ---
 
@@ -55,14 +66,129 @@ bpftool btf dump file /sys/kernel/btf/vmlinux format c \
 make -C internal/watcher/ebpf
 ```
 
-The resulting `process.bpf.o` is embedded into the Go binary via `//go:embed`
-in `internal/watcher/ebpf/process.go` so that no runtime compilation is required.
+The resulting `process.bpf.o` is embedded into the Go binary when built with
+`-tags bpf_embedded` (see [Go eBPF Loader](#go-ebpf-loader) below) so that no
+runtime compilation is required.
 
 ### Kernel requirements
 
 - Linux ≥ 5.8 — BPF ring buffer (`BPF_MAP_TYPE_RINGBUF`)
 - `CONFIG_BPF_SYSCALL=y`, `CONFIG_DEBUG_INFO_BTF=y` (for CO-RE)
 - `CAP_BPF` (Linux ≥ 5.8) or `CAP_SYS_ADMIN`
+
+---
+
+## Go eBPF Loader (`ebpf.ProcessWatcher`)
+
+Package `internal/watcher/ebpf` provides a Go userspace component that loads
+the pre-compiled `process.bpf.o`, attaches the tracepoints, reads events from
+the BPF ring buffer, and delivers them as `AlertEvent` values.
+
+### Architecture
+
+```
+                  kernel (Linux ≥ 5.8)
+┌─────────────────────────────────────────────────────────┐
+│  Process calls execve(2) / execveat(2)                  │
+│         ↓                                                │
+│  BPF tracepoint fires (sys_enter_execve / execveat)     │
+│         ↓                                                │
+│  fill_event() captures pid, ppid, uid, gid,             │
+│               comm, filename, argv                       │
+│         ↓                                                │
+│  bpf_ringbuf_submit() — writes exec_event to ring buf   │
+└──────────────────────────────┬──────────────────────────┘
+                               │ mmap (shared ring buffer)
+                    ┌──────────▼──────────┐
+                    │ readLoop()           │  readSample() spins on
+                    │                      │  consumer_pos / producer_pos
+                    └──────────┬──────────┘
+                               │ binary.Read() → execEvent{}
+                               │ handleEvent() → matchingRule()
+                               ↓
+                         emit AlertEvent
+```
+
+### Loading sequence (in `Start`)
+
+1. **Parse ELF** — `parseBPFELF` extracts map definitions, program
+   instructions, relocation entries, and the license string from `process.bpf.o`.
+2. **Create maps** — `BPF_MAP_CREATE` (`BPF_MAP_TYPE_RINGBUF`, 16 MiB).
+3. **Patch relocations** — `applyMapRelocations` patches `LD_IMM64` instructions
+   that reference the ring buffer map with the real kernel fd.
+4. **Load programs** — `BPF_PROG_LOAD` for `trace_execve` and `trace_execveat`.
+5. **Attach tracepoints** — `perf_event_open(PERF_TYPE_TRACEPOINT, id, cpu=-1)` ×
+   `PERF_EVENT_IOC_SET_BPF` × `PERF_EVENT_IOC_ENABLE` for each CPU.
+6. **Open ring buffer** — `mmap` the ring buffer map fd; start the read loop.
+
+### Build variants
+
+| Tag | Effect |
+|-----|--------|
+| *(none)* | Standard build; BPF object not embedded. `Start()` returns a clear error unless `SetBPFObject()` is called first. |
+| `bpf_embedded` | Embeds the compiled `process.bpf.o` at link time via `//go:embed`. |
+
+```bash
+# Standard build (compiles and tests without BPF object):
+go build ./internal/watcher/ebpf/...
+go test ./internal/watcher/ebpf/...
+
+# Embedded build (requires process.bpf.o to exist):
+make -C internal/watcher/ebpf
+go build -tags bpf_embedded ./internal/watcher/ebpf/...
+```
+
+### Usage
+
+```go
+import "github.com/tripwire/agent/internal/watcher/ebpf"
+
+rules := []config.TripwireRule{
+    {Name: "shell-exec", Type: "PROCESS", Target: "sh", Severity: "WARN"},
+}
+w := ebpf.NewProcessWatcher(rules, logger)
+
+// Optional: inject BPF object bytes at runtime (e.g. in tests).
+// w.SetBPFObject(myBPFObjectBytes)
+
+if err := w.Start(ctx); err != nil {
+    log.Fatal(err)
+}
+defer w.Stop()
+
+for evt := range w.Events() {
+    fmt.Printf("Alert: %s pid=%v\n", evt.RuleName, evt.Detail["pid"])
+}
+```
+
+### AlertEvent fields (eBPF variant)
+
+The eBPF loader captures richer metadata than the NETLINK_CONNECTOR variant
+because all fields are read atomically in the kernel at exec time:
+
+```go
+AlertEvent{
+    TripwireType: "PROCESS",
+    RuleName:     "<rule name from config>",
+    Severity:     "<INFO | WARN | CRITICAL>",
+    Timestamp:    time.Now().UTC(),
+    Detail: map[string]any{
+        "pid":     <int>,    // process ID (tgid)
+        "ppid":   <int>,    // parent process ID (captured in-kernel)
+        "uid":    <int>,    // real UID (captured in-kernel)
+        "gid":    <int>,    // real GID (captured in-kernel)
+        "comm":   <string>, // short task name (≤ 15 chars)
+        "exe":    <string>, // execve filename argument
+        "cmdline": <string>, // space-joined argv (present if non-empty)
+    },
+}
+```
+
+### Rule matching
+
+Identical to the NETLINK_CONNECTOR variant: the `Target` glob is matched
+against the executable basename first, then the full path. An empty `Target`
+matches every execve event.
 
 ---
 
