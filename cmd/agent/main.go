@@ -12,11 +12,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
 	"github.com/tripwire/agent/internal/agent"
 	"github.com/tripwire/agent/internal/config"
+	"github.com/tripwire/agent/internal/queue"
+	"github.com/tripwire/agent/internal/transport"
 	"github.com/tripwire/agent/internal/watcher"
 )
 
@@ -25,6 +28,7 @@ const networkPollInterval = time.Second
 
 func main() {
 	configPath := flag.String("config", "/etc/tripwire/config.yaml", "path to the TripWire agent YAML configuration file")
+	queuePath := flag.String("queue-path", "/var/lib/tripwire/queue.db", "path to the local SQLite alert queue database")
 	flag.Parse()
 
 	// Load and validate configuration.
@@ -45,8 +49,37 @@ func main() {
 		slog.String("health_addr", cfg.HealthAddr),
 	)
 
+	// Open the local SQLite alert queue.  The queue persists events across
+	// restarts so that alerts are not lost if the transport is temporarily
+	// unavailable.
+	q, err := queue.New(*queuePath)
+	if err != nil {
+		logger.Error("failed to open alert queue", slog.String("path", *queuePath), slog.Any("error", err))
+		os.Exit(1)
+	}
+	logger.Info("alert queue opened", slog.String("path", *queuePath), slog.Int("pending", q.Depth()))
+
+	// Create the gRPC transport client.  It dials with mTLS, calls
+	// RegisterAgent on each connect, drains the queue before forwarding live
+	// events, and reconnects automatically on stream errors.
+	grpcTransport := transport.New(
+		transport.ClientConfig{
+			Addr:         cfg.DashboardAddr,
+			CertPath:     cfg.TLS.CertPath,
+			KeyPath:      cfg.TLS.KeyPath,
+			CAPath:       cfg.TLS.CAPath,
+			Platform:     runtime.GOOS,
+			AgentVersion: cfg.AgentVersion,
+		},
+		q,
+		logger,
+	)
+
 	// Create agent orchestrator with all registered watchers.
 	var agentOpts []agent.Option
+
+	agentOpts = append(agentOpts, agent.WithQueue(q))
+	agentOpts = append(agentOpts, agent.WithTransport(grpcTransport))
 
 	// Instantiate a NetworkWatcher for all NETWORK-type rules.  The watcher
 	// silently filters non-NETWORK rules, so it is always safe to create.
