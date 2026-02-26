@@ -1,21 +1,20 @@
 {
-  "prTitle": "feat: implement ScanPipeline orchestration with OpenTelemetry spans",
-  "prBody": "## Summary\n\nImplements `task-fileguard-feat-pipeline-orchestrator-2`: the `ScanPipeline` class that orchestrates the six-step FileGuard scan pipeline with full OpenTelemetry instrumentation.\n\n### Changes\n\n- **`fileguard/core/pipeline.py`** — New `ScanPipeline` class executing:\n  1. `extract` — document text extraction via `DocumentExtractor`\n  2. `av_scan` — malware scanning via injected AV engine adapter\n  3. `pii_detect` — PII pattern matching via `PIIDetector`\n  4. `redact` — PII redaction (optional, skipped when not configured)\n  5. `disposition` — action determination (pass/quarantine/block)\n  6. `audit` — append-only audit log persistence (optional)\n\n- **OpenTelemetry spans**: Root span `fileguard.scan` + child spans `fileguard.<step_name>` for each step. Spans carry `scan.id`, `tenant_id`, `mime_type`, `file_size_bytes`, `disposition`, `findings_count`, `duration_ms`, per-step timing, and exception details.\n\n- **Fail-secure contract**: Any step exception immediately halts the pipeline, sets `context.metadata[\"disposition\"] = \"block\"`, appends to `context.errors`, and re-raises `PipelineError`.\n\n- **`PipelineError`** and **`AVScanRejectedError`** exceptions for structured error handling.\n\n- **Duck-typed protocols**: `AVEngineAdapterProtocol`, `RedactionEngineProtocol`, `DispositionEngineProtocol` — no base class inheritance required.\n\n- **`fileguard/tests/test_pipeline.py`** — 33 integration tests covering: happy path (clean/flagged/PII), AV rejected, mid-pipeline failure in all 6 steps, optional step skipping, step ordering, and `PipelineError` attribute verification.\n\n- **`docs/concepts/fileguard/pipeline.md`** — Full API documentation with step table, OTel attribute reference, metadata key reference, protocol definitions, and usage examples.\n\nCloses #282",
+  "prTitle": "feat: implement Celery scan worker for async and batch execution",
+  "prBody": "## Summary\n\n- Adds `fileguard/workers/scan_worker.py` with two Celery tasks:\n  - `scan_file_task`: wraps `ScanPipeline` for single-file async scanning; accepts base64-encoded file bytes, runs the full pipeline, returns a structured disposition result dict\n  - `scan_batch_task`: fans out a list of file references to individual `scan_file_task` subtasks via `celery.group`, aggregates results into a summary manifest\n- Retry policy: up to 3 retries with exponential back-off (2s→4s→8s) for transient errors; `PipelineError` (non-transient) returns `block` immediately without retrying\n- Pipeline built lazily per invocation; ClamAV included only when `CLAMAV_HOST` is set\n- Registered workers module in `celery_app.py`\n- Integration tests in `fileguard/tests/test_scan_worker.py` run in Celery eager mode (no broker required)\n- Documentation at `docs/concepts/fileguard/scan-worker.md` with cross-link from `pipeline.md`\n\nCloses #283",
   "testsPass": true,
   "filesChanged": [
-    "fileguard/core/pipeline.py",
-    "fileguard/tests/test_pipeline.py",
-    "fileguard/core/__init__.py",
-    "docs/concepts/fileguard/pipeline.md"
+    "fileguard/workers/__init__.py",
+    "fileguard/workers/scan_worker.py",
+    "fileguard/celery_app.py",
+    "fileguard/tests/test_scan_worker.py"
   ],
   "docsUpdated": [
+    "docs/concepts/fileguard/scan-worker.md",
     "docs/concepts/fileguard/pipeline.md"
   ],
   "docsReviewed": [
-    "docs/concepts/fileguard/LLD.md",
-    "docs/concepts/fileguard/HLD.md",
-    "docs/concepts/fileguard/av-engine.md",
-    "docs/concepts/fileguard/pii-pattern-library.md"
+    "docs/concepts/fileguard/pipeline.md",
+    "docs/concepts/fileguard/compliance-reports.md"
   ],
-  "completedTasks": [1, 2]
+  "completedTasks": [1, 2, 3]
 }
