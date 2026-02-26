@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 1,
-  "summary": "Resolved conflict in docs/concepts/fileguard/README.md. The conflict was in the project structure tree: HEAD referenced report.py/reports.py (Celery-based) while origin/main referenced compliance_report.py (read-only service). Both sets of files exist in the repo, so both were preserved in the merged result.",
-  "strategyUsed": "preserved both changes — kept all file references from both branches (schemas/report.py + schemas/compliance_report.py, services/reports.py + services/compliance_report.py, celery_app.py, test_report_service.py + test_compliance_report_api.py) since all files genuinely exist in the working tree"
+  "summary": "Resolved conflict in .claude-output.json: the file was deleted by origin/main (intentional removal of a transient AI-task metadata artifact) but present on this branch. Accepted the deletion since .claude-output.json is a generated ephemeral file not meant to persist in the codebase.",
+  "strategyUsed": "accepted theirs (deletion) — .claude-output.json is a transient metadata file produced by the previous Claude task run; origin/main correctly removed it, and there is no functional reason to keep it in the repository"
 }
