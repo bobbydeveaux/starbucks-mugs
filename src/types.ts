@@ -4,6 +4,66 @@
  */
 
 // ---------------------------------------------------------------------------
+// Tripwire Cybersecurity Dashboard types
+// ---------------------------------------------------------------------------
+
+/** Alert severity levels */
+export type Severity = 'INFO' | 'WARN' | 'CRITICAL';
+
+/** Tripwire event types */
+export type TripwireType = 'FILE' | 'NETWORK' | 'PROCESS';
+
+/** Host connectivity status */
+export type HostStatus = 'ONLINE' | 'OFFLINE' | 'DEGRADED';
+
+/** A single security alert emitted by the tripwire agent */
+export interface Alert {
+  /** UUID primary key */
+  alert_id: string;
+  /** UUID of the host that generated this alert */
+  host_id: string;
+  /** ISO 8601 timestamp of when the event occurred on the agent clock */
+  timestamp: string;
+  /** Category of tripwire that fired */
+  tripwire_type: TripwireType;
+  /** Name of the rule that fired */
+  rule_name: string;
+  /** Type-specific event metadata (file path, pid, port, etc.) */
+  event_detail: Record<string, unknown>;
+  /** Severity level of the alert */
+  severity: Severity;
+  /** ISO 8601 timestamp of when the dashboard ingested this alert */
+  received_at: string;
+}
+
+/** A registered monitoring host */
+export interface Host {
+  host_id: string;
+  hostname: string;
+  ip_address: string;
+  platform: string;
+  agent_version: string;
+  /** ISO 8601 timestamp of the last gRPC heartbeat, or null if never seen */
+  last_seen: string | null;
+  status: HostStatus;
+}
+
+/** Preset time-range options for the dashboard */
+export type TimeRange = '1h' | '6h' | '24h' | '7d' | '30d';
+
+/** Active filter state for the alert feed and trend chart */
+export interface AlertFilters {
+  /** Selected host IDs; empty array means all hosts */
+  hostIds: string[];
+  /** Severity filter; 'ALL' means no filter */
+  severity: Severity | 'ALL';
+  /** Tripwire type filter; 'ALL' means no filter */
+  tripwireType: TripwireType | 'ALL';
+  /** Relative time window */
+  timeRange: TimeRange;
+}
+
+// ---------------------------------------------------------------------------
 // Enums / discriminated union types
 // ---------------------------------------------------------------------------
 
