@@ -1,13 +1,13 @@
 # FileGuard Audit Service Reference
 
-Documentation for the tamper-evident audit logging service used by the FileGuard scan pipeline.
+Documentation for the tamper-evident audit logging and SIEM forwarding service used by the FileGuard scan pipeline.
 
 ---
 
 ## Overview
 
-`AuditService` provides HMAC-SHA256 integrity signing and append-only PostgreSQL persistence
-for every `ScanEvent` record produced by the scan pipeline.
+`AuditService` provides HMAC-SHA256 integrity signing, append-only PostgreSQL persistence,
+and optional real-time SIEM forwarding for every `ScanEvent` record produced by the scan pipeline.
 
 **Design goals:**
 
@@ -17,6 +17,7 @@ for every `ScanEvent` record produced by the scan pipeline.
 | Append-only | Service only issues `INSERT` (via `session.add` + `session.flush`); no `UPDATE`/`DELETE` code paths exist |
 | Observability | Structured JSON log entry emitted on every successful audit call with `correlation_id`, `tenant_id`, and `scan_id` |
 | Fail loud | `AuditError` is raised (never silently swallowed) on database write failure |
+| SIEM integration | Scan events forwarded to Splunk HEC or RiverSafe WatchTower on a best-effort, fire-and-forget basis; SIEM failures never block scans |
 
 ---
 
@@ -32,9 +33,16 @@ for every `ScanEvent` record produced by the scan pipeline.
 
 ```python
 class AuditService:
-    def __init__(self, secret_key: str | None = None) -> None: ...
+    def __init__(
+        self,
+        secret_key: str | None = None,
+        signing_key: str | None = None,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> None: ...
+
     def compute_hmac(self, scan_event: ScanEvent) -> str: ...
     def verify_hmac(self, scan_event: ScanEvent) -> bool: ...
+
     async def log_scan_event(
         self,
         session: AsyncSession,
@@ -43,6 +51,7 @@ class AuditService:
         correlation_id: str | uuid.UUID | None = None,
         tenant_id: str | uuid.UUID | None = None,
         scan_id: str | uuid.UUID | None = None,
+        siem_config: dict[str, Any] | None = None,
     ) -> ScanEvent: ...
 ```
 
@@ -51,6 +60,8 @@ class AuditService:
 | Argument | Type | Default | Description |
 |---|---|---|---|
 | `secret_key` | `str \| None` | `settings.SECRET_KEY` | HMAC signing secret. Must be kept confidential. |
+| `signing_key` | `str \| None` | `None` | Alias for `secret_key`. Takes precedence when both are supplied. |
+| `http_client` | `httpx.AsyncClient \| None` | `None` | Shared HTTP client for SIEM forwarding. When `None`, a transient client is created per forward call. Inject a shared client in production for connection pooling. |
 
 #### `compute_hmac(scan_event)`
 
@@ -76,13 +87,18 @@ the current field values. Uses `hmac.compare_digest` to prevent timing attacks.
 **Returns:** `True` if valid, `False` if the record has been tampered with or the
 signature is empty/invalid.
 
-#### `log_scan_event(session, scan_event, *, correlation_id, tenant_id, scan_id)`
+#### `log_scan_event(session, scan_event, *, correlation_id, tenant_id, scan_id, siem_config)`
 
-Computes the HMAC-SHA256 signature, writes it to `scan_event.hmac_signature`, and
-persists the record via `session.add()` + `session.flush()`.
+Computes the HMAC-SHA256 signature, writes it to `scan_event.hmac_signature`,
+persists the record via `session.add()` + `session.flush()`, and optionally
+forwards the event to a tenant-configured SIEM endpoint.
 
 The caller controls the transaction lifecycle (`begin` / `commit` / `rollback`).
 Multiple calls can be batched into a single transaction before committing.
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `siem_config` | `dict \| None` | `None` | Tenant SIEM integration config. When `None`, SIEM forwarding is skipped. See [SIEM Configuration](#siem-configuration) for the expected schema. |
 
 **Returns:** The same `scan_event` instance with `hmac_signature` populated.
 
@@ -151,6 +167,106 @@ to produce per-tenant audit reports.
 
 ---
 
+## SIEM forwarding
+
+`AuditService` supports real-time, best-effort forwarding of scan events to a
+tenant-configured SIEM endpoint. Forwarding is **fire-and-forget**: a 5-second HTTP
+timeout is enforced and any delivery failure is logged at `WARNING` level and
+suppressed — SIEM failures **never** disrupt the scan pipeline or cause transaction
+rollbacks.
+
+### Supported SIEM types
+
+| Type value | SIEM system | Auth scheme | Payload format |
+|---|---|---|---|
+| `"splunk"` | Splunk HTTP Event Collector (HEC) | `Authorization: Splunk <token>` | `{"event": {...}, "sourcetype": "fileguard:scan"}` |
+| `"watchtower"` | RiverSafe WatchTower REST API | `Authorization: Bearer <token>` | Flat event dict |
+
+### SIEM configuration
+
+The `siem_config` dict (stored as JSONB in the `tenant_config` table) has this schema:
+
+```python
+{
+    "type": "splunk" | "watchtower",   # required
+    "endpoint": "https://...",         # required — full URL of the SIEM ingest endpoint
+    "token": "...",                    # optional — auth token
+}
+```
+
+#### Splunk HEC example
+
+```python
+siem_config = {
+    "type": "splunk",
+    "endpoint": "https://splunk.example.com/services/collector/event",
+    "token": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+}
+```
+
+The forwarded payload follows the [Splunk HEC JSON format](https://docs.splunk.com/Documentation/Splunk/latest/Data/HECExamples):
+
+```json
+{
+  "event": {
+    "scan_id": "7c9e6679-...",
+    "tenant_id": "d290f1ee-...",
+    "file_hash": "e3b0c442...",
+    "file_name": "upload.pdf",
+    "file_size_bytes": 204800,
+    "mime_type": "application/pdf",
+    "status": "flagged",
+    "action_taken": "quarantine",
+    "findings": [{"type": "av_threat", "category": "Eicar-Test-Signature", "severity": "critical"}],
+    "scan_duration_ms": 312,
+    "created_at": "2026-02-26T10:15:30+00:00",
+    "hmac_signature": "a1b2c3..."
+  },
+  "sourcetype": "fileguard:scan"
+}
+```
+
+#### RiverSafe WatchTower example
+
+```python
+siem_config = {
+    "type": "watchtower",
+    "endpoint": "https://watchtower.example.com/api/v1/events",
+    "token": "Bearer-token-here",
+}
+```
+
+The forwarded payload is a flat event dict (no envelope):
+
+```json
+{
+  "scan_id": "7c9e6679-...",
+  "tenant_id": "d290f1ee-...",
+  "file_hash": "e3b0c442...",
+  "file_name": "upload.pdf",
+  "file_size_bytes": 204800,
+  "mime_type": "application/pdf",
+  "status": "clean",
+  "action_taken": "pass",
+  "findings": [],
+  "scan_duration_ms": 87,
+  "created_at": "2026-02-26T10:15:30+00:00",
+  "hmac_signature": "a1b2c3..."
+}
+```
+
+### Failure modes
+
+| Failure | Behaviour |
+|---|---|
+| Missing `endpoint` in config | Logs `WARNING "SIEM config missing 'endpoint'; skipping forwarding"`, returns |
+| HTTP 4xx / 5xx | Logs `WARNING "SIEM delivery failed (HTTP <code>) for scan_id=..."`, returns |
+| Network error (timeout, DNS, connection refused) | Logs `WARNING "SIEM delivery error for scan_id=..."`, returns |
+
+In all failure cases the `log_scan_event()` call returns normally and the scan pipeline continues.
+
+---
+
 ## Database persistence
 
 `AuditService` persists records to the `scan_event` PostgreSQL table (defined in
@@ -171,7 +287,7 @@ undetected. The HMAC signature provides a fourth, cryptographic layer of assuran
 
 ## Usage
 
-### Basic usage
+### Basic usage (no SIEM)
 
 ```python
 from fileguard.db.session import AsyncSessionLocal
@@ -189,6 +305,35 @@ async def record_scan(scan_event: ScanEvent, correlation_id: str) -> None:
                 correlation_id=correlation_id,
                 tenant_id=scan_event.tenant_id,
                 scan_id=scan_event.id,
+            )
+```
+
+### With SIEM forwarding
+
+```python
+import httpx
+from fileguard.services.audit import AuditService
+
+# Inject a shared client for connection pooling (recommended in production)
+http_client = httpx.AsyncClient()
+audit = AuditService(http_client=http_client)
+
+siem_config = {
+    "type": "splunk",
+    "endpoint": "https://splunk.example.com/services/collector/event",
+    "token": "hec-token-here",
+}
+
+async def record_scan(scan_event: ScanEvent, tenant: TenantConfig, correlation_id: str) -> None:
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            await audit.log_scan_event(
+                session,
+                scan_event,
+                correlation_id=correlation_id,
+                tenant_id=tenant.id,
+                scan_id=scan_event.id,
+                siem_config=tenant.siem_config,  # None → forwarding skipped
             )
 ```
 
@@ -231,3 +376,10 @@ Tests are fully offline (no PostgreSQL or Redis required). Coverage includes:
 - Fallback values when kwargs are omitted
 - `AuditError` raised and chained on DB write failure
 - No log emitted when INSERT fails
+- Splunk HEC payload wraps event in `{"event": {...}, "sourcetype": "fileguard:scan"}`
+- WatchTower payload sends flat event dict
+- Splunk auth header: `Authorization: Splunk <token>`
+- WatchTower / generic auth header: `Authorization: Bearer <token>`
+- SIEM HTTP errors and network errors logged at WARNING, never raised
+- Missing SIEM endpoint logs warning and skips forwarding
+- 5-second HTTP timeout enforced on all SIEM calls
