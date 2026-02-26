@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved 1 conflict in docs/concepts/tripwire-cybersecurity-tool/agent-core.md. The conflict was in the 'Package: internal/watcher' section: HEAD documented the listener-based NetworkWatcher (internal/watcher/network_watcher.go) while origin/main documented the FileWatcher with a pointer to file-watcher.md. Both components exist in the package, so both were preserved.",
-  "strategyUsed": "Preserved both changes: kept origin/main's FileWatcher description and file-watcher.md reference, then appended HEAD's NetworkWatcher documentation (types, constructor, lifecycle, event channel) since both implementations coexist in internal/watcher."
+  "filesResolved": 3,
+  "summary": "Resolved 3 conflicts: accepted origin/main's deletion of .claude-output.json (build artifact); resolved internal/watcher/watcher.go by choosing origin/main's EventType as uint32 with 4 constants (EventRead/Write/Create/Delete) required by platform-specific files; resolved internal/watcher/file_watcher.go by choosing origin/main's full FileWatcher implementation with Start/Stop/Events pattern that satisfies agent.Watcher.",
+  "strategyUsed": "Chose origin/main for all three conflicts: HEAD's Watcher interface with Watch/Stop/Events returning <-chan FileEvent was incompatible with agent.Watcher and existing platform implementations; HEAD's EventType as string with only 2 constants was incompatible with file_watcher_linux.go and file_watcher_other.go which require EventCreate and EventDelete; origin/main's FileWatcher with goroutine lifecycle management is the correct implementation that tests and platform files depend on."
 }
