@@ -1,30 +1,33 @@
-"""RedactionEngine — span-based PII redaction for the FileGuard scan pipeline.
+"""RedactionEngine — PII span replacement and document reconstruction.
 
 :class:`RedactionEngine` accepts a :class:`~fileguard.core.scan_context.ScanContext`
-whose ``findings`` list has been populated by :class:`~fileguard.core.pii_detector.PIIDetector`,
-and returns a copy of ``extracted_text`` with every PII span replaced by
-the token ``[REDACTED]``.
+populated with :class:`~fileguard.core.pii_detector.PIIFinding` objects and
+returns a redacted copy of the extracted text with every PII span replaced by
+a configurable token (default: ``[REDACTED]``).
 
-**Span detection** relies on two pieces of information present in each
-:class:`~fileguard.core.pii_detector.PIIFinding`:
+**Algorithm**
 
-* ``match`` — the exact substring that was matched.
-* ``offset`` — the byte offset in the *original file bytes* where the match
-  starts, produced by the ``byte_offsets`` map maintained in
-  :class:`~fileguard.core.scan_context.ScanContext`.
+1. Collect all character-level spans by searching for each finding's ``match``
+   string within ``context.extracted_text`` using a literal regex search.
+   This handles duplicate occurrences of the same matched value correctly.
+2. Sort spans by start position and merge any that overlap or are adjacent, to
+   prevent double-redaction artefacts and index drift.
+3. Reconstruct the output string by iterating through the merged spans from
+   left to right, appending un-redacted segments and the replacement token
+   alternately.  This is O(n) in the length of the text.
 
-A reverse mapping from byte offsets to character positions in
-``extracted_text`` is built once per call, allowing O(1) span lookup for
-findings that carry a valid ``offset``.  Findings with ``offset == -1``
-(i.e. byte-offset mapping was unavailable) fall back to a left-to-right
-substring search in the extracted text.
+**Design notes**
 
-**Overlap handling:** overlapping or immediately adjacent spans are merged
-into a single replacement span before substitution, preventing double
-redaction and index drift.
-
-**Substitution order:** replacements are applied right-to-left so that
-earlier span indices are not invalidated by upstream replacements.
+* The engine is stateless after construction; the same instance is safe for
+  concurrent use from multiple asyncio tasks.
+* Findings that carry ``type != "pii"`` (e.g. AV findings) are silently
+  ignored; only :class:`~fileguard.core.pii_detector.PIIFinding` objects
+  participate in redaction.
+* When ``context.extracted_text`` is ``None`` or an empty string, an empty
+  string is returned immediately with no error.
+* The redaction token is configurable at construction time so callers can use
+  labelled tokens (e.g. ``"[REDACTED:EMAIL]"``) or masked tokens
+  (``"████"``).
 
 Usage::
 
@@ -33,9 +36,8 @@ Usage::
 
     engine = RedactionEngine()
     ctx = ScanContext(file_bytes=b"...", mime_type="text/plain")
-    ctx.extracted_text = "Patient NI: AB123456C, email: alice@example.com"
-    ctx.byte_offsets = list(range(len(ctx.extracted_text)))
-    # ... populate ctx.findings with PIIFinding objects ...
+    ctx.extracted_text = "Patient NI: AB 12 34 56 C, email: alice@nhs.uk"
+    # ... run PIIDetector.scan(ctx) ...
     redacted = engine.redact(ctx)
     # "Patient NI: [REDACTED], email: [REDACTED]"
 """
@@ -43,36 +45,50 @@ Usage::
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from fileguard.core.scan_context import ScanContext
+    from fileguard.core.pii_detector import PIIFinding
+
+from fileguard.core.scan_context import ScanContext
 
 logger = logging.getLogger(__name__)
 
-REDACTED_TOKEN = "[REDACTED]"
-
 
 class RedactionEngine:
-    """Stateless PII span redaction engine.
+    """Stateless PII span replacement engine.
 
-    Replaces each detected PII span in ``context.extracted_text`` with the
-    token ``[REDACTED]`` and returns the resulting string.  The engine is
-    safe for concurrent use from multiple asyncio tasks.
+    Replaces all PII spans in the extracted text with a configurable
+    redaction token.  Overlapping or adjacent spans are merged before
+    substitution to prevent double-redaction and index drift.
 
-    Typical usage inside the scan pipeline::
+    Args:
+        token: The replacement string inserted in place of each PII span.
+            Defaults to ``"[REDACTED]"``.
+
+    Example — basic usage::
 
         engine = RedactionEngine()
-        redacted_text = engine.redact(context)
-        # Store or forward redacted_text as needed.
+        redacted = engine.redact(context)
+
+    Example — custom token::
+
+        engine = RedactionEngine(token="[PII REMOVED]")
+        redacted = engine.redact(context)
     """
+
+    DEFAULT_TOKEN: str = "[REDACTED]"
+
+    def __init__(self, token: str = DEFAULT_TOKEN) -> None:
+        self._token = token
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def redact(self, context: "ScanContext") -> str:
-        """Return a copy of ``context.extracted_text`` with PII spans replaced.
+    def redact(self, context: ScanContext) -> str:
+        """Redact PII spans in ``context.extracted_text``.
 
         Steps
         -----
@@ -83,31 +99,35 @@ class RedactionEngine:
            reverse map when ``offset != -1``, or a substring search
            otherwise.
         3. Merge overlapping / adjacent spans.
-        4. Apply substitutions right-to-left to preserve index validity.
+        4. Apply substitutions left-to-right to reconstruct the output.
 
         Args:
-            context: Shared scan state.  ``extracted_text`` and ``findings``
-                must be populated by upstream pipeline steps.
+            context: Populated :class:`~fileguard.core.scan_context.ScanContext`
+                with ``extracted_text`` and ``findings``.
 
         Returns:
-            The redacted string.  Returns an empty string if
-            ``context.extracted_text`` is ``None`` or empty, which is a
-            no-op condition (nothing to redact).
+            Redacted text string.  An empty string is returned when
+            ``context.extracted_text`` is ``None`` or empty, or when there
+            are no PII findings.
         """
         text = context.extracted_text or ""
         if not text:
             logger.debug(
-                "RedactionEngine.redact: no extracted text (scan_id=%s); skipping",
+                "RedactionEngine.redact: no extracted text (scan_id=%s); returning empty",
                 context.scan_id,
             )
             return text
 
-        pii_findings = [
-            f for f in context.findings if getattr(f, "type", None) == "pii"
+        # Import here to avoid circular imports at module level.
+        from fileguard.core.pii_detector import PIIFinding  # noqa: PLC0415
+
+        pii_findings: list[PIIFinding] = [
+            f for f in context.findings if isinstance(f, PIIFinding)
         ]
+
         if not pii_findings:
             logger.debug(
-                "RedactionEngine.redact: no PII findings (scan_id=%s); no redaction needed",
+                "RedactionEngine.redact: no PII findings (scan_id=%s); text unchanged",
                 context.scan_id,
             )
             return text
@@ -120,18 +140,19 @@ class RedactionEngine:
 
         spans = self._collect_spans(text, pii_findings, byte_to_char)
         merged = self._merge_spans(spans)
-        redacted = self._apply_redaction(text, merged)
+        result = self._apply_replacements(text, merged)
 
         logger.info(
-            "RedactionEngine.redact: scan_id=%s pii_findings=%d spans=%d",
+            "RedactionEngine.redact: scan_id=%s spans_merged=%d input_len=%d output_len=%d",
             context.scan_id,
-            len(pii_findings),
             len(merged),
+            len(text),
+            len(result),
         )
-        return redacted
+        return result
 
     # ------------------------------------------------------------------
-    # Span collection
+    # Internal helpers
     # ------------------------------------------------------------------
 
     def _collect_spans(
@@ -142,27 +163,35 @@ class RedactionEngine:
     ) -> list[tuple[int, int]]:
         """Convert PIIFinding objects into (start, end) character spans.
 
+        For each finding, the primary lookup path uses the ``byte_to_char``
+        reverse map (built from ``context.byte_offsets``) when
+        ``finding.offset != -1`` and the offset is present in the map.  If
+        the mapped character position does not match the expected text, or if
+        ``offset == -1``, a fallback regex search finds all occurrences of
+        the match string across the full text (ensuring repeated PII values
+        are all captured).
+
         Args:
-            text: The extracted text in which spans are located.
-            findings: List of PII findings from the scan pipeline.
+            text: The extracted text to search.
+            findings: PII findings whose ``match`` values locate spans.
             byte_to_char: Reverse map from byte offset to character index.
 
         Returns:
-            List of ``(start, end)`` character index tuples (exclusive end).
+            Unsorted list of ``(start, end)`` half-open character intervals.
         """
         spans: list[tuple[int, int]] = []
-        # Track covered positions to avoid re-using the same string position
-        # for multiple findings that share the same matched value.
-        used_positions: set[int] = set()
 
+        # Deduplicate match strings to avoid redundant searches.
+        seen: set[str] = set()
         for finding in findings:
             match_str: str = getattr(finding, "match", "")
             byte_offset: int = getattr(finding, "offset", -1)
 
-            if not match_str:
+            if not match_str or match_str in seen:
                 continue
+            seen.add(match_str)
 
-            span: tuple[int, int] | None = None
+            span_found_via_offset = False
 
             # --- primary path: use byte-offset reverse map ------------------
             if byte_offset != -1 and byte_offset in byte_to_char:
@@ -170,53 +199,53 @@ class RedactionEngine:
                 char_end = char_start + len(match_str)
                 # Validate that the text slice actually matches
                 if text[char_start:char_end] == match_str:
-                    span = (char_start, char_end)
+                    spans.append((char_start, char_end))
+                    logger.debug(
+                        "RedactionEngine: span (%d, %d) for match %r (via byte offset)",
+                        char_start,
+                        char_end,
+                        match_str,
+                    )
+                    span_found_via_offset = True
                 else:
-                    # Offset map mismatch — fall through to substring search
+                    # Offset map mismatch — fall through to regex search
                     logger.debug(
                         "RedactionEngine: byte-offset mismatch for match=%r at char=%d; "
-                        "falling back to substring search",
+                        "falling back to regex search",
                         match_str,
                         char_start,
                     )
 
-            # --- fallback path: substring search ----------------------------
-            if span is None:
-                search_start = 0
-                while True:
-                    pos = text.find(match_str, search_start)
-                    if pos == -1:
-                        break
-                    if pos not in used_positions:
-                        span = (pos, pos + len(match_str))
-                        break
-                    search_start = pos + 1
-
-            if span is not None:
-                spans.append(span)
-                used_positions.add(span[0])
+            # --- fallback path: regex search for all occurrences ------------
+            if not span_found_via_offset:
+                for m in re.finditer(re.escape(match_str), text):
+                    spans.append((m.start(), m.end()))
+                    logger.debug(
+                        "RedactionEngine: span (%d, %d) for match %r (via regex)",
+                        m.start(),
+                        m.end(),
+                        match_str,
+                    )
 
         return spans
 
-    # ------------------------------------------------------------------
-    # Span merging
-    # ------------------------------------------------------------------
-
+    @staticmethod
     def _merge_spans(
-        self,
         spans: list[tuple[int, int]],
     ) -> list[tuple[int, int]]:
-        """Merge overlapping or adjacent ``(start, end)`` spans.
+        """Merge overlapping and adjacent ``(start, end)`` spans.
 
-        Spans are sorted by ``start`` and then merged greedily: two spans
-        are merged when the second's ``start`` is less than or equal to
-        the first's ``end`` (touching or overlapping).
+        Returns a sorted list of non-overlapping, non-adjacent spans that
+        cover the union of all input spans.  Adjacent spans (where one span
+        ends exactly where the next begins) are merged to produce a single
+        contiguous replacement token.
 
         Args:
             spans: Unsorted list of ``(start, end)`` character spans.
 
         Returns:
-            Sorted list of non-overlapping, non-adjacent merged spans.
+            Sorted, merged list of ``(start, end)`` spans.  Empty list when
+            *spans* is empty.
         """
         if not spans:
             return []
@@ -225,37 +254,46 @@ class RedactionEngine:
         merged: list[tuple[int, int]] = [sorted_spans[0]]
 
         for start, end in sorted_spans[1:]:
-            prev_start, prev_end = merged[-1]
-            if start <= prev_end:
-                # Overlapping or adjacent — extend the current span
-                merged[-1] = (prev_start, max(prev_end, end))
+            last_start, last_end = merged[-1]
+            if start <= last_end:
+                # Overlapping or adjacent — extend the current merged span.
+                merged[-1] = (last_start, max(last_end, end))
             else:
                 merged.append((start, end))
 
         return merged
 
-    # ------------------------------------------------------------------
-    # Substitution
-    # ------------------------------------------------------------------
-
-    def _apply_redaction(
+    def _apply_replacements(
         self,
         text: str,
-        merged_spans: list[tuple[int, int]],
+        spans: list[tuple[int, int]],
     ) -> str:
-        """Replace character spans in *text* with :data:`REDACTED_TOKEN`.
+        """Reconstruct the text with merged spans replaced by the token.
 
-        Substitutions are applied right-to-left so that earlier span
-        indices remain valid throughout the process.
+        Iterates through the sorted, merged spans from left to right,
+        collecting un-redacted segments and interleaving the replacement
+        token.  This is O(n) in ``len(text)``.
 
         Args:
-            text: The original extracted text.
-            merged_spans: Sorted, non-overlapping ``(start, end)`` spans.
+            text: Original extracted text.
+            spans: Sorted, merged ``(start, end)`` spans to replace.
 
         Returns:
-            The redacted string.
+            Reconstructed string with every span replaced by :attr:`_token`.
         """
-        chars = list(text)
-        for start, end in reversed(merged_spans):
-            chars[start:end] = list(REDACTED_TOKEN)
-        return "".join(chars)
+        if not spans:
+            return text
+
+        parts: list[str] = []
+        prev_end = 0
+
+        for start, end in spans:
+            # Preserve text before this span.
+            parts.append(text[prev_end:start])
+            # Insert the redaction token.
+            parts.append(self._token)
+            prev_end = end
+
+        # Append any trailing non-PII text.
+        parts.append(text[prev_end:])
+        return "".join(parts)
