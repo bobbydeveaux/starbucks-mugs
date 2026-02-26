@@ -362,6 +362,31 @@ The agent does **not** bind to external interfaces for this endpoint.
 
 ---
 
+## Package: `internal/queue`
+
+**Files:** `internal/queue/schema.sql`, `internal/queue/sqlite_queue.go`
+
+`SQLiteQueue` implements the `Queue` interface using a WAL-mode SQLite
+database.  It buffers alert events durably on disk with at-least-once delivery
+semantics so that no events are lost if the gRPC transport is temporarily
+unavailable.
+
+Key operations:
+
+| Method | Description |
+|--------|-------------|
+| `Open(path, logger)` | Opens/creates the database and applies the WAL schema |
+| `Enqueue(ctx, evt)` | Persists an alert for at-least-once delivery |
+| `Dequeue(ctx, n)` | Returns up to `n` unacknowledged events in insertion order |
+| `Ack(ctx, id)` | Marks an event as delivered; idempotent |
+| `Depth()` | Returns the count of pending events (surfaced on `/healthz`) |
+| `Close()` | Releases the database connection; idempotent |
+
+See [`alert-queue.md`](alert-queue.md) for full API reference and usage
+examples.
+
+---
+
 ## Package: `internal/watcher`
 
 The `FileWatcher` in `internal/watcher/file.go` implements the `Watcher`
