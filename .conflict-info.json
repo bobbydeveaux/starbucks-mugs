@@ -4,8 +4,8 @@
   "headBranch": "feature/257-tripwire-cybersecurity-tool-sprint-5-issue-257",
   "conflictedFiles": [
     ".claude-output.json",
-    "docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md",
-    "src/App.tsx"
+    ".claude-resolution.json",
+    ".conflict-info.json"
   ],
   "conflictCount": 3
 }

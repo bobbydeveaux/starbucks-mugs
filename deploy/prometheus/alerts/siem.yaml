@@ -26,7 +26,7 @@ groups:
         annotations:
           summary: "FileGuard SIEM delivery error rate is above 0.5%"
           description: >
-            SIEM delivery error rate is {{ printf "%.2f" (mul $value 100.0) }}%
+            SIEM delivery error rate is {{ $value | humanizePercentage }}
             over the past 5 minutes, exceeding the 0.5% threshold.
             Check the SIEM endpoint connectivity, authentication tokens, and
             network policies for the FileGuard pods.

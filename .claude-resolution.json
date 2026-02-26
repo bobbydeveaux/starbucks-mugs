@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 3,
-  "summary": "Resolved 3 conflicted files: merged task metadata in .claude-output.json combining both PR outputs; combined WebSocket/AlertFeed and multi-host selector documentation into a single cohesive dashboard-ui.md; resolved App.tsx by using the origin/main TripWireDashboardPage component for the /dashboard route since both page files exist in the filesystem",
-  "strategyUsed": "preserved both changes — combined filesChanged and docsReviewed lists in .claude-output.json; kept both feature documentation sections in dashboard-ui.md (WebSocket integration + multi-host selector); chose origin/main component name (TripWireDashboardPage) for App.tsx route as it represents the approved main-branch state while the feature-branch TripwireDashboardPage file remains available"
+  "summary": "Resolved 3 conflicted metadata files from previous CI-assisted merge runs: accepted origin/main deletion of .claude-output.json; resolved .claude-resolution.json by writing fresh resolution metadata; staged .conflict-info.json which had no conflict markers but was unmerged. No actual code files were conflicted in this merge.",
+  "strategyUsed": "accepted deletion for .claude-output.json (deleted by origin/main); wrote new .claude-resolution.json capturing the current resolution; staged clean .conflict-info.json as-is. All real code changes (fileguard cloud PII adapters, prometheus SIEM alerts/tests, adapter __init__ exports) were non-conflicting and staged automatically by git."
 }
