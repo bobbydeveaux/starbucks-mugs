@@ -1,0 +1,27 @@
+{
+  "prTitle": "feat(dashboard-ui): multi-host selector and host status overview",
+  "prBody": "## Summary\n\n- Adds a `useHosts` React hook that fetches the registered agent host list from `GET /api/v1/hosts` with loading/error/refetch support\n- Adds `HostStatusBadge` — a colour-coded ONLINE/OFFLINE/DEGRADED pill badge\n- Adds `HostSelector` — an accessible multi-select checklist with Select All / Clear controls and per-host status badges\n- Adds `HostStatusOverview` — fleet-wide summary count cards (green/yellow/red) + a responsive host detail table with filtering by selection\n- Adds `TripWireDashboardPage` — two-column layout wiring HostSelector + HostStatusOverview with a Refresh button and error banner\n- Registers the `/dashboard` route in `App.tsx`\n- 48 unit tests across 4 new test files (all passing)\n- New documentation: `docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md`\n\n**Note on review feedback:** All blocking issues from the previous review have been verified as already resolved in the codebase:\n- WebSocket int64 overflow guard is in place (`rawLen > maxFrameSize` check + `recover()` in goroutine)\n- `RegisterAgent` returns a stable `host_id` via `ON CONFLICT … RETURNING host_id` upsert\n- `stream.Recv()` distinguishes context cancellation from transport errors\n- `noopLogger()` is defined directly in `process_watcher_test.go` (package-internal)\n\nCloses #258",
+  "testsPass": true,
+  "filesChanged": [
+    "src/App.tsx",
+    "src/types.ts",
+    "src/hooks/useHosts.ts",
+    "src/hooks/useHosts.test.ts",
+    "src/components/HostStatusBadge.tsx",
+    "src/components/HostStatusBadge.test.tsx",
+    "src/components/HostSelector.tsx",
+    "src/components/HostSelector.test.tsx",
+    "src/components/HostStatusOverview.tsx",
+    "src/components/HostStatusOverview.test.tsx",
+    "src/pages/TripWireDashboardPage.tsx"
+  ],
+  "docsUpdated": [
+    "docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/concepts/tripwire-cybersecurity-tool/rest-api.md",
+    "docs/components.md"
+  ]
+}
