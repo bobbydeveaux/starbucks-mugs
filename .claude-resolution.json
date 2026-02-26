@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 1,
-  "summary": "Resolved conflict in .claude-output.json by keeping the HEAD version, which contains the branch-specific metadata for feature/172-fileguard-sprint-2-issue-172 (fileguard AuditService with HMAC-SHA256 signing). The origin/main version contained output from a different already-merged PR (TripWire audit logger, issue #169), which is not relevant to this branch.",
-  "strategyUsed": "chose ours (HEAD) — the conflicted file is a branch-specific Claude output metadata file; HEAD contains the correct data for this PR (issue #172, fileguard sprint 2), while origin/main contained stale output from a different merged PR (issue #169)"
+  "filesResolved": 2,
+  "summary": "Resolved two merge conflicts: accepted main's deletion of .claude-output.json (a generated metadata file not intended for the repo), and resolved the pytest command conflict in middleware.md by choosing 'pytest tests/ -v' to run all tests including integration tests, which are fully offline per the documentation.",
+  "strategyUsed": "For .claude-output.json: accepted theirs (deletion) since the file is a generated artifact that main correctly removed. For docs/concepts/fileguard/middleware.md: chose origin/main's 'pytest tests/ -v' over HEAD's 'pytest tests/unit/ -v' to preserve full test coverage including integration tests, which the documentation confirms are fully offline (SQLite in-memory, no external services required)."
 }

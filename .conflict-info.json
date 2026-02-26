@@ -1,9 +1,10 @@
 {
-  "prNumber": 190,
+  "prNumber": 204,
   "baseBranch": "main",
-  "headBranch": "feature/172-fileguard-sprint-2-issue-172",
+  "headBranch": "feature/144-fileguard-sprint-2-issue-144",
   "conflictedFiles": [
-    ".claude-output.json"
+    ".claude-output.json",
+    "docs/concepts/fileguard/middleware.md"
   ],
-  "conflictCount": 1
+  "conflictCount": 2
 }

@@ -253,7 +253,7 @@ Pydantic model representing a tenant's configuration as loaded from the database
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/unit/ -v
+pytest tests/ -v
 ```
 
 All tests are fully offline — no database, Redis, or external services required.
@@ -280,3 +280,6 @@ All tests are fully offline — no database, Redis, or external services require
 - Public paths bypass rate limiting
 - Per-tenant Redis key namespacing
 - Retry-After computed from oldest window entry
+
+Integration tests for `AuditService` (`tests/integration/`) use an in-memory SQLite
+database via `aiosqlite` + `StaticPool` — no external PostgreSQL or Redis required.

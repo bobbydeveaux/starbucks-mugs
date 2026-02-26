@@ -40,21 +40,25 @@ type ProcReader func() (map[ConnKey]struct{}, error)
 
 // networkRule is a compiled NETWORK-type tripwire rule.
 type networkRule struct {
-	name     string
-	port     int
-	severity string
+	name      string
+	port      int
+	severity  string
+	protocol  string // "tcp", "udp", or "both"
+	direction string // "inbound", "outbound", or "both"
 }
 
 // ---------------------------------------------------------------------------
 // NetworkWatcher
 // ---------------------------------------------------------------------------
 
-// NetworkWatcher monitors TCP connections on configured ports by periodically
-// polling /proc/net/tcp and /proc/net/tcp6.  It implements the Watcher
-// interface and is safe for concurrent use.
+// NetworkWatcher monitors TCP and UDP connections on configured ports by
+// periodically polling /proc/net/tcp, /proc/net/tcp6, /proc/net/udp, and
+// /proc/net/udp6.  It implements the Watcher interface and is safe for
+// concurrent use.
 //
-// A new AlertEvent is emitted each time a TCP ESTABLISHED connection is
-// detected on a monitored local port that was not present in the previous poll.
+// A new AlertEvent is emitted each time a connection matching the rule's
+// protocol and direction filter is detected on a monitored port that was not
+// present in the previous poll.
 type NetworkWatcher struct {
 	rules        []networkRule
 	pollInterval time.Duration
@@ -100,10 +104,22 @@ func NewNetworkWatcherWithReader(rules []config.TripwireRule, logger *slog.Logge
 		if err != nil || port < 1 || port > 65535 {
 			return nil, fmt.Errorf("network watcher: rule %q has invalid port target %q: must be an integer in [1, 65535]", r.Name, r.Target)
 		}
+		// Default empty Protocol/Direction to permissive values so that rules
+		// created without defaults (e.g. in unit tests) still match all traffic.
+		proto := r.Protocol
+		if proto == "" {
+			proto = "both"
+		}
+		dir := r.Direction
+		if dir == "" {
+			dir = "inbound"
+		}
 		compiled = append(compiled, networkRule{
-			name:     r.Name,
-			port:     port,
-			severity: r.Severity,
+			name:      r.Name,
+			port:      port,
+			severity:  r.Severity,
+			protocol:  proto,
+			direction: dir,
 		})
 	}
 
@@ -209,11 +225,29 @@ func (w *NetworkWatcher) poll() {
 }
 
 // matchAndEmit checks whether ck matches any configured rule and sends an
-// AlertEvent if so.
+// AlertEvent if so.  Port matching respects the rule's direction:
+//
+//   - "inbound"  – match the local port (connection arrives at this host)
+//   - "outbound" – match the remote port (connection goes out from this host)
+//   - "both"     – match either local or remote port
 func (w *NetworkWatcher) matchAndEmit(ck ConnKey) {
-	port := portFromAddr(ck.LocalAddr)
+	localPort := portFromAddr(ck.LocalAddr)
+	remotePort := portFromAddr(ck.RemoteAddr)
 	for _, r := range w.rules {
-		if r.port != port {
+		// Direction-aware port matching.
+		var portMatches bool
+		switch r.direction {
+		case "outbound":
+			portMatches = r.port == remotePort
+		case "both":
+			portMatches = r.port == localPort || r.port == remotePort
+		default: // "inbound" or empty
+			portMatches = r.port == localPort
+		}
+		if !portMatches {
+			continue
+		}
+		if !protocolMatches(r.protocol, ck.Protocol) {
 			continue
 		}
 		evt := AlertEvent{
@@ -246,12 +280,13 @@ func (w *NetworkWatcher) matchAndEmit(ck ConnKey) {
 // /proc/net reader
 // ---------------------------------------------------------------------------
 
-// defaultProcReader reads /proc/net/tcp and /proc/net/tcp6 to collect
-// currently ESTABLISHED TCP connections.  Missing files (e.g. tcp6 on kernels
-// without IPv6 support) are skipped silently.
+// defaultProcReader reads /proc/net/tcp, /proc/net/tcp6, /proc/net/udp, and
+// /proc/net/udp6 to collect currently active TCP and UDP connections.  Missing
+// files (e.g. tcp6/udp6 on kernels without IPv6 support) are skipped silently.
 func defaultProcReader() (map[ConnKey]struct{}, error) {
 	conns := make(map[ConnKey]struct{})
 
+	// Read ESTABLISHED TCP connections.
 	for _, entry := range []struct {
 		path  string
 		proto string
@@ -274,6 +309,31 @@ func defaultProcReader() (map[ConnKey]struct{}, error) {
 			}] = struct{}{}
 		}
 	}
+
+	// Read active UDP sockets (bound and connected).
+	for _, entry := range []struct {
+		path  string
+		proto string
+	}{
+		{"/proc/net/udp", "udp"},
+		{"/proc/net/udp6", "udp6"},
+	} {
+		parsed, err := parseProcNetUdpFile(entry.path, entry.proto)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return conns, fmt.Errorf("network watcher: reading %s: %w", entry.path, err)
+		}
+		for _, ck := range parsed {
+			conns[ConnKey{
+				LocalAddr:  ck.LocalAddr,
+				RemoteAddr: ck.RemoteAddr,
+				Protocol:   ck.Protocol,
+			}] = struct{}{}
+		}
+	}
+
 	return conns, nil
 }
 
@@ -354,6 +414,95 @@ func parseProcNetFile(path, proto string) ([]ConnEntry, error) {
 	}
 
 	return conns, scanner.Err()
+}
+
+// ParseProcNetUdpFile parses a /proc/net/udp or /proc/net/udp6 file and
+// returns active UDP sockets.  It includes both unconnected bound sockets
+// (state 0x07) and connected UDP sockets (state 0x01).
+//
+// Unlike TCP, UDP sockets may have an all-zero remote address (unconnected);
+// these are still included because binding to a monitored port is itself a
+// security-relevant event.  The remote address in that case decodes to
+// "0.0.0.0:0" (IPv4) or "[::]:0" (IPv6).
+//
+// It is exported to allow testing the parsing logic with synthetic data.
+func ParseProcNetUdpFile(path, proto string) ([]ConnEntry, error) {
+	return parseProcNetUdpFile(path, proto)
+}
+
+func parseProcNetUdpFile(path, proto string) ([]ConnEntry, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var conns []ConnEntry
+	scanner := bufio.NewScanner(f)
+	lineNum := 0
+
+	for scanner.Scan() {
+		lineNum++
+		if lineNum == 1 {
+			continue // skip header line
+		}
+
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 4 {
+			continue
+		}
+
+		// fields[3] is the socket state as a hex byte.
+		state, err := strconv.ParseUint(fields[3], 16, 8)
+		if err != nil {
+			continue
+		}
+
+		// 0x07 = active unconnected UDP socket (most common; maps to
+		//        TCP_CLOSE in the kernel's state enum but is the normal
+		//        state for a bound-but-unconnected UDP socket).
+		// 0x01 = connected UDP socket (has a specific remote address).
+		// All other states (free, etc.) are ignored.
+		if state != 0x07 && state != 0x01 {
+			continue
+		}
+
+		localAddr, err := HexToAddr(fields[1])
+		if err != nil {
+			continue
+		}
+
+		// For UDP the remote address is often all-zeros (unconnected);
+		// we decode it unconditionally rather than skipping zero entries.
+		remoteAddr, err := HexToAddr(fields[2])
+		if err != nil {
+			continue
+		}
+
+		conns = append(conns, ConnEntry{
+			LocalAddr:  localAddr,
+			RemoteAddr: remoteAddr,
+			Protocol:   proto,
+		})
+	}
+
+	return conns, scanner.Err()
+}
+
+// protocolMatches reports whether the connection protocol satisfies the rule's
+// protocol filter.  "both" (or empty string) matches any protocol.  "tcp"
+// matches "tcp" and "tcp6"; "udp" matches "udp" and "udp6".
+func protocolMatches(ruleProto, connProto string) bool {
+	if ruleProto == "" || ruleProto == "both" {
+		return true
+	}
+	switch ruleProto {
+	case "tcp":
+		return connProto == "tcp" || connProto == "tcp6"
+	case "udp":
+		return connProto == "udp" || connProto == "udp6"
+	}
+	return false
 }
 
 // isZeroHexAddr reports whether a /proc/net hex address represents the zero
