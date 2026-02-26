@@ -10,6 +10,10 @@ name is executed on the host, using kernel-level mechanisms to trace
 
 ## Overview
 
+The Process Watcher emits an `AlertEvent` (with `TripwireType: "PROCESS"`) whenever
+a configured process name pattern is matched against a newly exec'd process.
+It is designed as a multi-layer system with platform-specific backends:
+
 | Implementation | File | Platform | Mechanism |
 |----------------|------|----------|-----------|
 | `ProcessWatcher` | `process_watcher.go` | All | Platform backend (see below) |
@@ -19,7 +23,19 @@ name is executed on the host, using kernel-level mechanisms to trace
 
 The companion eBPF C program in `internal/watcher/ebpf/process.bpf.c` documents
 the equivalent BPF tracepoint implementation for environments with BPF compiler
-tooling.
+tooling. The Go eBPF loader in `internal/watcher/ebpf/process.go` provides a
+`Loader` interface that loads the pre-compiled BPF object and delivers typed
+`ExecEvent` values (see [Go eBPF Loader](#go-ebpf-loader) below).
+
+### Choosing a runtime
+
+| | eBPF loader (`ebpf.Loader`) | NETLINK_CONNECTOR (`watcher.ProcessWatcher`) |
+|---|---|---|
+| **Kernel req.** | Linux ≥ 5.8, `CAP_BPF` | Any Linux, `CAP_NET_ADMIN` |
+| **argv capture** | In-kernel (race-free) | /proc read (TOCTOU risk) |
+| **PPID / UID / GID** | Always available | Not available |
+| **BPF toolchain** | Required to compile .bpf.o | Not required |
+| **Deployment** | Build with `make -C internal/watcher/ebpf` | Standard build |
 
 ---
 
@@ -228,6 +244,76 @@ itself does not need to change — only the backend selection in
 - Linux ≥ 5.8 — BPF ring buffer (`BPF_MAP_TYPE_RINGBUF`)
 - `CONFIG_BPF_SYSCALL=y`, `CONFIG_DEBUG_INFO_BTF=y` (for CO-RE)
 - `CAP_BPF` (Linux ≥ 5.8) or `CAP_SYS_ADMIN`
+
+---
+
+## Go eBPF Loader (`ebpf.Loader`)
+
+Package `internal/watcher/ebpf` provides a Go userspace component that loads
+the pre-compiled `process.bpf.o`, attaches the tracepoints, reads events from
+the BPF ring buffer, and delivers them as `ExecEvent` values.
+
+### Architecture
+
+```
+                  kernel (Linux ≥ 5.8)
+┌─────────────────────────────────────────────────────────┐
+│  Process calls execve(2) / execveat(2)                  │
+│         ↓                                                │
+│  BPF tracepoint fires (sys_enter_execve / execveat)     │
+│         ↓                                                │
+│  fill_event() captures pid, ppid, uid, gid,             │
+│               comm, filename, argv                       │
+│         ↓                                                │
+│  bpf_ringbuf_submit() — writes exec_event to ring buf   │
+└──────────────────────────────┬──────────────────────────┘
+                               │ mmap (shared ring buffer)
+                    ┌──────────▼──────────┐
+                    │ readLoop()           │  ringbuf.Reader polls
+                    └──────────┬──────────┘
+                               │ binary.Read() → ExecEvent{}
+                               ↓
+                         Events() channel
+```
+
+### Usage
+
+```go
+import "github.com/tripwire/agent/internal/watcher/ebpf"
+
+l, err := ebpf.NewLoader(logger)
+if err != nil {
+    // ebpf.ErrNotSupported if kernel < 5.8; fall back to NETLINK_CONNECTOR
+    log.Fatal(err)
+}
+defer l.Close()
+
+if err := l.Load(ctx); err != nil {
+    log.Fatal(err)
+}
+
+for evt := range l.Events() {
+    fmt.Printf("execve: pid=%d filename=%s argv=%s\n",
+        evt.PID, evt.Filename, evt.Argv)
+}
+```
+
+### `ExecEvent` fields (eBPF variant)
+
+The eBPF loader captures richer metadata than the NETLINK_CONNECTOR variant
+because all fields are read atomically in the kernel at exec time:
+
+```go
+ExecEvent{
+    PID:      <uint32>,  // process ID (tgid)
+    PPID:     <uint32>,  // parent process ID (captured in-kernel)
+    UID:      <uint32>,  // real UID (captured in-kernel)
+    GID:      <uint32>,  // real GID (captured in-kernel)
+    Comm:     <string>,  // short task name (≤ 15 chars)
+    Filename: <string>,  // execve filename argument
+    Argv:     <string>,  // space-joined argv (present if non-empty)
+}
+```
 
 ---
 
