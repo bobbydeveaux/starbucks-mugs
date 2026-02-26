@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in .claude-resolution.json and .conflict-info.json. Both files are CI/CD workflow metadata generated per-branch. .conflict-info.json was already resolved in the working tree (correct PR #291 and branch context). .claude-resolution.json had a conflict between two previous AI-written summaries about a prior .claude-output.json resolution; replaced with current resolution metadata.",
-  "strategyUsed": "replaced both conflicted metadata files with correct current-context values — .conflict-info.json already had no markers and was staged as-is; .claude-resolution.json conflict markers were removed and the file was rewritten to reflect this resolution session rather than carrying forward stale summaries from prior merge runs"
+  "filesResolved": 3,
+  "summary": "Resolved 3 conflicted files: merged task metadata in .claude-output.json combining both PR outputs; combined WebSocket/AlertFeed and multi-host selector documentation into a single cohesive dashboard-ui.md; resolved App.tsx by using the origin/main TripWireDashboardPage component for the /dashboard route since both page files exist in the filesystem",
+  "strategyUsed": "preserved both changes — combined filesChanged and docsReviewed lists in .claude-output.json; kept both feature documentation sections in dashboard-ui.md (WebSocket integration + multi-host selector); chose origin/main component name (TripWireDashboardPage) for App.tsx route as it represents the approved main-branch state while the feature-branch TripwireDashboardPage file remains available"
 }

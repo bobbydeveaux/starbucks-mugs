@@ -1,17 +1,26 @@
 {
-  "prTitle": "feat: WebSocket hook and live alert feed component",
-  "prBody": "## Summary\n\nImplements task `task-tripwire-cybersecurity-tool-feat-dashboard-ui-2`: WebSocket hook and live alert feed component for the TripWire security dashboard.\n\n### Changes\n\n- **`src/types.ts`** — Add TripWire types: `TripwireAlert`, `TripwireHost`, `WsAlertMessage`, `TripwireType`, `Severity`, `HostStatus`, `WebSocketReadyState`\n- **`src/hooks/useWebSocket.ts`** — WebSocket connection hook with exponential-backoff auto-reconnect; bearer token appended as `?token=` query param (browsers cannot send custom WS headers)\n- **`src/hooks/useAlerts.ts`** — Live alert accumulation hook; prepends incoming WS alerts newest-first, caps list at `maxAlerts` to prevent unbounded memory growth\n- **`src/components/AlertFeed.tsx`** — Virtualized alert list using `react-window` `FixedSizeList`; DOM node count stays constant regardless of alert volume; severity colour-coding and keyboard accessibility\n- **`src/pages/TripwireDashboardPage.tsx`** — Top-level `/dashboard` route with connection status badge, alert count toolbar, and click-to-expand alert detail modal\n- **`src/App.tsx`** — Add `/dashboard` route\n- **`package.json`** — Add `react-window@1.8.10` and `@types/react-window`\n\n### Tests (51 new, all passing)\n\n- `useWebSocket.test.ts` (20 tests)\n- `useAlerts.test.ts` (13 tests)\n- `AlertFeed.test.tsx` (18 tests)\n\n### Acceptance criteria\n\n- useWebSocket reconnects automatically on disconnect with exponential backoff\n- Bearer token applied in the upgrade request via `?token=` query param\n- New alerts appear in the feed via prepend — no full list re-render needed\n- AlertFeed virtualizes rows via react-window so DOM node count stays constant\n\nCloses #257",
+  "prTitle": "feat(dashboard-ui): multi-host selector and host status overview",
+  "prBody": "## Summary\n\n- Adds a `useHosts` React hook that fetches the registered agent host list from `GET /api/v1/hosts` with loading/error/refetch support\n- Adds `HostStatusBadge` — a colour-coded ONLINE/OFFLINE/DEGRADED pill badge\n- Adds `HostSelector` — an accessible multi-select checklist with Select All / Clear controls and per-host status badges\n- Adds `HostStatusOverview` — fleet-wide summary count cards (green/yellow/red) + a responsive host detail table with filtering by selection\n- Adds `TripWireDashboardPage` — two-column layout wiring HostSelector + HostStatusOverview with a Refresh button and error banner\n- Registers the `/dashboard` route in `App.tsx`\n- 48 unit tests across 4 new test files (all passing)\n- New documentation: `docs/concepts/tripwire-cybersecurity-tool/dashboard-ui.md`\n\n**Note on review feedback:** All blocking issues from the previous review have been verified as already resolved in the codebase:\n- WebSocket int64 overflow guard is in place (`rawLen > maxFrameSize` check + `recover()` in goroutine)\n- `RegisterAgent` returns a stable `host_id` via `ON CONFLICT … RETURNING host_id` upsert\n- `stream.Recv()` distinguishes context cancellation from transport errors\n- `noopLogger()` is defined directly in `process_watcher_test.go` (package-internal)\n\nCloses #258",
   "testsPass": true,
   "filesChanged": [
+    "src/App.tsx",
     "src/types.ts",
     "src/hooks/useWebSocket.ts",
     "src/hooks/useWebSocket.test.ts",
     "src/hooks/useAlerts.ts",
     "src/hooks/useAlerts.test.ts",
+    "src/hooks/useHosts.ts",
+    "src/hooks/useHosts.test.ts",
     "src/components/AlertFeed.tsx",
     "src/components/AlertFeed.test.tsx",
+    "src/components/HostStatusBadge.tsx",
+    "src/components/HostStatusBadge.test.tsx",
+    "src/components/HostSelector.tsx",
+    "src/components/HostSelector.test.tsx",
+    "src/components/HostStatusOverview.tsx",
+    "src/components/HostStatusOverview.test.tsx",
     "src/pages/TripwireDashboardPage.tsx",
-    "src/App.tsx",
+    "src/pages/TripWireDashboardPage.tsx",
     "package.json",
     "package-lock.json"
   ],
@@ -21,7 +30,9 @@
   "docsReviewed": [
     "docs/concepts/tripwire-cybersecurity-tool/HLD.md",
     "docs/concepts/tripwire-cybersecurity-tool/grpc-alert-service.md",
-    "docs/concepts/tripwire-cybersecurity-tool/rest-api.md"
+    "docs/concepts/tripwire-cybersecurity-tool/rest-api.md",
+    "docs/concepts/tripwire-cybersecurity-tool/LLD.md",
+    "docs/components.md"
   ],
   "completedTasks": [1, 2, 3, 4]
 }

@@ -125,7 +125,12 @@ fileguard/              Python package (FastAPI application)
 ├── core/
 │   ├── av_engine.py    Abstract AVEngineAdapter interface + ScanResult/Finding types
 │   ├── clamav_adapter.py ClamAV clamd TCP socket adapter (fail-secure)
-│   └── document_extractor.py  Multi-format text extractor with thread-pool execution
+│   ├── document_extractor.py  Multi-format text extractor with thread-pool execution
+│   ├── scan_context.py  ScanContext dataclass — shared state for the scan pipeline
+│   ├── pii_detector.py  PIIDetector engine + PIIFinding type
+│   └── patterns/
+│       ├── __init__.py
+│       └── uk_patterns.py  Pre-compiled UK PII patterns + JSON custom-pattern loading
 ├── models/
 │   ├── tenant_config.py  SQLAlchemy ORM model for tenant_config table
 │   ├── scan_event.py     SQLAlchemy ORM model for scan_event table (append-only)
@@ -165,7 +170,8 @@ tests/
 │   ├── test_report_service.py          Unit tests for ReportService and Celery tasks
 │   └── test_compliance_report_api.py   Unit tests for compliance report API handlers and service
 └── integration/
-    └── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
+    ├── test_audit_service_integration.py  Integration tests (SQLite + httpx transport)
+    └── test_reports_api.py               Integration tests for reports list + download API
 
 docker-compose.yml      Local development compose file
 requirements.txt        Python dependencies
@@ -211,6 +217,7 @@ celery -A fileguard.celery_app beat --loglevel=info
 ```
 
 ---
+
 
 ## AV Engine Adapter
 
@@ -298,6 +305,79 @@ for entry in result.offsets:
 `ExtractionError` is raised for unsupported MIME types or corrupt/malformed
 files.  ZIP members that fail extraction are skipped with a warning log — one
 corrupt member does not abort the whole archive.
+
+## PII Detection Engine
+
+`fileguard/core/pii_detector.py` implements `PIIDetector`, the core regex-based
+PII scanning engine.  It runs a compiled set of patterns against extracted text and
+produces `PIIFinding` objects carrying the **category**, **severity**, **matched value**,
+and **byte offset** of every match.
+
+### Built-in UK patterns
+
+| Category      | Example matches                     | Severity |
+|---------------|-------------------------------------|----------|
+| `NI_NUMBER`   | `AB123456C`, `AB 12 34 56 C`        | high     |
+| `NHS_NUMBER`  | `943 476 5919`, `9434765919`        | high     |
+| `EMAIL`       | `alice@example.com`                 | medium   |
+| `PHONE`       | `07700 900123`, `+44 7700 900123`   | medium   |
+| `POSTCODE`    | `SW1A 1AA`, `EC1A1BB`               | low      |
+
+All patterns are pre-compiled at module load time — no per-scan recompilation.
+
+### Custom patterns
+
+Load additional patterns from a JSON file at startup:
+
+```json
+[
+    {"name": "EMPLOYEE_ID", "pattern": "EMP-[0-9]{6}", "severity": "medium"}
+]
+```
+
+```python
+from fileguard.core.patterns.uk_patterns import get_patterns
+
+patterns = get_patterns("/etc/fileguard/custom_patterns.json")
+```
+
+### Standalone usage
+
+```python
+from fileguard.core.pii_detector import PIIDetector
+
+detector = PIIDetector()                       # built-in UK patterns
+findings = detector.detect(
+    text="Patient NI: AB123456C",
+    byte_offsets=list(range(len("Patient NI: AB123456C"))),
+)
+for f in findings:
+    print(f.category, f.severity, f.match, f.offset)
+# NI_NUMBER high AB123456C 12
+```
+
+### Pipeline integration via ScanContext
+
+`fileguard/core/scan_context.py` defines `ScanContext`, the shared state object
+passed through each pipeline step (AV → extraction → PII detection → disposition).
+
+```python
+from fileguard.core.pii_detector import PIIDetector
+from fileguard.core.scan_context import ScanContext
+
+# Context is populated by earlier pipeline steps
+ctx = ScanContext(file_bytes=raw_bytes, mime_type="application/pdf")
+ctx.extracted_text = "...text from DocumentExtractor..."
+ctx.byte_offsets = [...]   # from ExtractionResult.byte_offsets
+
+detector = PIIDetector()
+detector.scan(ctx)          # appends PIIFinding objects to ctx.findings
+
+print(ctx.findings)
+```
+
+`PIIDetector.scan()` is a no-op when `ctx.extracted_text` is `None` or empty,
+so it is safe to call even if document extraction was skipped.
 
 ## Compliance Reports API
 
