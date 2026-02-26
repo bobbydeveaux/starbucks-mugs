@@ -6,11 +6,20 @@ package watcher
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/tripwire/agent/internal/config"
 )
+
+// noopLogger returns a *slog.Logger that discards all log output. Defined here
+// (rather than inherited from file_test.go) because this file belongs to the
+// internal package watcher, not the external package watcher_test.
+func noopLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError + 10}))
+}
 
 // ---------------------------------------------------------------------------
 // Interface compliance (compile-time)
