@@ -335,6 +335,5 @@ func hostIDFromHostname(hostname string) string {
 	return hostname
 }
 
-// Ensure InProcessBroadcaster satisfies the local Broadcaster interface at
-// compile time.
-var _ Broadcaster = (*websocket.InProcessBroadcaster)(nil)
+// Ensure Broadcaster satisfies the local Broadcaster interface at compile time.
+var _ Broadcaster = (*websocket.Broadcaster)(nil)

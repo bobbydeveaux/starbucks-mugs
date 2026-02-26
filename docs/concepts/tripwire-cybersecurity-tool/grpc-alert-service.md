@@ -21,8 +21,8 @@ TripWire Agent                 Dashboard Server
                                          │
                                          ▼ (non-blocking fan-out)
                               ┌──────────────────────────────────┐
-                              │  InProcessBroadcaster            │
-                              │  sync.Map: ch1, ch2, ch3 ...     │
+                              │  websocket.Broadcaster           │
+                              │  sync.Map: client1, client2 ...  │
                               └──────────────────────────────────┘
                                    │         │         │
                                    ▼         ▼         ▼
@@ -144,46 +144,65 @@ The Common Name (CN) of the connecting agent's mTLS client certificate is extrac
 internal/server/websocket/broadcaster.go
 ```
 
-### Interface
+### Broadcaster (concrete struct)
+
+`websocket.Broadcaster` is the concrete in-process implementation for
+single-instance deployments.  It exposes two complementary fan-out APIs:
+
+**WebSocket client API** — used by the HTTP upgrade handler:
 
 ```go
-type Broadcaster interface {
-    Subscribe(ctx context.Context) <-chan storage.Alert
-    Unsubscribe(ch <-chan storage.Alert)
-    Publish(a storage.Alert)
-    Close()
-}
-```
-
-### InProcessBroadcaster
-
-The concrete implementation for single-instance deployments.
-
-```go
-b := websocket.NewBroadcaster(logger, 64 /* per-subscriber buffer */)
+b := websocket.NewBroadcaster(logger, 64 /* per-client buffer */)
 defer b.Close()
 
-// WebSocket handler subscribes on connect:
+// Register a new WebSocket client (one per connected browser tab):
+client := b.Register(clientID)
+defer b.Unregister(clientID)
+
+// Write loop drains JSON-encoded alert frames:
+for frame := range client.Send() {
+    conn.Write(frame) // RFC 6455 text frame
+}
+
+// Fan an AlertMessage to all registered clients (non-blocking):
+b.Broadcast(websocket.AlertMessage{
+    Type: "alert",
+    Data: websocket.AlertData{AlertID: "…", Severity: "CRITICAL"},
+})
+```
+
+**Anonymous subscriber API** — used by the integration/test layer:
+
+```go
+// Subscribe to receive raw storage.Alert values:
 ch := b.Subscribe(clientCtx)
 
 // Alert service publishes on every persisted event (non-blocking):
-b.Publish(alert)
+b.Publish(alert) // fans to Subscribe() channels AND calls Broadcast()
 
-// WebSocket handler reads and writes to the browser:
+// Consumer loop (e.g. integration test or internal pipeline):
 for a := range ch {
-    conn.WriteJSON(a)
+    process(a)
 }
 ```
+
+**Types sent to each API:**
+
+| API | Channel element | Use case |
+|-----|----------------|----------|
+| `Register` → `Client.Send()` | `[]byte` (JSON `AlertMessage`) | Browser WebSocket frame |
+| `Subscribe` | `storage.Alert` | Internal consumers, integration tests |
 
 ### Fan-out semantics
 
 | Property | Detail |
 |---|---|
 | **Delivery** | Best-effort; drops for full buffers |
-| **Back-pressure** | None — `Publish` is always O(1) and non-blocking |
-| **Concurrency** | `sync.Map` for lock-free subscriber enumeration |
-| **Cleanup** | Context cancellation automatically calls `Unsubscribe` |
-| **Multi-instance** | Replace `InProcessBroadcaster` with a Redis pub/sub adapter |
+| **Back-pressure** | None — `Publish`/`Broadcast` are always O(n) and non-blocking per subscriber |
+| **Concurrency** | `sync.Map` for lock-free client/subscriber enumeration |
+| **Cleanup** | Context cancellation automatically calls `Unsubscribe`; `Unregister` closes `Client.Send()` |
+| **Multi-instance** | Replace `Broadcaster` with a Redis pub/sub adapter implementing the same API |
+| **Drop tracking** | `Client.Dropped` (`atomic.Int64`) counts messages dropped for that client |
 
 ### Non-blocking publish
 
