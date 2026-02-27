@@ -1,8 +1,60 @@
 ## Code Review - Changes Requested
 
-**Review decision: `changes_requested` with blocking issues.**
+## ❌ BLOCKING ISSUES FOUND
 
-The core problem is that this PR's description and claimed implementation are entirely disconnected from the actual diff. Only `.claude-output.json` was deleted — the entire dashboard UI feature (AlertFilters, useAlerts hook, FilterContext, API client, TypeScript types, and all 23 tests) is absent from the committed code. Merging would silently close #259 without delivering any of its requirements.
+**PR #331 — WIP: Implement Editor and Preview components**
+
+---
+
+### Summary
+
+This PR is in **DRAFT** state and contains **no implementation**. The only change is deletion of `.claude-output.json` — a metadata artifact from a completely unrelated previous PR (the Celery scan worker task). The required components described in issue #326 do not exist anywhere in the repository.
+
+---
+
+### Blocking Issues
+
+**1. Implementation is entirely missing**
+
+The issue requires creating two files:
+- `markdowntopdf/src/components/Editor.tsx`
+- `markdowntopdf/src/components/Preview.tsx`
+
+Neither file exists. The `markdowntopdf/` directory itself does not exist in the repository. The PR has **0 additions** and **20 deletions** (only the `.claude-output.json` removal).
+
+**2. All CI checks are failing**
+
+- **Build**: FAIL
+- **Lint**: FAIL
+- **Type Check**: FAIL
+
+These failures confirm the implementation has not been delivered.
+
+**3. Wrong `.claude-output.json` deleted**
+
+The deleted file contained metadata referencing a Celery scan worker PR (issue #283), not this MarkdownToPDF task. This suggests the agent may have encountered an error mid-run and committed a partial/incorrect state.
+
+---
+
+### Acceptance Criteria Status
+
+Per issue #326:
+
+| Criterion | Status |
+|---|---|
+| Editor renders a textarea with value/onChange props | Not implemented |
+| Preview renders sanitized HTML via dangerouslySetInnerHTML | Not implemented |
+| Preview forwards ref to wrapping div | Not implemented |
+| Both components compile without TypeScript errors | Fails (no files to compile) |
+
+---
+
+### Required Actions
+
+1. Create `markdowntopdf/src/components/Editor.tsx` with a controlled textarea accepting `value` and `onChange` props and explicit TypeScript interface.
+2. Create `markdowntopdf/src/components/Preview.tsx` calling `parseMarkdown`, injecting via `dangerouslySetInnerHTML`, and forwarding a ref to the wrapping div.
+3. Ensure all CI checks pass before moving out of DRAFT.
+4. Include a correct `.claude-output.json` reflecting the actual files changed in this task.
 
 **Action Required**: Please address the blocking issues above before merging.
 
