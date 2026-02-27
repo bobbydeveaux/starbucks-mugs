@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in fileguard/core/redaction.py and tests/unit/test_redaction.py by merging both implementations",
-  "strategyUsed": "Preserved configurable token API from HEAD branch while incorporating byte-offset-aware span detection from origin/main; merged test suites to cover both behaviors"
+  "filesResolved": 5,
+  "summary": "Resolved 5 conflicts in package.json, package-lock.json, tsconfig.json, parseMarkdown.ts, and vite.config.ts by merging both branches' contributions where possible.",
+  "strategyUsed": "Preserved functionality from both sides: kept HEAD's version '0.1.0' in package.json; adopted origin/main's project-references tsconfig.json (consistent with staged tsconfig.app.json and tsconfig.node.json); used origin/main's 'tsc -b && vite build' build script (required for project references); merged dependencies by including html2pdf.js and all additional devDependencies from origin/main while keeping everything from HEAD; used origin/main's cleaner parseMarkdown.ts (.trim() guard, type cast); combined vite.config.ts by taking path resolution imports and setupFiles from origin/main alongside HEAD's css:false setting; regenerated package-lock.json via npm install to reflect the merged package.json."
 }

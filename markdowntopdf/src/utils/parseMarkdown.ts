@@ -2,17 +2,16 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
 /**
- * Converts a markdown string to sanitized HTML.
+ * Parse a markdown string into sanitized HTML.
  *
- * Chains marked.parse() for markdown-to-HTML conversion with
- * DOMPurify.sanitize() to strip any XSS payloads before the
- * result is injected into the DOM.
+ * The pipeline is:
+ *   1. marked.parse() – converts markdown to HTML
+ *   2. DOMPurify.sanitize() – strips XSS payloads before DOM injection
  *
- * @param raw - Raw markdown input string
- * @returns Sanitized HTML string safe for dangerouslySetInnerHTML
+ * Returns an empty string for empty / whitespace-only input without errors.
  */
 export function parseMarkdown(raw: string): string {
-  if (!raw) return '';
-  const html = marked.parse(raw, { async: false });
+  if (!raw.trim()) return '';
+  const html = marked.parse(raw) as string;
   return DOMPurify.sanitize(html);
 }
