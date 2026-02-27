@@ -1,0 +1,104 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: system-ui, sans-serif;
+}
+
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-bottom: 1px solid #313244;
+}
+
+.app-toolbar h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.pane-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-pane {
+  flex: 1;
+  resize: none;
+  border: none;
+  border-right: 1px solid #313244;
+  padding: 1rem;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  outline: none;
+}
+
+.preview-pane {
+  flex: 1;
+  padding: 1rem 2rem;
+  overflow-y: auto;
+  background: #fff;
+  color: #24292e;
+  line-height: 1.7;
+}
+
+/* Basic markdown typography in preview */
+.preview-pane h1,
+.preview-pane h2,
+.preview-pane h3,
+.preview-pane h4,
+.preview-pane h5,
+.preview-pane h6 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.preview-pane pre {
+  background: #f6f8fa;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+
+.preview-pane code {
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.85em;
+}
+
+.preview-pane blockquote {
+  border-left: 4px solid #d0d7de;
+  margin: 0;
+  padding: 0 1rem;
+  color: #656d76;
+}
+
+.preview-pane a {
+  color: #0969da;
+}
+
+.preview-pane img {
+  max-width: 100%;
+}
