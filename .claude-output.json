@@ -1,0 +1,35 @@
+{
+  "prTitle": "test: add component and integration tests for markdowntopdf-clone",
+  "prBody": "## Summary\n\n- **Preview.test.tsx** (8 tests): unit tests covering HTML rendering from markdown, ref forwarding, empty/whitespace input (no crash), XSS payload stripping, and prop-change re-rendering. Uses a `vi.mock` on `parseMarkdown` to keep tests unit-scoped.\n- **DownloadButton.test.tsx** (7 tests): unit tests covering initial button render, disabled/generating state during PDF generation, restore after success, inline error message on rejection, null-ref guard (no call to html2pdf.js), and verification that `html2pdf().from()` is called with the preview DOM node. Uses `vi.doMock` for the dynamic `import('html2pdf.js')` path.\n- **App.test.tsx** (5 tests): integration tests verifying editor/preview pane rendering, default sample markdown content, Download PDF button render, debounced preview update after editor input, and h1 in preview on load.\n- All **20 tests pass** with zero warnings under Vitest + jsdom.\n- Brought in the full `markdowntopdf/` implementation from the prior sprint tasks (branches #326/#327) as the dependency for writing these tests.\n- Updated `docs/concepts/markdowntopdf-clone/components.md` with the full test coverage table and quick-start `npm test` instructions.\n\nCloses #329",
+  "testsPass": true,
+  "filesChanged": [
+    "markdowntopdf/src/components/Preview.test.tsx",
+    "markdowntopdf/src/components/DownloadButton.test.tsx",
+    "markdowntopdf/src/App.test.tsx",
+    "markdowntopdf/src/App.tsx",
+    "markdowntopdf/src/App.css",
+    "markdowntopdf/src/components/Editor.tsx",
+    "markdowntopdf/src/components/Preview.tsx",
+    "markdowntopdf/src/components/DownloadButton.tsx",
+    "markdowntopdf/src/utils/parseMarkdown.ts",
+    "markdowntopdf/src/main.tsx",
+    "markdowntopdf/src/setupTests.ts",
+    "markdowntopdf/src/vite-env.d.ts",
+    "markdowntopdf/package.json",
+    "markdowntopdf/vite.config.ts",
+    "markdowntopdf/tsconfig.json",
+    "markdowntopdf/tsconfig.app.json",
+    "markdowntopdf/tsconfig.node.json",
+    "markdowntopdf/index.html"
+  ],
+  "docsUpdated": [
+    "docs/concepts/markdowntopdf-clone/components.md"
+  ],
+  "docsReviewed": [
+    "docs/concepts/markdowntopdf-clone/HLD.md",
+    "docs/concepts/markdowntopdf-clone/LLD.md",
+    "docs/concepts/markdowntopdf-clone/PRD.md",
+    "docs/concepts/markdowntopdf-clone/README.md"
+  ],
+  "completedTasks": [1, 2, 3, 4, 5]
+}

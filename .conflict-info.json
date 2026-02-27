@@ -1,13 +1,15 @@
 {
-  "prNumber": 333,
+  "prNumber": 332,
   "baseBranch": "main",
-  "headBranch": "feature/325-markdowntopdf-clone-sprint-1-issue-325",
+  "headBranch": "feature/329-markdowntopdf-clone-sprint-1-issue-329",
   "conflictedFiles": [
+    ".claude-output.json",
+    ".review-feedback.txt",
+    "docs/concepts/markdowntopdf-clone/components.md",
     "markdowntopdf/package-lock.json",
     "markdowntopdf/package.json",
-    "markdowntopdf/src/utils/parseMarkdown.ts",
-    "markdowntopdf/tsconfig.json",
+    "markdowntopdf/src/App.tsx",
     "markdowntopdf/vite.config.ts"
   ],
-  "conflictCount": 5
+  "conflictCount": 7
 }

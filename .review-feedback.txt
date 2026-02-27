@@ -1,5 +1,7 @@
 ## Code Review - Changes Requested
 
+Review complete. The decision is **changes_requested** with blocking issues — the PR is a DRAFT with no test code written and failing CI across the board.
+
 ## ❌ BLOCKING ISSUES FOUND
 
 **PR #331 — WIP: Implement Editor and Preview components**
