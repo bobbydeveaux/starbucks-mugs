@@ -1,8 +1,6 @@
 ## Code Review - Changes Requested
 
-**Review decision: `changes_requested` with blocking issues.**
-
-The core problem is that this PR's description and claimed implementation are entirely disconnected from the actual diff. Only `.claude-output.json` was deleted — the entire dashboard UI feature (AlertFilters, useAlerts hook, FilterContext, API client, TypeScript types, and all 23 tests) is absent from the committed code. Merging would silently close #259 without delivering any of its requirements.
+Review complete. The decision is **changes_requested** with blocking issues — the PR is a DRAFT with no test code written and failing CI across the board.
 
 **Action Required**: Please address the blocking issues above before merging.
 
