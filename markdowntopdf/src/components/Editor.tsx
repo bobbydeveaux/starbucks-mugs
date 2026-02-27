@@ -3,16 +3,17 @@ interface EditorProps {
   onChange: (value: string) => void;
 }
 
-function Editor({ value, onChange }: EditorProps): JSX.Element {
+export function Editor({ value, onChange }: EditorProps): JSX.Element {
   return (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="editor-pane"
-      aria-label="Markdown editor"
-      placeholder="Type your markdown here..."
-    />
+    <div className="pane editor-pane">
+      <div className="pane-header">Markdown</div>
+      <textarea
+        className="editor-textarea"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        spellCheck={false}
+        aria-label="Markdown editor"
+      />
+    </div>
   );
 }
-
-export default Editor;

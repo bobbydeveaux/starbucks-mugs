@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in fileguard/core/redaction.py and tests/unit/test_redaction.py by merging both implementations",
-  "strategyUsed": "Preserved configurable token API from HEAD branch while incorporating byte-offset-aware span detection from origin/main; merged test suites to cover both behaviors"
+  "filesResolved": 10,
+  "summary": "Resolved 10 'both added' conflicts between the feature branch and origin/main for the markdowntopdf React application. The feature branch had a simpler initial implementation while origin/main had a more complete version with DownloadButton, debounced preview, project references tsconfig, and better structured components.",
+  "strategyUsed": "Favored origin/main's more complete implementation for App.tsx (debouncing, DownloadButton), Editor.tsx and Preview.tsx (named exports, structured wrapper divs with headers), App.css (comprehensive styles including download button and responsive media query), main.tsx (named React imports, error guard), parseMarkdown.ts (trim() check), and tsconfig.json (project references). For package.json, merged both sides: used tsc -b build script and higher dep versions from origin/main, while preserving lint/typecheck scripts and ESLint devDependencies from HEAD. For vite.config.ts, merged both sides: kept setupFiles from origin/main and include pattern from HEAD. For index.html, used lowercase <!doctype html> (HTML5 convention from origin/main)."
 }
