@@ -1,0 +1,13 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: markdowntopdf-clone-feat-project-setup
+        name: Project Setup
+        type: enabler
+        files: [markdowntopdf/index.html markdowntopdf/package.json markdowntopdf/vite.config.ts markdowntopdf/src/main.tsx markdowntopdf/src/App.css markdowntopdf/package-lock.json markdowntopdf/tsconfig.json markdowntopdf/.gitignore markdowntopdf/README.md markdowntopdf/Dockerfile markdowntopdf/docker-compose.yml]
+      - id: markdowntopdf-clone-feat-converter-app
+        name: Markdown Editor, Live Preview, and PDF Download
+        type: feature
+        files: [markdowntopdf/src/App.tsx markdowntopdf/src/utils/parseMarkdown.ts markdowntopdf/src/components/Editor.tsx markdowntopdf/src/components/Preview.tsx markdowntopdf/src/components/DownloadButton.tsx markdowntopdf/src/App.test.tsx markdowntopdf/src/components/Preview.test.tsx markdowntopdf/src/components/DownloadButton.test.tsx markdowntopdf/package.json markdowntopdf/package-lock.json markdowntopdf/tsconfig.json markdowntopdf/.gitignore markdowntopdf/README.md markdowntopdf/Dockerfile markdowntopdf/docker-compose.yml]
