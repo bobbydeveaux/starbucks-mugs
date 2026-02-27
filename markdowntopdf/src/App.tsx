@@ -10,6 +10,7 @@ Type your **markdown** here and see it rendered live in the preview pane.
 ## Features
 
 - Live preview as you type
+- Sanitized HTML output (XSS-safe)
 - Syntax-highlighted headings, bold, italic, and lists
 - One-click **PDF download**
 

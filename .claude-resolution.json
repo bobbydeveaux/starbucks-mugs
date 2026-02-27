@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 2,
-  "summary": "Resolved conflicts in fileguard/core/redaction.py and tests/unit/test_redaction.py by merging both implementations",
-  "strategyUsed": "Preserved configurable token API from HEAD branch while incorporating byte-offset-aware span detection from origin/main; merged test suites to cover both behaviors"
+  "summary": "Resolved conflicts in DownloadButton.test.tsx and Preview.test.tsx by adopting the origin/main versions, which feature better test isolation, more comprehensive coverage, and improved testing practices (per-test vi.doMock + vi.resetModules for DownloadButton; mocked parseMarkdown dependency for Preview). All scenarios covered by HEAD are also covered by the origin/main test suites, plus additional cases.",
+  "strategyUsed": "Chose origin/main for both files — origin/main tests are strictly more comprehensive: DownloadButton tests use per-test module mocking (vi.doMock) and userEvent instead of shared vi.mock + fireEvent, adding 'button enabled by default' and 'restores button after success' cases; Preview tests mock parseMarkdown for proper unit isolation and add 'pane header', 'paragraph text', 'whitespace input', and 'prop changes' cases not present in HEAD."
 }

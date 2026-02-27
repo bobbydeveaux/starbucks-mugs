@@ -106,3 +106,13 @@ Chains `marked.parse()` → `DOMPurify.sanitize()`. Returns empty string for bla
 | File | Coverage |
 |---|---|
 | `markdowntopdf/src/App.test.tsx` | Editor↔Preview integration, debounce, default content, Download button render |
+| `markdowntopdf/src/components/Preview.test.tsx` | HTML rendering from markdown, ref forwarding, empty/whitespace input, XSS stripping, prop updates |
+| `markdowntopdf/src/components/DownloadButton.test.tsx` | Loading state, button disabled state, error message display, null ref guard, html2pdf.js invocation |
+
+All tests run with `npm test` in `markdowntopdf/`. Requires Vitest + jsdom (included in devDependencies).
+
+```sh
+cd markdowntopdf
+npm install
+npm test
+```

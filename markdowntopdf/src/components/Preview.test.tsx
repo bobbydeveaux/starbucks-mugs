@@ -1,60 +1,76 @@
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { Preview } from './Preview';
-import { createRef } from 'react';
+
+// Mock parseMarkdown so Preview tests are unit-scoped
+vi.mock('../utils/parseMarkdown', () => ({
+  parseMarkdown: (raw: string) => {
+    if (!raw.trim()) return '';
+    if (raw.startsWith('# ')) return `<h1>${raw.slice(2).trim()}</h1>`;
+    if (raw.includes('<script>')) return ''; // simulate XSS stripping
+    return `<p>${raw}</p>`;
+  },
+}));
 
 describe('Preview', () => {
-  it('renders a heading from markdown', () => {
-    const ref = createRef<HTMLDivElement>();
-    const { container } = render(<Preview ref={ref} markdown="# Hello" />);
-    expect(container.querySelector('h1')?.textContent).toBe('Hello');
+  beforeEach(() => {
+    // Clear any leftover DOM between tests
+    document.body.innerHTML = '';
   });
 
-  it('renders bold text from markdown', () => {
-    const ref = createRef<HTMLDivElement>();
-    const { container } = render(<Preview ref={ref} markdown="**bold**" />);
-    expect(container.querySelector('strong')).not.toBeNull();
+  it('renders the "Preview" pane header', () => {
+    render(<Preview markdown="" />);
+    expect(screen.getByText('Preview')).toBeInTheDocument();
   });
 
-  it('renders an unordered list from markdown', () => {
-    const ref = createRef<HTMLDivElement>();
-    const { container } = render(
-      <Preview ref={ref} markdown={'- item one\n- item two'} />,
-    );
-    expect(container.querySelectorAll('li')).toHaveLength(2);
+  it('renders sanitized HTML from a heading markdown string', () => {
+    render(<Preview markdown="# Hello World" />);
+    const content = document.querySelector('.preview-content');
+    expect(content).not.toBeNull();
+    expect(content?.innerHTML).toBe('<h1>Hello World</h1>');
   });
 
-  it('renders a code block from markdown', () => {
-    const ref = createRef<HTMLDivElement>();
-    const { container } = render(
-      <Preview ref={ref} markdown={'```\nconsole.log(1)\n```'} />,
-    );
-    expect(container.querySelector('code')).not.toBeNull();
+  it('renders a paragraph for plain text markdown', () => {
+    render(<Preview markdown="some text" />);
+    const content = document.querySelector('.preview-content');
+    expect(content?.innerHTML).toBe('<p>some text</p>');
   });
 
-  it('strips <script> tags via DOMPurify', () => {
-    const ref = createRef<HTMLDivElement>();
-    const { container } = render(
-      <Preview
-        ref={ref}
-        markdown={'<script>alert("xss")</script> safe text'}
-      />,
-    );
-    expect(container.querySelector('script')).toBeNull();
-    expect(container.textContent).toContain('safe text');
-  });
-
-  it('renders an empty preview for empty markdown', () => {
-    const ref = createRef<HTMLDivElement>();
-    const { container } = render(<Preview ref={ref} markdown="" />);
-    const content = container.querySelector('.preview-content');
+  it('renders nothing for an empty string', () => {
+    render(<Preview markdown="" />);
+    const content = document.querySelector('.preview-content');
     expect(content?.innerHTML).toBe('');
   });
 
-  it('exposes the ref on the preview-content div', () => {
-    const ref = createRef<HTMLDivElement>();
+  it('renders nothing for whitespace-only input', () => {
+    render(<Preview markdown="   " />);
+    const content = document.querySelector('.preview-content');
+    expect(content?.innerHTML).toBe('');
+  });
+
+  it('strips XSS payloads (script tags are removed)', () => {
+    render(<Preview markdown="<script>alert('xss')</script>" />);
+    const content = document.querySelector('.preview-content');
+    expect(content?.innerHTML).toBe('');
+  });
+
+  it('forwards its ref to the preview-content div', () => {
+    const ref = React.createRef<HTMLDivElement>();
     render(<Preview ref={ref} markdown="# Test" />);
     expect(ref.current).not.toBeNull();
     expect(ref.current?.classList.contains('preview-content')).toBe(true);
+  });
+
+  it('updates rendered HTML when the markdown prop changes', () => {
+    const { rerender } = render(<Preview markdown="# First" />);
+    expect(document.querySelector('.preview-content')?.innerHTML).toBe(
+      '<h1>First</h1>',
+    );
+
+    rerender(<Preview markdown="# Second" />);
+    expect(document.querySelector('.preview-content')?.innerHTML).toBe(
+      '<h1>Second</h1>',
+    );
   });
 });
