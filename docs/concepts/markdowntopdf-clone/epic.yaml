@@ -1,0 +1,39 @@
+Epics:
+- features:
+  - dependencies: []
+    description: Scaffold Vite + React 18 project with marked.js, DOMPurify, and html2pdf.js
+      dependencies configured and ready for development
+    estimatedComplexity: low
+    files:
+    - markdowntopdf/index.html
+    - markdowntopdf/package.json
+    - markdowntopdf/vite.config.ts
+    - markdowntopdf/src/main.tsx
+    - markdowntopdf/src/App.css
+    id: markdowntopdf-clone-feat-project-setup
+    name: Project Setup
+    project: markdowntopdf
+    type: enabler
+  - dependencies:
+    - markdowntopdf-clone-feat-project-setup
+    description: Split-pane UI with a controlled textarea editor, debounced real-time
+      markdown rendering via marked.js and DOMPurify, and a download button that lazy-imports
+      html2pdf.js to generate PDFs entirely client-side from the rendered preview
+      node
+    estimatedComplexity: medium
+    files:
+    - markdowntopdf/src/App.tsx
+    - markdowntopdf/src/utils/parseMarkdown.ts
+    - markdowntopdf/src/components/Editor.tsx
+    - markdowntopdf/src/components/Preview.tsx
+    - markdowntopdf/src/components/DownloadButton.tsx
+    - markdowntopdf/src/App.test.tsx
+    - markdowntopdf/src/components/Preview.test.tsx
+    - markdowntopdf/src/components/DownloadButton.test.tsx
+    id: markdowntopdf-clone-feat-converter-app
+    name: Markdown Editor, Live Preview, and PDF Download
+    project: markdowntopdf
+    type: feature
+  id: markdowntopdf-clone-epic-core
+  name: Markdown to PDF Converter
+Version: v1alpha1
