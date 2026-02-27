@@ -1,10 +1,15 @@
 {
-  "prNumber": 317,
+  "prNumber": 332,
   "baseBranch": "main",
-  "headBranch": "feature/277-fileguard-sprint-4-issue-277",
+  "headBranch": "feature/329-markdowntopdf-clone-sprint-1-issue-329",
   "conflictedFiles": [
-    "fileguard/core/redaction.py",
-    "tests/unit/test_redaction.py"
+    ".claude-output.json",
+    ".review-feedback.txt",
+    "docs/concepts/markdowntopdf-clone/components.md",
+    "markdowntopdf/package-lock.json",
+    "markdowntopdf/package.json",
+    "markdowntopdf/src/App.tsx",
+    "markdowntopdf/vite.config.ts"
   ],
-  "conflictCount": 2
+  "conflictCount": 7
 }
