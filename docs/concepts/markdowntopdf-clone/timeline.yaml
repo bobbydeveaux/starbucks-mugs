@@ -1,0 +1,23 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-02-27T20:30:07Z
+  totalSprints: 1
+  totalDuration: 7 days
+
+sprints:
+  - number: 1
+    startDate: 2026-02-27
+    endDate: 2026-03-06
+    duration: 7 days
+    features:
+      - id: markdowntopdf-clone-feat-project-setup
+        name: Project Setup
+        type: enabler
+      - id: markdowntopdf-clone-feat-converter-app
+        name: Markdown Editor, Live Preview, and PDF Download
+        type: feature
+
+criticalPath:
+  - markdowntopdf-clone-feat-project-setup
+  - markdowntopdf-clone-feat-converter-app
