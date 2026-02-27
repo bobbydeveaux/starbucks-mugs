@@ -1,0 +1,138 @@
+GeneratedAt: "2026-02-27T20:31:09Z"
+Plan: markdowntopdf-clone-plan
+Sprints:
+- Features:
+  - FeatureID: markdowntopdf-clone-feat-project-setup
+    FeatureTitle: Project Setup
+    Tasks:
+    - AcceptanceCriteria:
+      - npm install completes without errors and all four runtime deps (react, marked,
+        dompurify, html2pdf.js) are resolvable
+      - vite.config.ts is valid and `npm run dev` starts the dev server
+      - index.html references the correct root script entry
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Initialize the markdowntopdf/ directory with a Vite + React 18
+        project. Configure package.json with marked, dompurify, html2pdf.js, and their
+        TypeScript type definitions. Set up vite.config.ts and index.html as the Vite
+        entry point.
+      EstimatedEffort: S
+      Files:
+      - markdowntopdf/package.json
+      - markdowntopdf/vite.config.ts
+      - markdowntopdf/index.html
+      ID: task-markdowntopdf-clone-feat-project-setup-1
+      Title: Scaffold Vite + React 18 project with dependencies
+    - AcceptanceCriteria:
+      - App renders without runtime errors in the browser
+      - App.css defines a flex-row container suitable for a 50/50 split-pane layout
+      - '`npm run build` produces a valid production bundle with no TypeScript errors'
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-markdowntopdf-clone-feat-project-setup-1
+      Description: 'Implement src/main.tsx to mount the React app via ReactDOM.createRoot
+        targeting the #root element. Add App.css with the flexbox split-pane layout
+        styles that will be shared across Editor and Preview components.'
+      EstimatedEffort: S
+      Files:
+      - markdowntopdf/src/main.tsx
+      - markdowntopdf/src/App.css
+      ID: task-markdowntopdf-clone-feat-project-setup-2
+      Title: Configure React entry point and base split-pane styles
+  - FeatureID: markdowntopdf-clone-feat-converter-app
+    FeatureTitle: Markdown Editor, Live Preview, and PDF Download
+    Tasks:
+    - AcceptanceCriteria:
+      - 'parseMarkdown(raw: string): string returns sanitized HTML from markdown input'
+      - XSS payloads in markdown are stripped by DOMPurify before output
+      - Empty string input returns empty string without errors
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create the parseMarkdown utility that chains marked.parse with
+        DOMPurify.sanitize. This is the foundational parsing layer used by the Preview
+        component. Include TypeScript types and handle edge cases like empty input.
+      EstimatedEffort: S
+      Files:
+      - markdowntopdf/src/utils/parseMarkdown.ts
+      ID: task-markdowntopdf-clone-feat-converter-app-1
+      Title: Implement parseMarkdown utility
+    - AcceptanceCriteria:
+      - Editor renders a textarea that fires onChange on every keystroke with the
+        current value
+      - Preview renders sanitized HTML from the markdown prop via dangerouslySetInnerHTML
+      - Preview forwards its ref to the wrapping div so the parent can target the
+        DOM node
+      - Both components compile without TypeScript errors
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-markdowntopdf-clone-feat-converter-app-1
+      Description: Build Editor as a controlled textarea accepting value and onChange
+        props with no internal state. Build Preview to call parseMarkdown and inject
+        via dangerouslySetInnerHTML, forwarding a ref for PDF capture. Both components
+        must be typed with explicit prop interfaces.
+      EstimatedEffort: S
+      Files:
+      - markdowntopdf/src/components/Editor.tsx
+      - markdowntopdf/src/components/Preview.tsx
+      ID: task-markdowntopdf-clone-feat-converter-app-2
+      Title: Implement Editor and Preview components
+    - AcceptanceCriteria:
+      - Typing in the Editor updates the Preview in real time (debounced 150ms)
+      - Split-pane layout renders Editor and Preview at equal widths filling the viewport
+      - previewRef correctly targets the Preview DOM node
+      - Default sample markdown is visible on first load
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-markdowntopdf-clone-feat-converter-app-2
+      Description: Wire App.tsx as the single state owner with a markdownText useState
+        hook initialized to a sample markdown string. Render Editor and Preview side-by-side
+        in a flex-row split pane, hold a previewRef via useRef, and pass the ref and
+        a setter callback to the appropriate children. Add App.css flexbox styles
+        for the split layout.
+      EstimatedEffort: M
+      Files:
+      - markdowntopdf/src/App.tsx
+      - markdowntopdf/src/App.css
+      ID: task-markdowntopdf-clone-feat-converter-app-3
+      Title: Implement App.tsx with state management and split-pane layout
+    - AcceptanceCriteria:
+      - Clicking Download triggers a dynamic import of html2pdf.js and generates a
+        PDF from the preview node
+      - Button is disabled and shows a loading indicator while PDF is being generated
+      - An inline error message is rendered if html2pdf.js throws during generation
+      - html2pdf.js is not included in the initial JS bundle (confirmed via build
+        output)
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-markdowntopdf-clone-feat-converter-app-3
+      Description: Build DownloadButton to lazy-import html2pdf.js on click (dynamic
+        import, not top-level), capturing the forwarded previewRef node. Manage a
+        loading boolean state during generation and display an inline error message
+        on failure. The button must be disabled while loading.
+      EstimatedEffort: M
+      Files:
+      - markdowntopdf/src/components/DownloadButton.tsx
+      ID: task-markdowntopdf-clone-feat-converter-app-4
+      Title: Implement DownloadButton with lazy-loaded PDF generation
+    - AcceptanceCriteria:
+      - Preview test confirms rendered output matches expected HTML for a given markdown
+        string
+      - DownloadButton test confirms button is disabled during loading and error text
+        appears on rejection
+      - App integration test confirms typing in Editor updates the Preview content
+      - All tests pass with no console errors
+      AgentType: qa-engineer
+      Dependencies:
+      - task-markdowntopdf-clone-feat-converter-app-4
+      Description: Write tests for Preview (renders HTML from markdown prop, sanitizes
+        XSS), DownloadButton (loading state, error state, calls html2pdf with ref
+        node), and App integration (editor input propagates to preview). Mock html2pdf.js
+        and DOMPurify where necessary to keep tests unit-scoped.
+      EstimatedEffort: M
+      Files:
+      - markdowntopdf/src/App.test.tsx
+      - markdowntopdf/src/components/Preview.test.tsx
+      - markdowntopdf/src/components/DownloadButton.test.tsx
+      ID: task-markdowntopdf-clone-feat-converter-app-5
+      Title: Write component and integration tests
+  Sprint: 1
