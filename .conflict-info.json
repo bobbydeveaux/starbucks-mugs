@@ -1,10 +1,10 @@
 {
-  "prNumber": 335,
+  "prNumber": 347,
   "baseBranch": "main",
-  "headBranch": "feature/323-markdowntopdf-clone-sprint-1-issue-323",
+  "headBranch": "feature/342-find-images-for-all-the-cars-sprint-2-issue-342",
   "conflictedFiles": [
-    "markdowntopdf/src/components/DownloadButton.test.tsx",
-    "markdowntopdf/src/components/Preview.test.tsx"
+    "src/utils/imageUrl.test.ts",
+    "src/utils/imageUrl.ts"
   ],
   "conflictCount": 2
 }
