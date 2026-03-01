@@ -418,4 +418,57 @@ describe('getCarImageUrl', () => {
       });
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Tests: Brand prefix handling (model names that include the brand name)
+  // -------------------------------------------------------------------------
+
+  describe('Brand prefix handling', () => {
+    it('strips brand prefix from model name', () => {
+      const result = getCarImageUrl('ferrari', 'Ferrari 488');
+      expect(result).toBe('/images/ferrari/488.jpg');
+    });
+
+    it('strips brand prefix for Lamborghini', () => {
+      const result = getCarImageUrl('lamborghini', 'Lamborghini Gallardo');
+      expect(result).toBe('/images/lamborghini/gallardo.jpg');
+    });
+
+    it('normalizes mixed-case brand in URL', () => {
+      const result = getCarImageUrl('Ferrari', 'Ferrari 488');
+      expect(result).toBe('/images/ferrari/488.jpg');
+    });
+
+    it('strips brand prefix with spaces and diacriticals', () => {
+      const result = getCarImageUrl('lamborghini', 'Lamborghini Huracán');
+      expect(result).toBe('/images/lamborghini/huracan.jpg');
+    });
+
+    it('strips brand prefix with multiple model words', () => {
+      const result = getCarImageUrl('ferrari', 'Ferrari F8 Tributo');
+      expect(result).toBe('/images/ferrari/f8-tributo.jpg');
+    });
+
+    it('strips brand prefix with leading/trailing spaces in model name', () => {
+      const result = getCarImageUrl('ferrari', '  Ferrari 488  ');
+      expect(result).toBe('/images/ferrari/488.jpg');
+    });
+
+    it('strips uppercased brand prefix', () => {
+      const result = getCarImageUrl('Lamborghini', 'LAMBORGHINI Murciélago LP 640');
+      expect(result).toBe('/images/lamborghini/murcielago-lp-640.jpg');
+    });
+
+    it('handles real Ferrari models with brand prefix', () => {
+      expect(getCarImageUrl('ferrari', 'Ferrari 488')).toBe('/images/ferrari/488.jpg');
+      expect(getCarImageUrl('ferrari', 'Ferrari F8 Tributo')).toBe('/images/ferrari/f8-tributo.jpg');
+      expect(getCarImageUrl('ferrari', 'Ferrari 458 Italia')).toBe('/images/ferrari/458-italia.jpg');
+    });
+
+    it('handles real Lamborghini models with brand prefix', () => {
+      expect(getCarImageUrl('lamborghini', 'Lamborghini Gallardo')).toBe('/images/lamborghini/gallardo.jpg');
+      expect(getCarImageUrl('lamborghini', 'Lamborghini Huracán')).toBe('/images/lamborghini/huracan.jpg');
+      expect(getCarImageUrl('lamborghini', 'Lamborghini Murciélago')).toBe('/images/lamborghini/murcielago.jpg');
+    });
+  });
 });

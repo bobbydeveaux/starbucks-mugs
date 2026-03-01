@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
   "filesResolved": 2,
-  "summary": "Resolved conflicts in DownloadButton.test.tsx and Preview.test.tsx by adopting the origin/main versions, which feature better test isolation, more comprehensive coverage, and improved testing practices (per-test vi.doMock + vi.resetModules for DownloadButton; mocked parseMarkdown dependency for Preview). All scenarios covered by HEAD are also covered by the origin/main test suites, plus additional cases.",
-  "strategyUsed": "Chose origin/main for both files — origin/main tests are strictly more comprehensive: DownloadButton tests use per-test module mocking (vi.doMock) and userEvent instead of shared vi.mock + fireEvent, adding 'button enabled by default' and 'restores button after success' cases; Preview tests mock parseMarkdown for proper unit isolation and add 'pane header', 'paragraph text', 'whitespace input', and 'prop changes' cases not present in HEAD."
+  "summary": "Resolved conflicts in src/utils/imageUrl.ts and src/utils/imageUrl.test.ts. The HEAD branch had a robust URL-generation implementation (special-char removal, step-by-step normalization) with comprehensive fixture-based tests. origin/main introduced brand-prefix stripping (e.g. 'Ferrari 488' → '488') and brand.toLowerCase() in URLs, with simpler tests. Both sets of functionality were preserved in the merge.",
+  "strategyUsed": "preserved both changes: kept HEAD's robust special-character removal and comprehensive test suite; added origin/main's brand-prefix stripping logic and brand.toLowerCase() URL normalization; added origin/main's brand-prefix test cases as a new describe block. All 76 imageUrl tests pass."
 }
