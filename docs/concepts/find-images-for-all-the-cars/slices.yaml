@@ -1,0 +1,15 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: find-images-for-all-the-cars-feat-source-images
+        name: Source and organize car images
+        type: feature
+        files: [/public/images/ferrari/ /public/images/lamborghini/]
+  - number: 2
+    features:
+      - id: find-images-for-all-the-cars-feat-image-utility
+        name: Implement image URL utility and tests
+        type: feature
+        files: [src/utils/imageUrl.ts src/utils/imageUrl.test.ts src/components/CarCard.test.tsx]

@@ -1,0 +1,83 @@
+GeneratedAt: "2026-03-01T16:13:13Z"
+Plan: find-images-for-all-the-cars-plan
+Sprints:
+- Features:
+  - FeatureID: find-images-for-all-the-cars-feat-source-images
+    FeatureTitle: Source and organize car images
+    Tasks:
+    - AcceptanceCriteria:
+      - 47 Ferrari JPG images in /public/images/ferrari/ with correct filenames matching
+        JSON model names
+      - 43 Lamborghini JPG images in /public/images/lamborghini/ with correct filenames
+        matching JSON model names
+      - Filenames use lowercase convention with spaces converted to hyphens
+      - All images committed to git repository
+      AgentType: operator-engineer
+      Dependencies: []
+      Description: Acquire 47 Ferrari and 43 Lamborghini images from public sources.
+        Rename them according to the JSON model naming convention (e.g., '488.jpg'
+        for 'Ferrari 488', 'huracan.jpg' for 'Lamborghini Huracán'). Place them in
+        the correct directory structure and commit to version control.
+      EstimatedEffort: M
+      Files:
+      - /public/images/ferrari/
+      - /public/images/lamborghini/
+      ID: task-find-images-for-all-the-cars-feat-source-images-1
+      Title: Source and organize car images
+    - AcceptanceCriteria:
+      - All 47 Ferrari images load successfully via /images/ferrari/* routes returning
+        HTTP 200
+      - All 43 Lamborghini images load successfully via /images/lamborghini/* routes
+        returning HTTP 200
+      - Missing image paths correctly return HTTP 404
+      - E2E test suite passes without failures
+      AgentType: qa-engineer
+      Dependencies:
+      - task-find-images-for-all-the-cars-feat-source-images-1
+      Description: Run E2E tests to verify all 90 car images load correctly through
+        the static file serving routes at /images/ferrari/* and /images/lamborghini/*.
+        Validate HTTP status codes and image accessibility.
+      EstimatedEffort: S
+      Files: []
+      ID: task-find-images-for-all-the-cars-feat-source-images-2
+      Title: Verify images load with E2E tests
+  Sprint: 1
+- Features:
+  - FeatureID: find-images-for-all-the-cars-feat-image-utility
+    FeatureTitle: Implement image URL utility and tests
+    Tasks:
+    - AcceptanceCriteria:
+      - Function getCarImageUrl(brand, modelName) is exported and callable
+      - 'Inputs are correctly normalized: ''BMW'' → ''bmw'', ''Model X'' → ''model-x'''
+      - 'Function returns correct URL format: `/images/bmw/model-x.jpg`'
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create src/utils/imageUrl.ts with the getCarImageUrl function that
+        constructs image URLs from brand and model names. The function should convert
+        inputs to lowercase and replace spaces with hyphens to generate paths in the
+        format `/images/${brand}/${modelName}.jpg`.
+      EstimatedEffort: S
+      Files:
+      - src/utils/imageUrl.ts
+      ID: task-find-images-for-all-the-cars-feat-image-utility-1
+      Title: Implement getCarImageUrl utility function
+    - AcceptanceCriteria:
+      - Unit tests pass for various input formats (uppercase, mixed case, spaces,
+        multiple words)
+      - Integration test verifies CarCard renders with correct image URLs
+      - All unit and integration tests pass
+      - Test coverage includes normal and edge case scenarios
+      AgentType: qa-engineer
+      Dependencies:
+      - task-find-images-for-all-the-cars-feat-image-utility-1
+      Description: Create src/utils/imageUrl.test.ts with comprehensive unit tests
+        for the getCarImageUrl function, and integrate testing into src/components/CarCard.test.tsx
+        to verify the component correctly uses the utility. Tests should cover edge
+        cases, input variations, and component integration scenarios.
+      EstimatedEffort: M
+      Files:
+      - src/utils/imageUrl.test.ts
+      - src/components/CarCard.test.tsx
+      ID: task-find-images-for-all-the-cars-feat-image-utility-2
+      Title: Implement and verify image utility tests
+  Sprint: 2

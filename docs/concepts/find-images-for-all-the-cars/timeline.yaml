@@ -1,0 +1,28 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-03-01T16:12:26Z
+  totalSprints: 2
+  totalDuration: 15 days
+
+sprints:
+  - number: 2
+    startDate: 2026-03-01
+    endDate: 2026-03-08
+    duration: 7 days
+    features:
+      - id: find-images-for-all-the-cars-feat-image-utility
+        name: Implement image URL utility and tests
+        type: feature
+  - number: 1
+    startDate: 2026-03-09
+    endDate: 2026-03-16
+    duration: 7 days
+    features:
+      - id: find-images-for-all-the-cars-feat-source-images
+        name: Source and organize car images
+        type: feature
+
+criticalPath:
+  - find-images-for-all-the-cars-feat-source-images
+  - find-images-for-all-the-cars-feat-image-utility
