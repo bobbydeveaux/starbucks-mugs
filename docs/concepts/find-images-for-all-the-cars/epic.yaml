@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Acquire, organize, and place 90 car images (47 Ferrari + 43 Lamborghini)
       in correct directory structure with proper naming conventions matching JSON
       model names
@@ -12,7 +13,8 @@ Epics:
     name: Source and organize car images
     project: website
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - find-images-for-all-the-cars-feat-source-images
     description: Create image URL construction utility function and implement unit/integration
       tests to verify all images load correctly with proper naming conventions
@@ -25,6 +27,6 @@ Epics:
     name: Implement image URL utility and tests
     project: website
     type: feature
-  id: find-images-for-all-the-cars-epic-image-assets
-  name: Image Asset Management
+  ID: find-images-for-all-the-cars-epic-image-assets
+  Name: Image Asset Management
 Version: v1alpha1
