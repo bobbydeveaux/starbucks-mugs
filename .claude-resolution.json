@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 5,
-  "summary": "Resolved conflicts across 5 files: .claude-output.json (manual merge preserving HEAD's PR title/body for issue #355 and completedTasks [1,2,3,4] while merging docsReviewed from both branches), package.json (manual merge keeping HEAD's version 0.1.0 + origin/main's lint script, cheerio, eslint packages, and newer dependency versions), scrape.ts (used origin/main's curated dataset approach with 187 countries and --live flag), temperatures.json (used origin/main's comprehensive 187-country dataset), package-lock.json (used origin/main's version including cheerio lock entries).",
-  "strategyUsed": "Manual merge for .claude-output.json and package.json to preserve both branches' contributions; used origin/main for scrape.ts, temperatures.json, and package-lock.json as they represent a more comprehensive and complete dataset (187 countries vs 167, curated approach with validation, and matching lock file including cheerio dependency)"
+  "filesResolved": 3,
+  "summary": "Resolved 3 conflicts by choosing origin/main for all files: package.json and package-lock.json use newer dependency versions with additional scripts (typecheck, scrape), and temperatures.json uses origin/main's actual temperature dataset instead of the empty array from HEAD.",
+  "strategyUsed": "chose theirs (origin/main) for all 3 files - package.json has newer deps and required scrape script, package-lock.json matches the chosen package.json, temperatures.json has actual scraped data vs empty array on HEAD"
 }

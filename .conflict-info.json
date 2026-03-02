@@ -1,13 +1,11 @@
 {
-  "prNumber": 361,
+  "prNumber": 366,
   "baseBranch": "main",
-  "headBranch": "feature/355-what-s-the-temp-website-sprint-1-issue-355",
+  "headBranch": "feature/351-what-s-the-temp-website-sprint-1-issue-351",
   "conflictedFiles": [
-    ".claude-output.json",
     "what-s-the-temp/package-lock.json",
     "what-s-the-temp/package.json",
-    "what-s-the-temp/public/temperatures.json",
-    "what-s-the-temp/scripts/scrape.ts"
+    "what-s-the-temp/public/temperatures.json"
   ],
-  "conflictCount": 5
+  "conflictCount": 3
 }
