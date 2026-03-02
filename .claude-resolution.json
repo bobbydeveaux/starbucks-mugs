@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in src/utils/imageUrl.ts and src/utils/imageUrl.test.ts. The HEAD branch had a robust URL-generation implementation (special-char removal, step-by-step normalization) with comprehensive fixture-based tests. origin/main introduced brand-prefix stripping (e.g. 'Ferrari 488' → '488') and brand.toLowerCase() in URLs, with simpler tests. Both sets of functionality were preserved in the merge.",
-  "strategyUsed": "preserved both changes: kept HEAD's robust special-character removal and comprehensive test suite; added origin/main's brand-prefix stripping logic and brand.toLowerCase() URL normalization; added origin/main's brand-prefix test cases as a new describe block. All 76 imageUrl tests pass."
+  "filesResolved": 3,
+  "summary": "Resolved 3 conflicts by choosing origin/main for all files: package.json and package-lock.json use newer dependency versions with additional scripts (typecheck, scrape), and temperatures.json uses origin/main's actual temperature dataset instead of the empty array from HEAD.",
+  "strategyUsed": "chose theirs (origin/main) for all 3 files - package.json has newer deps and required scrape script, package-lock.json matches the chosen package.json, temperatures.json has actual scraped data vs empty array on HEAD"
 }

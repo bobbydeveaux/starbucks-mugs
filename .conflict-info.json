@@ -1,10 +1,11 @@
 {
-  "prNumber": 347,
+  "prNumber": 366,
   "baseBranch": "main",
-  "headBranch": "feature/342-find-images-for-all-the-cars-sprint-2-issue-342",
+  "headBranch": "feature/351-what-s-the-temp-website-sprint-1-issue-351",
   "conflictedFiles": [
-    "src/utils/imageUrl.test.ts",
-    "src/utils/imageUrl.ts"
+    "what-s-the-temp/package-lock.json",
+    "what-s-the-temp/package.json",
+    "what-s-the-temp/public/temperatures.json"
   ],
-  "conflictCount": 2
+  "conflictCount": 3
 }
