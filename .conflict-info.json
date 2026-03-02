@@ -1,11 +1,15 @@
 {
-  "prNumber": 366,
+  "prNumber": 362,
   "baseBranch": "main",
-  "headBranch": "feature/351-what-s-the-temp-website-sprint-1-issue-351",
+  "headBranch": "feature/353-what-s-the-temp-website-sprint-1-issue-353",
   "conflictedFiles": [
+    ".claude-output.json",
+    "what-s-the-temp/index.html",
     "what-s-the-temp/package-lock.json",
     "what-s-the-temp/package.json",
-    "what-s-the-temp/public/temperatures.json"
+    "what-s-the-temp/src/App.tsx",
+    "what-s-the-temp/tailwind.config.ts",
+    "what-s-the-temp/vite.config.ts"
   ],
-  "conflictCount": 3
+  "conflictCount": 7
 }
