@@ -1,0 +1,39 @@
+GeneratedAt: "2026-03-02T16:02:35Z"
+Issues:
+- IssueNumber: 369
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/369
+  TaskID: task-music-dj-website-feat-backend-server-1
+- IssueNumber: 370
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/370
+  TaskID: task-music-dj-website-feat-backend-server-2
+- IssueNumber: 371
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/371
+  TaskID: task-music-dj-website-feat-backend-server-3
+- IssueNumber: 372
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/372
+  TaskID: task-music-dj-website-feat-chart-proxy-1
+- IssueNumber: 373
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/373
+  TaskID: task-music-dj-website-feat-chart-proxy-2
+- IssueNumber: 374
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/374
+  TaskID: task-music-dj-website-feat-frontend-setup-1
+- IssueNumber: 375
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/375
+  TaskID: task-music-dj-website-feat-frontend-setup-2
+- IssueNumber: 376
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/376
+  TaskID: task-music-dj-website-feat-frontend-setup-3
+- IssueNumber: 377
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/377
+  TaskID: task-music-dj-website-feat-chart-display-1
+- IssueNumber: 378
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/378
+  TaskID: task-music-dj-website-feat-chart-display-2
+- IssueNumber: 379
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/379
+  TaskID: task-music-dj-website-feat-genre-filter-1
+- IssueNumber: 380
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/380
+  TaskID: task-music-dj-website-feat-random-picker-1
+Plan: music-dj-website-plan

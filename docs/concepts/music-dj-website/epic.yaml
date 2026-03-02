@@ -1,0 +1,101 @@
+Epics:
+- Features:
+  - Sprint: 1
+    dependencies: null
+    description: Set up Node.js/Express server with in-memory node-cache, /api/health
+      endpoint, Morgan logging, and static file serving for the compiled frontend
+      build
+    estimatedComplexity: low
+    files:
+    - music-dj-website/package.json
+    - music-dj-website/server/index.js
+    - music-dj-website/server/services/cache.js
+    - music-dj-website/server/routes/charts.js
+    id: music-dj-website-feat-backend-server
+    name: Express Server & Cache Layer
+    project: music-dj-website
+    type: enabler
+  - Sprint: 1
+    dependencies:
+    - music-dj-website-feat-backend-server
+    description: Implement chartProxy service that fetches top tracks from Spotify
+      (primary) with Last.fm fallback, normalizes both responses to the unified Track
+      shape, applies 60-minute cache, and returns stale cache on upstream failure
+    estimatedComplexity: high
+    files:
+    - music-dj-website/server/services/chartProxy.js
+    - music-dj-website/server/services/spotifyClient.js
+    - music-dj-website/server/services/lastfmClient.js
+    id: music-dj-website-feat-chart-proxy
+    name: Chart Data Proxy with Spotify & Last.fm
+    project: music-dj-website
+    type: feature
+  ID: music-dj-website-epic-backend
+  Name: Backend API & Chart Proxy
+- Features:
+  - Sprint: 1
+    dependencies:
+    - music-dj-website-feat-backend-server
+    description: Scaffold the React SPA with Vite build config, TypeScript, API proxy
+      to Express on port 3001, shared Track/ChartResponse types, and the fetchCharts
+      API wrapper
+    estimatedComplexity: low
+    files:
+    - music-dj-website/index.html
+    - music-dj-website/vite.config.ts
+    - music-dj-website/tsconfig.json
+    - music-dj-website/src/main.tsx
+    - music-dj-website/src/App.tsx
+    - music-dj-website/src/types.ts
+    - music-dj-website/src/api/charts.ts
+    - music-dj-website/src/index.css
+    id: music-dj-website-feat-frontend-setup
+    name: Vite + React Project Setup
+    project: music-dj-website
+    type: enabler
+  - Sprint: 2
+    dependencies:
+    - music-dj-website-feat-frontend-setup
+    - music-dj-website-feat-chart-proxy
+    description: Implement useCharts hook for data fetching with loading/error states,
+      TrackList and TrackCard components rendering rank, title, artist, and genre
+      chip for each track
+    estimatedComplexity: medium
+    files:
+    - music-dj-website/src/hooks/useCharts.ts
+    - music-dj-website/src/components/TrackList.tsx
+    - music-dj-website/src/components/TrackCard.tsx
+    id: music-dj-website-feat-chart-display
+    name: Chart Data Display
+    project: music-dj-website
+    type: feature
+  - Sprint: 2
+    dependencies:
+    - music-dj-website-feat-chart-display
+    description: GenreFilter component rendering genre pill buttons that update selectedGenre
+      state in App.tsx, triggering useCharts re-fetch and narrowing the track pool
+      for random selection
+    estimatedComplexity: low
+    files:
+    - music-dj-website/src/components/GenreFilter.tsx
+    id: music-dj-website-feat-genre-filter
+    name: Genre Filter
+    project: music-dj-website
+    type: feature
+  - Sprint: 2
+    dependencies:
+    - music-dj-website-feat-genre-filter
+    description: RandomPicker component with Pick and Re-roll buttons using pickRandom
+      utility (O(1) Math.random selection), highlights the selected track with accent
+      styling, resets on genre change
+    estimatedComplexity: low
+    files:
+    - music-dj-website/src/components/RandomPicker.tsx
+    - music-dj-website/src/utils/randomPick.ts
+    id: music-dj-website-feat-random-picker
+    name: Random Track Picker & Re-roll
+    project: music-dj-website
+    type: feature
+  ID: music-dj-website-epic-frontend
+  Name: DJ Frontend Interface
+Version: v1alpha1

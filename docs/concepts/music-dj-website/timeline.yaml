@@ -1,0 +1,43 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-03-02T15:59:46Z
+  totalSprints: 2
+  totalDuration: 15 days
+
+sprints:
+  - number: 1
+    startDate: 2026-03-02
+    endDate: 2026-03-09
+    duration: 7 days
+    features:
+      - id: music-dj-website-feat-backend-server
+        name: Express Server & Cache Layer
+        type: enabler
+      - id: music-dj-website-feat-chart-proxy
+        name: Chart Data Proxy with Spotify & Last.fm
+        type: feature
+      - id: music-dj-website-feat-frontend-setup
+        name: Vite + React Project Setup
+        type: enabler
+  - number: 2
+    startDate: 2026-03-10
+    endDate: 2026-03-17
+    duration: 7 days
+    features:
+      - id: music-dj-website-feat-chart-display
+        name: Chart Data Display
+        type: feature
+      - id: music-dj-website-feat-genre-filter
+        name: Genre Filter
+        type: feature
+      - id: music-dj-website-feat-random-picker
+        name: Random Track Picker & Re-roll
+        type: feature
+
+criticalPath:
+  - music-dj-website-feat-backend-server
+  - music-dj-website-feat-frontend-setup
+  - music-dj-website-feat-chart-display
+  - music-dj-website-feat-genre-filter
+  - music-dj-website-feat-random-picker

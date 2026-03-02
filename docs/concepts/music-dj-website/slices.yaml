@@ -1,0 +1,31 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: music-dj-website-feat-backend-server
+        name: Express Server & Cache Layer
+        type: enabler
+        files: [music-dj-website/package.json music-dj-website/server/index.js music-dj-website/server/services/cache.js music-dj-website/server/routes/charts.js music-dj-website/package-lock.json music-dj-website/tsconfig.json music-dj-website/.gitignore music-dj-website/README.md music-dj-website/Dockerfile music-dj-website/docker-compose.yml]
+      - id: music-dj-website-feat-chart-proxy
+        name: Chart Data Proxy with Spotify & Last.fm
+        type: feature
+        files: [music-dj-website/server/services/chartProxy.js music-dj-website/server/services/spotifyClient.js music-dj-website/server/services/lastfmClient.js music-dj-website/package.json music-dj-website/package-lock.json music-dj-website/tsconfig.json music-dj-website/.gitignore music-dj-website/README.md music-dj-website/Dockerfile music-dj-website/docker-compose.yml]
+      - id: music-dj-website-feat-frontend-setup
+        name: Vite + React Project Setup
+        type: enabler
+        files: [music-dj-website/index.html music-dj-website/vite.config.ts music-dj-website/tsconfig.json music-dj-website/src/main.tsx music-dj-website/src/App.tsx music-dj-website/src/types.ts music-dj-website/src/api/charts.ts music-dj-website/src/index.css music-dj-website/package.json music-dj-website/package-lock.json music-dj-website/.gitignore music-dj-website/README.md music-dj-website/Dockerfile music-dj-website/docker-compose.yml]
+  - number: 2
+    features:
+      - id: music-dj-website-feat-chart-display
+        name: Chart Data Display
+        type: feature
+        files: [music-dj-website/src/hooks/useCharts.ts music-dj-website/src/components/TrackList.tsx music-dj-website/src/components/TrackCard.tsx music-dj-website/package.json music-dj-website/package-lock.json music-dj-website/tsconfig.json music-dj-website/.gitignore music-dj-website/README.md music-dj-website/Dockerfile music-dj-website/docker-compose.yml]
+      - id: music-dj-website-feat-genre-filter
+        name: Genre Filter
+        type: feature
+        files: [music-dj-website/src/components/GenreFilter.tsx music-dj-website/package.json music-dj-website/package-lock.json music-dj-website/tsconfig.json music-dj-website/.gitignore music-dj-website/README.md music-dj-website/Dockerfile music-dj-website/docker-compose.yml]
+      - id: music-dj-website-feat-random-picker
+        name: Random Track Picker & Re-roll
+        type: feature
+        files: [music-dj-website/src/components/RandomPicker.tsx music-dj-website/src/utils/randomPick.ts music-dj-website/package.json music-dj-website/package-lock.json music-dj-website/tsconfig.json music-dj-website/.gitignore music-dj-website/README.md music-dj-website/Dockerfile music-dj-website/docker-compose.yml]
