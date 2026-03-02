@@ -1,10 +1,10 @@
 {
-  "prNumber": 384,
+  "prNumber": 383,
   "baseBranch": "main",
-  "headBranch": "feature/357-what-s-the-temp-website-sprint-2-issue-357",
+  "headBranch": "feature/360-what-s-the-temp-website-sprint-2-issue-360",
   "conflictedFiles": [
-    ".claude-output.json",
-    ".review-feedback.txt"
+    ".review-feedback.txt",
+    "what-s-the-temp/src/utils/temperature.ts"
   ],
   "conflictCount": 2
 }
