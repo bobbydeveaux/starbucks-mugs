@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Set up Node.js/Express server with in-memory node-cache, /api/health
       endpoint, Morgan logging, and static file serving for the compiled frontend
       build
@@ -14,7 +15,8 @@ Epics:
     name: Express Server & Cache Layer
     project: music-dj-website
     type: enabler
-  - dependencies:
+  - Sprint: 1
+    dependencies:
     - music-dj-website-feat-backend-server
     description: Implement chartProxy service that fetches top tracks from Spotify
       (primary) with Last.fm fallback, normalizes both responses to the unified Track
@@ -28,10 +30,11 @@ Epics:
     name: Chart Data Proxy with Spotify & Last.fm
     project: music-dj-website
     type: feature
-  id: music-dj-website-epic-backend
-  name: Backend API & Chart Proxy
-- features:
-  - dependencies:
+  ID: music-dj-website-epic-backend
+  Name: Backend API & Chart Proxy
+- Features:
+  - Sprint: 1
+    dependencies:
     - music-dj-website-feat-backend-server
     description: Scaffold the React SPA with Vite build config, TypeScript, API proxy
       to Express on port 3001, shared Track/ChartResponse types, and the fetchCharts
@@ -50,7 +53,8 @@ Epics:
     name: Vite + React Project Setup
     project: music-dj-website
     type: enabler
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - music-dj-website-feat-frontend-setup
     - music-dj-website-feat-chart-proxy
     description: Implement useCharts hook for data fetching with loading/error states,
@@ -65,7 +69,8 @@ Epics:
     name: Chart Data Display
     project: music-dj-website
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - music-dj-website-feat-chart-display
     description: GenreFilter component rendering genre pill buttons that update selectedGenre
       state in App.tsx, triggering useCharts re-fetch and narrowing the track pool
@@ -77,7 +82,8 @@ Epics:
     name: Genre Filter
     project: music-dj-website
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - music-dj-website-feat-genre-filter
     description: RandomPicker component with Pick and Re-roll buttons using pickRandom
       utility (O(1) Math.random selection), highlights the selected track with accent
@@ -90,6 +96,6 @@ Epics:
     name: Random Track Picker & Re-roll
     project: music-dj-website
     type: feature
-  id: music-dj-website-epic-frontend
-  name: DJ Frontend Interface
+  ID: music-dj-website-epic-frontend
+  Name: DJ Frontend Interface
 Version: v1alpha1
