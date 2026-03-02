@@ -1,10 +1,15 @@
 {
-  "prNumber": 347,
+  "prNumber": 362,
   "baseBranch": "main",
-  "headBranch": "feature/342-find-images-for-all-the-cars-sprint-2-issue-342",
+  "headBranch": "feature/353-what-s-the-temp-website-sprint-1-issue-353",
   "conflictedFiles": [
-    "src/utils/imageUrl.test.ts",
-    "src/utils/imageUrl.ts"
+    ".claude-output.json",
+    "what-s-the-temp/index.html",
+    "what-s-the-temp/package-lock.json",
+    "what-s-the-temp/package.json",
+    "what-s-the-temp/src/App.tsx",
+    "what-s-the-temp/tailwind.config.ts",
+    "what-s-the-temp/vite.config.ts"
   ],
-  "conflictCount": 2
+  "conflictCount": 7
 }
