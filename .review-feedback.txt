@@ -28,6 +28,12 @@ The `what-s-the-temp/src/utils/` directory exists but is empty. No utility funct
 
 ---
 
+### BLOCKING: filterCountries Implementation Also Missing
+
+The PR has **blocking issues** — it's a WIP with zero implementation. The entire `filterCountries` function and its tests need to be written before this can merge.
+
+---
+
 ### What Needs to Be Done
 
 1. Implement `what-s-the-temp/src/utils/temperature.ts` with:
@@ -40,7 +46,9 @@ The `what-s-the-temp/src/utils/` directory exists but is empty. No utility funct
    - Edge cases: negative temps, 0°C/32°F boundary
    - `formatTemp` output format and rounding tests
 
-3. Ensure all tests pass before re-submitting.
+3. Implement `what-s-the-temp/src/utils/filterCountries.ts` and its tests.
+
+4. Ensure all tests pass before re-submitting.
 
 **Action Required**: Please address the blocking issues above before merging.
 
