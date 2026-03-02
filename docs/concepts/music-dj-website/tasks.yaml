@@ -1,0 +1,232 @@
+GeneratedAt: "2026-03-02T16:01:33Z"
+Plan: music-dj-website-plan
+Sprints:
+- Features:
+  - FeatureID: music-dj-website-feat-backend-server
+    FeatureTitle: Express Server & Cache Layer
+    Tasks:
+    - AcceptanceCriteria:
+      - npm install completes without errors
+      - npm run dev starts both Vite dev server and Express concurrently
+      - npm run build produces a compiled frontend build
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Create package.json with all required dependencies (express, node-cache,
+        morgan, cors) and dev dependencies (nodemon, vite). Define scripts for concurrent
+        client and server development, production build, and server start.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/package.json
+      ID: task-music-dj-website-feat-backend-server-1
+      Title: Initialize project dependencies and scripts
+    - AcceptanceCriteria:
+      - GET /api/health returns 200 with JSON status payload
+      - Morgan logs requests to stdout in dev format
+      - Server serves static files from the build directory in production
+      - All non-API routes return index.html for client-side routing
+      AgentType: backend-engineer
+      Dependencies:
+      - task-music-dj-website-feat-backend-server-1
+      Description: Implement server/index.js with Express app, Morgan HTTP request
+        logging, CORS middleware, and static file serving for the Vite-compiled frontend
+        build. Mount the charts router under /api and ensure fallthrough to index.html
+        for SPA routing.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/server/index.js
+      - music-dj-website/server/routes/charts.js
+      ID: task-music-dj-website-feat-backend-server-2
+      Title: Set up Express server with logging and static serving
+    - AcceptanceCriteria:
+      - Cache returns a stored value within its TTL without re-fetching
+      - getOrFetch calls the provided fetcher only on cache miss or expiry
+      - Stale reads return the last known value when the fetcher throws
+      AgentType: backend-engineer
+      Dependencies:
+      - task-music-dj-website-feat-backend-server-1
+      Description: Create server/services/cache.js as a node-cache wrapper with a
+        60-minute TTL and stale-read support. Expose get, set, and getOrFetch helpers
+        so route handlers can cache API responses without duplicating cache logic.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/server/services/cache.js
+      ID: task-music-dj-website-feat-backend-server-3
+      Title: Implement node-cache wrapper service
+  - FeatureID: music-dj-website-feat-chart-proxy
+    FeatureTitle: Chart Data Proxy with Spotify & Last.fm
+    Tasks:
+    - AcceptanceCriteria:
+      - spotifyClient fetches and caches an OAuth2 access token, retrying on expiry
+      - spotifyClient.getTopTracks() returns raw Spotify track objects
+      - lastfmClient.getTopTracks() returns raw Last.fm track objects
+      - Both clients throw on non-2xx responses so callers can detect failures
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Implement spotifyClient.js with Client Credentials OAuth2 token
+        fetch and top tracks endpoint call. Implement lastfmClient.js with chart.getTopTracks
+        fetch. Both clients should return raw API responses without normalization.
+      EstimatedEffort: M
+      Files:
+      - music-dj-website/server/services/spotifyClient.js
+      - music-dj-website/server/services/lastfmClient.js
+      ID: task-music-dj-website-feat-chart-proxy-1
+      Title: Implement Spotify and Last.fm API clients
+    - AcceptanceCriteria:
+      - Returns normalized Track[] from Spotify on success; falls back to Last.fm
+        when Spotify throws
+      - Responses are cached for 60 minutes; subsequent calls within TTL skip upstream
+        requests
+      - Stale cache is returned (instead of throwing) when all upstreams fail
+      - Normalized Track objects include rank, title, artist, and genre fields regardless
+        of source
+      AgentType: backend-engineer
+      Dependencies:
+      - task-music-dj-website-feat-chart-proxy-1
+      Description: Implement chartProxy.js to call Spotify as primary and fall back
+        to Last.fm on failure, normalizing both raw responses into the unified Track
+        shape. Apply a 60-minute node-cache layer and return stale cached data when
+        both upstreams fail.
+      EstimatedEffort: M
+      Files:
+      - music-dj-website/server/services/chartProxy.js
+      - music-dj-website/server/services/cache.js
+      ID: task-music-dj-website-feat-chart-proxy-2
+      Title: Implement chartProxy orchestration with normalization and caching
+  - FeatureID: music-dj-website-feat-frontend-setup
+    FeatureTitle: Vite + React Project Setup
+    Tasks:
+    - AcceptanceCriteria:
+      - vite dev server starts and proxies /api/* requests to localhost:3001
+      - TypeScript compiles with no errors using strict mode
+      - index.html loads the React app entry point correctly
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create the Vite project skeleton including index.html, vite.config.ts
+        with /api/* proxy to Express on port 3001, and tsconfig.json with strict TypeScript
+        settings. Follow the existing costa-vs-starbucks/ pattern for project layout.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/index.html
+      - music-dj-website/vite.config.ts
+      - music-dj-website/tsconfig.json
+      ID: task-music-dj-website-feat-frontend-setup-1
+      Title: Scaffold Vite + TypeScript project with proxy config
+    - AcceptanceCriteria:
+      - Track and ChartResponse interfaces cover all fields returned by the backend
+        (rank, title, artist, genre, etc.)
+      - fetchCharts returns a typed ChartResponse and throws a meaningful error on
+        non-2xx responses
+      - No any types used; all exports are properly typed
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Implement the Track and ChartResponse TypeScript interfaces in
+        types.ts, then build the fetchCharts function in api/charts.ts that calls
+        /api/charts and returns typed data with error handling.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/src/types.ts
+      - music-dj-website/src/api/charts.ts
+      ID: task-music-dj-website-feat-frontend-setup-2
+      Title: Define shared types and fetchCharts API wrapper
+    - AcceptanceCriteria:
+      - npm run dev renders the App component without console errors
+      - index.css is imported in main.tsx and base styles apply globally
+      - App.tsx compiles cleanly and serves as a valid placeholder for child components
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-music-dj-website-feat-frontend-setup-1
+      - task-music-dj-website-feat-frontend-setup-2
+      Description: Wire up main.tsx to mount the React root, create a minimal App.tsx
+        as the top-level component placeholder, and add index.css with base resets
+        and CSS custom properties for the design system.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/src/main.tsx
+      - music-dj-website/src/App.tsx
+      - music-dj-website/src/index.css
+      ID: task-music-dj-website-feat-frontend-setup-3
+      Title: Bootstrap React app shell with entry point and base styles
+  Sprint: 1
+- Features:
+  - FeatureID: music-dj-website-feat-chart-display
+    FeatureTitle: Chart Data Display
+    Tasks:
+    - AcceptanceCriteria:
+      - useCharts returns loading=true while fetch is in progress
+      - useCharts returns error state when fetch fails
+      - useCharts returns populated tracks array and fetchedAt timestamp on success
+      - Hook re-fetches when called and handles cleanup on unmount
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create the useCharts hook in src/hooks/useCharts.ts that fetches
+        chart data from /api/charts. The hook should expose loading, error, tracks,
+        and fetchedAt state. Use the charts.ts fetch wrapper from src/api/charts.ts.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/src/hooks/useCharts.ts
+      - music-dj-website/src/api/charts.ts
+      ID: task-music-dj-website-feat-chart-display-1
+      Title: Implement useCharts hook with loading/error states
+    - AcceptanceCriteria:
+      - TrackCard displays rank, title, artist, and a genre chip for each track
+      - TrackList renders all tracks using TrackCard in ranked order
+      - TrackList shows a loading indicator while useCharts is fetching
+      - TrackList shows an error message when useCharts returns an error
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-music-dj-website-feat-chart-display-1
+      Description: Create TrackCard component rendering rank, title, artist, and genre
+        chip for a single track. Create TrackList component that renders an ordered
+        list of TrackCard items, wiring in the useCharts hook to handle loading and
+        error display states.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/src/components/TrackCard.tsx
+      - music-dj-website/src/components/TrackList.tsx
+      ID: task-music-dj-website-feat-chart-display-2
+      Title: Implement TrackCard and TrackList components
+  - FeatureID: music-dj-website-feat-genre-filter
+    FeatureTitle: Genre Filter
+    Tasks:
+    - AcceptanceCriteria:
+      - GenreFilter renders a pill button for each unique genre derived from the track
+        list, plus an 'All' option
+      - Clicking a genre pill updates selectedGenre state in App.tsx, causing useCharts
+        to re-fetch with the selected genre
+      - The active genre pill is visually distinguished from inactive ones
+      - Selecting 'All' resets the filter and restores the full track pool
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create GenreFilter.tsx that renders clickable genre pill buttons
+        from the available tracks. The component receives the current selectedGenre
+        and an onGenreChange callback from App.tsx, updating state to trigger useCharts
+        re-fetch and narrow the track pool for random selection.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/src/components/GenreFilter.tsx
+      - music-dj-website/src/App.tsx
+      ID: task-music-dj-website-feat-genre-filter-1
+      Title: Implement GenreFilter component with genre pill buttons
+  - FeatureID: music-dj-website-feat-random-picker
+    FeatureTitle: Random Track Picker & Re-roll
+    Tasks:
+    - AcceptanceCriteria:
+      - pickRandom returns a valid Track from the array in O(1) time, or null for
+        empty input
+      - Pick button selects a random track and displays it with accent/highlight styling
+      - Re-roll button selects a different random track from the current filtered
+        list
+      - Selected track resets when the active genre filter changes
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create the pickRandom(tracks[]) utility in randomPick.ts using
+        O(1) Math.random selection returning Track | null. Build the RandomPicker
+        component with Pick and Re-roll buttons that highlight the selected track
+        with accent styling and reset selection when the genre changes.
+      EstimatedEffort: S
+      Files:
+      - music-dj-website/src/utils/randomPick.ts
+      - music-dj-website/src/components/RandomPicker.tsx
+      ID: task-music-dj-website-feat-random-picker-1
+      Title: Implement pickRandom utility and RandomPicker component
+  Sprint: 2
