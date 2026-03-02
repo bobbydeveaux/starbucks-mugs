@@ -1,6 +1,6 @@
 ## Code Review - Changes Requested
 
-The review is complete. This PR is flagged as blocking because it contains **no implementation whatsoever** — just an empty branch initialization commit. The entire task (TypeScript + Vite build pipeline configuration) remains unimplemented.
+The PR has **blocking issues** — it's a WIP with zero implementation. The entire `filterCountries` function and its tests need to be written before this can merge.
 
 **Action Required**: Please address the blocking issues above before merging.
 
