@@ -1,0 +1,3368 @@
+[
+  {
+    "country": "Algeria",
+    "code": "DZ",
+    "avgTemps": {
+      "jan": 11,
+      "feb": 12,
+      "mar": 14,
+      "apr": 17,
+      "may": 21,
+      "jun": 25,
+      "jul": 28,
+      "aug": 29,
+      "sep": 26,
+      "oct": 21,
+      "nov": 15,
+      "dec": 11
+    }
+  },
+  {
+    "country": "Angola",
+    "code": "AO",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 26,
+      "mar": 26,
+      "apr": 26,
+      "may": 26,
+      "jun": 23,
+      "jul": 22,
+      "aug": 23,
+      "sep": 24,
+      "oct": 26,
+      "nov": 26,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Benin",
+    "code": "BJ",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 29,
+      "mar": 30,
+      "apr": 30,
+      "may": 27,
+      "jun": 26,
+      "jul": 24,
+      "aug": 24,
+      "sep": 26,
+      "oct": 26,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Botswana",
+    "code": "BW",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 26,
+      "mar": 24,
+      "apr": 20,
+      "may": 16,
+      "jun": 13,
+      "jul": 12,
+      "aug": 14,
+      "sep": 18,
+      "oct": 22,
+      "nov": 25,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Burkina Faso",
+    "code": "BF",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 28,
+      "mar": 31,
+      "apr": 33,
+      "may": 33,
+      "jun": 30,
+      "jul": 27,
+      "aug": 26,
+      "sep": 27,
+      "oct": 29,
+      "nov": 28,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Burundi",
+    "code": "BI",
+    "avgTemps": {
+      "jan": 20,
+      "feb": 21,
+      "mar": 21,
+      "apr": 21,
+      "may": 20,
+      "jun": 19,
+      "jul": 19,
+      "aug": 19,
+      "sep": 20,
+      "oct": 20,
+      "nov": 20,
+      "dec": 20
+    }
+  },
+  {
+    "country": "Cabo Verde",
+    "code": "CV",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 22,
+      "mar": 23,
+      "apr": 23,
+      "may": 24,
+      "jun": 25,
+      "jul": 27,
+      "aug": 28,
+      "sep": 28,
+      "oct": 26,
+      "nov": 24,
+      "dec": 23
+    }
+  },
+  {
+    "country": "Cameroon",
+    "code": "CM",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 27,
+      "mar": 27,
+      "apr": 26,
+      "may": 25,
+      "jun": 24,
+      "jul": 23,
+      "aug": 23,
+      "sep": 24,
+      "oct": 25,
+      "nov": 25,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Central African Republic",
+    "code": "CF",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 27,
+      "mar": 28,
+      "apr": 27,
+      "may": 26,
+      "jun": 25,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 25,
+      "nov": 25,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Chad",
+    "code": "TD",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 25,
+      "mar": 29,
+      "apr": 33,
+      "may": 35,
+      "jun": 34,
+      "jul": 31,
+      "aug": 29,
+      "sep": 30,
+      "oct": 31,
+      "nov": 27,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Comoros",
+    "code": "KM",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 27,
+      "may": 25,
+      "jun": 23,
+      "jul": 22,
+      "aug": 22,
+      "sep": 23,
+      "oct": 24,
+      "nov": 25,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Congo",
+    "code": "CG",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 26,
+      "mar": 26,
+      "apr": 26,
+      "may": 26,
+      "jun": 24,
+      "jul": 23,
+      "aug": 23,
+      "sep": 24,
+      "oct": 25,
+      "nov": 25,
+      "dec": 25
+    }
+  },
+  {
+    "country": "DR Congo",
+    "code": "CD",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 25,
+      "mar": 24,
+      "apr": 24,
+      "may": 24,
+      "jun": 22,
+      "jul": 21,
+      "aug": 21,
+      "sep": 23,
+      "oct": 24,
+      "nov": 24,
+      "dec": 24
+    }
+  },
+  {
+    "country": "Côte d'Ivoire",
+    "code": "CI",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 29,
+      "mar": 28,
+      "apr": 27,
+      "may": 26,
+      "jun": 25,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 26,
+      "nov": 27,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Djibouti",
+    "code": "DJ",
+    "avgTemps": {
+      "jan": 23,
+      "feb": 24,
+      "mar": 26,
+      "apr": 28,
+      "may": 32,
+      "jun": 34,
+      "jul": 35,
+      "aug": 34,
+      "sep": 33,
+      "oct": 30,
+      "nov": 27,
+      "dec": 24
+    }
+  },
+  {
+    "country": "Egypt",
+    "code": "EG",
+    "avgTemps": {
+      "jan": 13,
+      "feb": 15,
+      "mar": 18,
+      "apr": 21,
+      "may": 25,
+      "jun": 28,
+      "jul": 29,
+      "aug": 29,
+      "sep": 27,
+      "oct": 24,
+      "nov": 19,
+      "dec": 14
+    }
+  },
+  {
+    "country": "Equatorial Guinea",
+    "code": "GQ",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 25,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 25,
+      "nov": 25,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Eritrea",
+    "code": "ER",
+    "avgTemps": {
+      "jan": 20,
+      "feb": 21,
+      "mar": 23,
+      "apr": 25,
+      "may": 28,
+      "jun": 30,
+      "jul": 30,
+      "aug": 29,
+      "sep": 27,
+      "oct": 26,
+      "nov": 23,
+      "dec": 21
+    }
+  },
+  {
+    "country": "Eswatini",
+    "code": "SZ",
+    "avgTemps": {
+      "jan": 21,
+      "feb": 21,
+      "mar": 18,
+      "apr": 15,
+      "may": 12,
+      "jun": 9,
+      "jul": 9,
+      "aug": 11,
+      "sep": 14,
+      "oct": 17,
+      "nov": 19,
+      "dec": 21
+    }
+  },
+  {
+    "country": "Ethiopia",
+    "code": "ET",
+    "avgTemps": {
+      "jan": 15,
+      "feb": 17,
+      "mar": 19,
+      "apr": 20,
+      "may": 20,
+      "jun": 19,
+      "jul": 17,
+      "aug": 18,
+      "sep": 18,
+      "oct": 17,
+      "nov": 15,
+      "dec": 14
+    }
+  },
+  {
+    "country": "Gabon",
+    "code": "GA",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 25,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 26,
+      "nov": 26,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Gambia",
+    "code": "GM",
+    "avgTemps": {
+      "jan": 23,
+      "feb": 26,
+      "mar": 29,
+      "apr": 30,
+      "may": 32,
+      "jun": 32,
+      "jul": 29,
+      "aug": 28,
+      "sep": 29,
+      "oct": 30,
+      "nov": 28,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Ghana",
+    "code": "GH",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 29,
+      "mar": 28,
+      "apr": 28,
+      "may": 26,
+      "jun": 25,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 26,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Guinea",
+    "code": "GN",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 28,
+      "mar": 29,
+      "apr": 29,
+      "may": 28,
+      "jun": 27,
+      "jul": 25,
+      "aug": 25,
+      "sep": 26,
+      "oct": 27,
+      "nov": 28,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Guinea-Bissau",
+    "code": "GW",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 26,
+      "mar": 29,
+      "apr": 30,
+      "may": 30,
+      "jun": 28,
+      "jul": 27,
+      "aug": 27,
+      "sep": 28,
+      "oct": 29,
+      "nov": 28,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Kenya",
+    "code": "KE",
+    "avgTemps": {
+      "jan": 19,
+      "feb": 20,
+      "mar": 21,
+      "apr": 20,
+      "may": 19,
+      "jun": 18,
+      "jul": 17,
+      "aug": 17,
+      "sep": 18,
+      "oct": 19,
+      "nov": 19,
+      "dec": 19
+    }
+  },
+  {
+    "country": "Lesotho",
+    "code": "LS",
+    "avgTemps": {
+      "jan": 18,
+      "feb": 17,
+      "mar": 15,
+      "apr": 11,
+      "may": 8,
+      "jun": 5,
+      "jul": 4,
+      "aug": 6,
+      "sep": 10,
+      "oct": 13,
+      "nov": 16,
+      "dec": 17
+    }
+  },
+  {
+    "country": "Liberia",
+    "code": "LR",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 26,
+      "jul": 25,
+      "aug": 25,
+      "sep": 25,
+      "oct": 26,
+      "nov": 27,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Libya",
+    "code": "LY",
+    "avgTemps": {
+      "jan": 12,
+      "feb": 14,
+      "mar": 17,
+      "apr": 21,
+      "may": 25,
+      "jun": 29,
+      "jul": 32,
+      "aug": 32,
+      "sep": 28,
+      "oct": 23,
+      "nov": 17,
+      "dec": 13
+    }
+  },
+  {
+    "country": "Madagascar",
+    "code": "MG",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 26,
+      "apr": 24,
+      "may": 21,
+      "jun": 18,
+      "jul": 17,
+      "aug": 18,
+      "sep": 21,
+      "oct": 24,
+      "nov": 25,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Malawi",
+    "code": "MW",
+    "avgTemps": {
+      "jan": 23,
+      "feb": 23,
+      "mar": 22,
+      "apr": 21,
+      "may": 19,
+      "jun": 17,
+      "jul": 16,
+      "aug": 18,
+      "sep": 21,
+      "oct": 24,
+      "nov": 25,
+      "dec": 24
+    }
+  },
+  {
+    "country": "Mali",
+    "code": "ML",
+    "avgTemps": {
+      "jan": 23,
+      "feb": 26,
+      "mar": 29,
+      "apr": 33,
+      "may": 35,
+      "jun": 33,
+      "jul": 29,
+      "aug": 28,
+      "sep": 29,
+      "oct": 31,
+      "nov": 28,
+      "dec": 23
+    }
+  },
+  {
+    "country": "Mauritania",
+    "code": "MR",
+    "avgTemps": {
+      "jan": 18,
+      "feb": 20,
+      "mar": 24,
+      "apr": 27,
+      "may": 29,
+      "jun": 30,
+      "jul": 30,
+      "aug": 29,
+      "sep": 30,
+      "oct": 28,
+      "nov": 23,
+      "dec": 19
+    }
+  },
+  {
+    "country": "Mauritius",
+    "code": "MU",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 27,
+      "apr": 26,
+      "may": 24,
+      "jun": 22,
+      "jul": 21,
+      "aug": 21,
+      "sep": 22,
+      "oct": 23,
+      "nov": 25,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Morocco",
+    "code": "MA",
+    "avgTemps": {
+      "jan": 11,
+      "feb": 12,
+      "mar": 14,
+      "apr": 16,
+      "may": 19,
+      "jun": 22,
+      "jul": 25,
+      "aug": 26,
+      "sep": 23,
+      "oct": 19,
+      "nov": 14,
+      "dec": 11
+    }
+  },
+  {
+    "country": "Mozambique",
+    "code": "MZ",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 26,
+      "apr": 24,
+      "may": 22,
+      "jun": 19,
+      "jul": 18,
+      "aug": 20,
+      "sep": 22,
+      "oct": 25,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Namibia",
+    "code": "NA",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 25,
+      "mar": 23,
+      "apr": 20,
+      "may": 17,
+      "jun": 14,
+      "jul": 13,
+      "aug": 15,
+      "sep": 18,
+      "oct": 21,
+      "nov": 24,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Niger",
+    "code": "NE",
+    "avgTemps": {
+      "jan": 21,
+      "feb": 24,
+      "mar": 28,
+      "apr": 32,
+      "may": 35,
+      "jun": 35,
+      "jul": 31,
+      "aug": 30,
+      "sep": 31,
+      "oct": 33,
+      "nov": 28,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Nigeria",
+    "code": "NG",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 26,
+      "jun": 25,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 26,
+      "nov": 26,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Rwanda",
+    "code": "RW",
+    "avgTemps": {
+      "jan": 20,
+      "feb": 20,
+      "mar": 20,
+      "apr": 20,
+      "may": 20,
+      "jun": 19,
+      "jul": 19,
+      "aug": 19,
+      "sep": 20,
+      "oct": 20,
+      "nov": 20,
+      "dec": 20
+    }
+  },
+  {
+    "country": "São Tomé and Príncipe",
+    "code": "ST",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 26,
+      "may": 27,
+      "jun": 26,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 26,
+      "nov": 26,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Senegal",
+    "code": "SN",
+    "avgTemps": {
+      "jan": 21,
+      "feb": 22,
+      "mar": 25,
+      "apr": 27,
+      "may": 29,
+      "jun": 30,
+      "jul": 29,
+      "aug": 29,
+      "sep": 30,
+      "oct": 30,
+      "nov": 26,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Seychelles",
+    "code": "SC",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 29,
+      "mar": 29,
+      "apr": 29,
+      "may": 28,
+      "jun": 27,
+      "jul": 26,
+      "aug": 26,
+      "sep": 27,
+      "oct": 28,
+      "nov": 28,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Sierra Leone",
+    "code": "SL",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 27,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 27,
+      "jul": 25,
+      "aug": 25,
+      "sep": 26,
+      "oct": 27,
+      "nov": 27,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Somalia",
+    "code": "SO",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 27,
+      "mar": 28,
+      "apr": 29,
+      "may": 30,
+      "jun": 29,
+      "jul": 27,
+      "aug": 27,
+      "sep": 28,
+      "oct": 28,
+      "nov": 27,
+      "dec": 26
+    }
+  },
+  {
+    "country": "South Africa",
+    "code": "ZA",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 21,
+      "mar": 20,
+      "apr": 17,
+      "may": 14,
+      "jun": 11,
+      "jul": 10,
+      "aug": 11,
+      "sep": 14,
+      "oct": 17,
+      "nov": 20,
+      "dec": 21
+    }
+  },
+  {
+    "country": "South Sudan",
+    "code": "SS",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 28,
+      "mar": 29,
+      "apr": 30,
+      "may": 30,
+      "jun": 27,
+      "jul": 25,
+      "aug": 25,
+      "sep": 26,
+      "oct": 27,
+      "nov": 26,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Sudan",
+    "code": "SD",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 24,
+      "mar": 28,
+      "apr": 31,
+      "may": 34,
+      "jun": 35,
+      "jul": 33,
+      "aug": 32,
+      "sep": 33,
+      "oct": 33,
+      "nov": 28,
+      "dec": 23
+    }
+  },
+  {
+    "country": "Tanzania",
+    "code": "TZ",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 26,
+      "mar": 25,
+      "apr": 23,
+      "may": 20,
+      "jun": 18,
+      "jul": 17,
+      "aug": 18,
+      "sep": 20,
+      "oct": 23,
+      "nov": 25,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Togo",
+    "code": "TG",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 29,
+      "mar": 29,
+      "apr": 28,
+      "may": 26,
+      "jun": 25,
+      "jul": 24,
+      "aug": 24,
+      "sep": 25,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Tunisia",
+    "code": "TN",
+    "avgTemps": {
+      "jan": 10,
+      "feb": 11,
+      "mar": 13,
+      "apr": 16,
+      "may": 20,
+      "jun": 24,
+      "jul": 27,
+      "aug": 27,
+      "sep": 25,
+      "oct": 20,
+      "nov": 15,
+      "dec": 11
+    }
+  },
+  {
+    "country": "Uganda",
+    "code": "UG",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 23,
+      "mar": 23,
+      "apr": 22,
+      "may": 22,
+      "jun": 21,
+      "jul": 21,
+      "aug": 21,
+      "sep": 22,
+      "oct": 22,
+      "nov": 22,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Zambia",
+    "code": "ZM",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 23,
+      "mar": 22,
+      "apr": 20,
+      "may": 17,
+      "jun": 14,
+      "jul": 13,
+      "aug": 15,
+      "sep": 18,
+      "oct": 22,
+      "nov": 25,
+      "dec": 24
+    }
+  },
+  {
+    "country": "Zimbabwe",
+    "code": "ZW",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 23,
+      "mar": 22,
+      "apr": 19,
+      "may": 15,
+      "jun": 11,
+      "jul": 10,
+      "aug": 12,
+      "sep": 16,
+      "oct": 20,
+      "nov": 22,
+      "dec": 23
+    }
+  },
+  {
+    "country": "Bahamas",
+    "code": "BS",
+    "avgTemps": {
+      "jan": 21,
+      "feb": 21,
+      "mar": 23,
+      "apr": 25,
+      "may": 27,
+      "jun": 28,
+      "jul": 29,
+      "aug": 29,
+      "sep": 28,
+      "oct": 26,
+      "nov": 23,
+      "dec": 21
+    }
+  },
+  {
+    "country": "Barbados",
+    "code": "BB",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 25,
+      "mar": 25,
+      "apr": 26,
+      "may": 27,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 27,
+      "nov": 27,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Belize",
+    "code": "BZ",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 25,
+      "mar": 27,
+      "apr": 28,
+      "may": 29,
+      "jun": 29,
+      "jul": 28,
+      "aug": 29,
+      "sep": 28,
+      "oct": 27,
+      "nov": 26,
+      "dec": 24
+    }
+  },
+  {
+    "country": "Canada",
+    "code": "CA",
+    "avgTemps": {
+      "jan": -10,
+      "feb": -9,
+      "mar": -3,
+      "apr": 5,
+      "may": 12,
+      "jun": 17,
+      "jul": 20,
+      "aug": 19,
+      "sep": 14,
+      "oct": 8,
+      "nov": 1,
+      "dec": -7
+    }
+  },
+  {
+    "country": "Costa Rica",
+    "code": "CR",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 22,
+      "mar": 23,
+      "apr": 24,
+      "may": 24,
+      "jun": 23,
+      "jul": 23,
+      "aug": 23,
+      "sep": 23,
+      "oct": 23,
+      "nov": 23,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Cuba",
+    "code": "CU",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 22,
+      "mar": 23,
+      "apr": 25,
+      "may": 26,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 26,
+      "nov": 24,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Dominica",
+    "code": "DM",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 24,
+      "mar": 24,
+      "apr": 25,
+      "may": 27,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 27,
+      "nov": 26,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Dominican Republic",
+    "code": "DO",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 24,
+      "mar": 25,
+      "apr": 26,
+      "may": 27,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 27,
+      "nov": 26,
+      "dec": 25
+    }
+  },
+  {
+    "country": "El Salvador",
+    "code": "SV",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 24,
+      "mar": 25,
+      "apr": 26,
+      "may": 27,
+      "jun": 26,
+      "jul": 26,
+      "aug": 26,
+      "sep": 26,
+      "oct": 25,
+      "nov": 24,
+      "dec": 24
+    }
+  },
+  {
+    "country": "Grenada",
+    "code": "GD",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 25,
+      "mar": 25,
+      "apr": 26,
+      "may": 28,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 27,
+      "nov": 26,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Guatemala",
+    "code": "GT",
+    "avgTemps": {
+      "jan": 19,
+      "feb": 20,
+      "mar": 21,
+      "apr": 22,
+      "may": 22,
+      "jun": 21,
+      "jul": 21,
+      "aug": 21,
+      "sep": 21,
+      "oct": 21,
+      "nov": 21,
+      "dec": 19
+    }
+  },
+  {
+    "country": "Haiti",
+    "code": "HT",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 24,
+      "mar": 25,
+      "apr": 26,
+      "may": 27,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 27,
+      "nov": 26,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Honduras",
+    "code": "HN",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 23,
+      "mar": 24,
+      "apr": 25,
+      "may": 26,
+      "jun": 26,
+      "jul": 26,
+      "aug": 26,
+      "sep": 26,
+      "oct": 25,
+      "nov": 24,
+      "dec": 23
+    }
+  },
+  {
+    "country": "Jamaica",
+    "code": "JM",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 25,
+      "mar": 26,
+      "apr": 27,
+      "may": 28,
+      "jun": 29,
+      "jul": 29,
+      "aug": 29,
+      "sep": 28,
+      "oct": 28,
+      "nov": 27,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Mexico",
+    "code": "MX",
+    "avgTemps": {
+      "jan": 16,
+      "feb": 17,
+      "mar": 20,
+      "apr": 22,
+      "may": 24,
+      "jun": 24,
+      "jul": 24,
+      "aug": 24,
+      "sep": 23,
+      "oct": 21,
+      "nov": 18,
+      "dec": 16
+    }
+  },
+  {
+    "country": "Nicaragua",
+    "code": "NI",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 27,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 27,
+      "jul": 26,
+      "aug": 26,
+      "sep": 26,
+      "oct": 26,
+      "nov": 26,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Panama",
+    "code": "PA",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 26,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 27,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Trinidad and Tobago",
+    "code": "TT",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 26,
+      "mar": 27,
+      "apr": 28,
+      "may": 29,
+      "jun": 28,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "United States",
+    "code": "US",
+    "avgTemps": {
+      "jan": 2,
+      "feb": 4,
+      "mar": 8,
+      "apr": 13,
+      "may": 18,
+      "jun": 22,
+      "jul": 25,
+      "aug": 24,
+      "sep": 20,
+      "oct": 14,
+      "nov": 8,
+      "dec": 3
+    }
+  },
+  {
+    "country": "Argentina",
+    "code": "AR",
+    "avgTemps": {
+      "jan": 24,
+      "feb": 23,
+      "mar": 19,
+      "apr": 15,
+      "may": 11,
+      "jun": 7,
+      "jul": 6,
+      "aug": 8,
+      "sep": 11,
+      "oct": 15,
+      "nov": 19,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Bolivia",
+    "code": "BO",
+    "avgTemps": {
+      "jan": 17,
+      "feb": 17,
+      "mar": 16,
+      "apr": 14,
+      "may": 12,
+      "jun": 9,
+      "jul": 8,
+      "aug": 9,
+      "sep": 12,
+      "oct": 15,
+      "nov": 17,
+      "dec": 17
+    }
+  },
+  {
+    "country": "Brazil",
+    "code": "BR",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 26,
+      "mar": 25,
+      "apr": 24,
+      "may": 23,
+      "jun": 22,
+      "jul": 21,
+      "aug": 22,
+      "sep": 23,
+      "oct": 24,
+      "nov": 25,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Chile",
+    "code": "CL",
+    "avgTemps": {
+      "jan": 17,
+      "feb": 17,
+      "mar": 14,
+      "apr": 11,
+      "may": 8,
+      "jun": 6,
+      "jul": 5,
+      "aug": 6,
+      "sep": 9,
+      "oct": 12,
+      "nov": 15,
+      "dec": 17
+    }
+  },
+  {
+    "country": "Colombia",
+    "code": "CO",
+    "avgTemps": {
+      "jan": 20,
+      "feb": 20,
+      "mar": 20,
+      "apr": 20,
+      "may": 20,
+      "jun": 19,
+      "jul": 19,
+      "aug": 19,
+      "sep": 20,
+      "oct": 20,
+      "nov": 20,
+      "dec": 20
+    }
+  },
+  {
+    "country": "Ecuador",
+    "code": "EC",
+    "avgTemps": {
+      "jan": 18,
+      "feb": 18,
+      "mar": 18,
+      "apr": 18,
+      "may": 18,
+      "jun": 18,
+      "jul": 18,
+      "aug": 18,
+      "sep": 18,
+      "oct": 18,
+      "nov": 18,
+      "dec": 18
+    }
+  },
+  {
+    "country": "Guyana",
+    "code": "GY",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 27,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Paraguay",
+    "code": "PY",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 27,
+      "mar": 25,
+      "apr": 20,
+      "may": 16,
+      "jun": 13,
+      "jul": 12,
+      "aug": 14,
+      "sep": 18,
+      "oct": 22,
+      "nov": 25,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Peru",
+    "code": "PE",
+    "avgTemps": {
+      "jan": 23,
+      "feb": 23,
+      "mar": 22,
+      "apr": 21,
+      "may": 19,
+      "jun": 17,
+      "jul": 16,
+      "aug": 17,
+      "sep": 18,
+      "oct": 20,
+      "nov": 21,
+      "dec": 22
+    }
+  },
+  {
+    "country": "Suriname",
+    "code": "SR",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 26,
+      "jul": 26,
+      "aug": 26,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Uruguay",
+    "code": "UY",
+    "avgTemps": {
+      "jan": 23,
+      "feb": 22,
+      "mar": 19,
+      "apr": 15,
+      "may": 12,
+      "jun": 9,
+      "jul": 8,
+      "aug": 10,
+      "sep": 13,
+      "oct": 16,
+      "nov": 19,
+      "dec": 21
+    }
+  },
+  {
+    "country": "Venezuela",
+    "code": "VE",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 25,
+      "mar": 25,
+      "apr": 26,
+      "may": 26,
+      "jun": 25,
+      "jul": 25,
+      "aug": 25,
+      "sep": 25,
+      "oct": 25,
+      "nov": 25,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Albania",
+    "code": "AL",
+    "avgTemps": {
+      "jan": 7,
+      "feb": 8,
+      "mar": 11,
+      "apr": 15,
+      "may": 20,
+      "jun": 25,
+      "jul": 27,
+      "aug": 27,
+      "sep": 24,
+      "oct": 19,
+      "nov": 13,
+      "dec": 8
+    }
+  },
+  {
+    "country": "Andorra",
+    "code": "AD",
+    "avgTemps": {
+      "jan": 2,
+      "feb": 3,
+      "mar": 5,
+      "apr": 8,
+      "may": 12,
+      "jun": 15,
+      "jul": 18,
+      "aug": 18,
+      "sep": 15,
+      "oct": 11,
+      "nov": 6,
+      "dec": 3
+    }
+  },
+  {
+    "country": "Austria",
+    "code": "AT",
+    "avgTemps": {
+      "jan": -2,
+      "feb": 0,
+      "mar": 4,
+      "apr": 9,
+      "may": 14,
+      "jun": 17,
+      "jul": 20,
+      "aug": 19,
+      "sep": 15,
+      "oct": 10,
+      "nov": 5,
+      "dec": 0
+    }
+  },
+  {
+    "country": "Belarus",
+    "code": "BY",
+    "avgTemps": {
+      "jan": -6,
+      "feb": -5,
+      "mar": 0,
+      "apr": 8,
+      "may": 15,
+      "jun": 18,
+      "jul": 20,
+      "aug": 19,
+      "sep": 14,
+      "oct": 8,
+      "nov": 2,
+      "dec": -4
+    }
+  },
+  {
+    "country": "Belgium",
+    "code": "BE",
+    "avgTemps": {
+      "jan": 3,
+      "feb": 4,
+      "mar": 7,
+      "apr": 10,
+      "may": 14,
+      "jun": 17,
+      "jul": 19,
+      "aug": 19,
+      "sep": 16,
+      "oct": 12,
+      "nov": 7,
+      "dec": 4
+    }
+  },
+  {
+    "country": "Bosnia and Herzegovina",
+    "code": "BA",
+    "avgTemps": {
+      "jan": 1,
+      "feb": 3,
+      "mar": 7,
+      "apr": 12,
+      "may": 17,
+      "jun": 21,
+      "jul": 23,
+      "aug": 23,
+      "sep": 18,
+      "oct": 13,
+      "nov": 7,
+      "dec": 2
+    }
+  },
+  {
+    "country": "Bulgaria",
+    "code": "BG",
+    "avgTemps": {
+      "jan": 2,
+      "feb": 4,
+      "mar": 8,
+      "apr": 13,
+      "may": 18,
+      "jun": 22,
+      "jul": 24,
+      "aug": 24,
+      "sep": 20,
+      "oct": 14,
+      "nov": 8,
+      "dec": 3
+    }
+  },
+  {
+    "country": "Croatia",
+    "code": "HR",
+    "avgTemps": {
+      "jan": 5,
+      "feb": 6,
+      "mar": 10,
+      "apr": 14,
+      "may": 19,
+      "jun": 23,
+      "jul": 26,
+      "aug": 26,
+      "sep": 22,
+      "oct": 16,
+      "nov": 10,
+      "dec": 6
+    }
+  },
+  {
+    "country": "Cyprus",
+    "code": "CY",
+    "avgTemps": {
+      "jan": 10,
+      "feb": 11,
+      "mar": 13,
+      "apr": 17,
+      "may": 22,
+      "jun": 27,
+      "jul": 29,
+      "aug": 29,
+      "sep": 27,
+      "oct": 22,
+      "nov": 17,
+      "dec": 12
+    }
+  },
+  {
+    "country": "Czech Republic",
+    "code": "CZ",
+    "avgTemps": {
+      "jan": -2,
+      "feb": -1,
+      "mar": 3,
+      "apr": 8,
+      "may": 13,
+      "jun": 16,
+      "jul": 18,
+      "aug": 18,
+      "sep": 14,
+      "oct": 9,
+      "nov": 4,
+      "dec": -1
+    }
+  },
+  {
+    "country": "Denmark",
+    "code": "DK",
+    "avgTemps": {
+      "jan": 2,
+      "feb": 2,
+      "mar": 4,
+      "apr": 8,
+      "may": 12,
+      "jun": 16,
+      "jul": 18,
+      "aug": 18,
+      "sep": 14,
+      "oct": 10,
+      "nov": 6,
+      "dec": 3
+    }
+  },
+  {
+    "country": "Estonia",
+    "code": "EE",
+    "avgTemps": {
+      "jan": -5,
+      "feb": -5,
+      "mar": -1,
+      "apr": 5,
+      "may": 11,
+      "jun": 16,
+      "jul": 18,
+      "aug": 17,
+      "sep": 12,
+      "oct": 7,
+      "nov": 2,
+      "dec": -2
+    }
+  },
+  {
+    "country": "Finland",
+    "code": "FI",
+    "avgTemps": {
+      "jan": -7,
+      "feb": -7,
+      "mar": -3,
+      "apr": 3,
+      "may": 10,
+      "jun": 14,
+      "jul": 17,
+      "aug": 16,
+      "sep": 11,
+      "oct": 5,
+      "nov": 0,
+      "dec": -5
+    }
+  },
+  {
+    "country": "France",
+    "code": "FR",
+    "avgTemps": {
+      "jan": 5,
+      "feb": 6,
+      "mar": 9,
+      "apr": 12,
+      "may": 16,
+      "jun": 20,
+      "jul": 22,
+      "aug": 22,
+      "sep": 19,
+      "oct": 14,
+      "nov": 9,
+      "dec": 5
+    }
+  },
+  {
+    "country": "Germany",
+    "code": "DE",
+    "avgTemps": {
+      "jan": 0,
+      "feb": 1,
+      "mar": 5,
+      "apr": 9,
+      "may": 14,
+      "jun": 17,
+      "jul": 19,
+      "aug": 19,
+      "sep": 15,
+      "oct": 10,
+      "nov": 5,
+      "dec": 1
+    }
+  },
+  {
+    "country": "Greece",
+    "code": "GR",
+    "avgTemps": {
+      "jan": 10,
+      "feb": 11,
+      "mar": 13,
+      "apr": 17,
+      "may": 22,
+      "jun": 27,
+      "jul": 30,
+      "aug": 30,
+      "sep": 26,
+      "oct": 21,
+      "nov": 16,
+      "dec": 12
+    }
+  },
+  {
+    "country": "Hungary",
+    "code": "HU",
+    "avgTemps": {
+      "jan": 0,
+      "feb": 2,
+      "mar": 7,
+      "apr": 12,
+      "may": 17,
+      "jun": 21,
+      "jul": 23,
+      "aug": 23,
+      "sep": 18,
+      "oct": 13,
+      "nov": 6,
+      "dec": 1
+    }
+  },
+  {
+    "country": "Iceland",
+    "code": "IS",
+    "avgTemps": {
+      "jan": -1,
+      "feb": 0,
+      "mar": 0,
+      "apr": 3,
+      "may": 6,
+      "jun": 9,
+      "jul": 12,
+      "aug": 12,
+      "sep": 8,
+      "oct": 4,
+      "nov": 1,
+      "dec": 0
+    }
+  },
+  {
+    "country": "Ireland",
+    "code": "IE",
+    "avgTemps": {
+      "jan": 6,
+      "feb": 6,
+      "mar": 7,
+      "apr": 9,
+      "may": 12,
+      "jun": 14,
+      "jul": 16,
+      "aug": 16,
+      "sep": 14,
+      "oct": 11,
+      "nov": 8,
+      "dec": 6
+    }
+  },
+  {
+    "country": "Italy",
+    "code": "IT",
+    "avgTemps": {
+      "jan": 7,
+      "feb": 8,
+      "mar": 11,
+      "apr": 15,
+      "may": 19,
+      "jun": 24,
+      "jul": 27,
+      "aug": 27,
+      "sep": 23,
+      "oct": 17,
+      "nov": 12,
+      "dec": 8
+    }
+  },
+  {
+    "country": "Kosovo",
+    "code": "XK",
+    "avgTemps": {
+      "jan": 0,
+      "feb": 2,
+      "mar": 5,
+      "apr": 11,
+      "may": 16,
+      "jun": 20,
+      "jul": 23,
+      "aug": 23,
+      "sep": 18,
+      "oct": 12,
+      "nov": 6,
+      "dec": 1
+    }
+  },
+  {
+    "country": "Latvia",
+    "code": "LV",
+    "avgTemps": {
+      "jan": -5,
+      "feb": -4,
+      "mar": 0,
+      "apr": 6,
+      "may": 12,
+      "jun": 16,
+      "jul": 18,
+      "aug": 17,
+      "sep": 12,
+      "oct": 7,
+      "nov": 2,
+      "dec": -3
+    }
+  },
+  {
+    "country": "Liechtenstein",
+    "code": "LI",
+    "avgTemps": {
+      "jan": -1,
+      "feb": 0,
+      "mar": 3,
+      "apr": 8,
+      "may": 12,
+      "jun": 16,
+      "jul": 18,
+      "aug": 18,
+      "sep": 14,
+      "oct": 9,
+      "nov": 3,
+      "dec": 0
+    }
+  },
+  {
+    "country": "Lithuania",
+    "code": "LT",
+    "avgTemps": {
+      "jan": -5,
+      "feb": -4,
+      "mar": 0,
+      "apr": 6,
+      "may": 12,
+      "jun": 16,
+      "jul": 18,
+      "aug": 17,
+      "sep": 12,
+      "oct": 7,
+      "nov": 2,
+      "dec": -3
+    }
+  },
+  {
+    "country": "Luxembourg",
+    "code": "LU",
+    "avgTemps": {
+      "jan": 1,
+      "feb": 2,
+      "mar": 6,
+      "apr": 10,
+      "may": 14,
+      "jun": 17,
+      "jul": 20,
+      "aug": 19,
+      "sep": 16,
+      "oct": 11,
+      "nov": 6,
+      "dec": 2
+    }
+  },
+  {
+    "country": "Malta",
+    "code": "MT",
+    "avgTemps": {
+      "jan": 12,
+      "feb": 12,
+      "mar": 14,
+      "apr": 17,
+      "may": 21,
+      "jun": 26,
+      "jul": 28,
+      "aug": 28,
+      "sep": 26,
+      "oct": 22,
+      "nov": 17,
+      "dec": 14
+    }
+  },
+  {
+    "country": "Moldova",
+    "code": "MD",
+    "avgTemps": {
+      "jan": -3,
+      "feb": -1,
+      "mar": 4,
+      "apr": 11,
+      "may": 17,
+      "jun": 20,
+      "jul": 22,
+      "aug": 22,
+      "sep": 17,
+      "oct": 11,
+      "nov": 5,
+      "dec": -1
+    }
+  },
+  {
+    "country": "Montenegro",
+    "code": "ME",
+    "avgTemps": {
+      "jan": 5,
+      "feb": 6,
+      "mar": 9,
+      "apr": 13,
+      "may": 18,
+      "jun": 23,
+      "jul": 25,
+      "aug": 25,
+      "sep": 21,
+      "oct": 15,
+      "nov": 10,
+      "dec": 6
+    }
+  },
+  {
+    "country": "Netherlands",
+    "code": "NL",
+    "avgTemps": {
+      "jan": 3,
+      "feb": 3,
+      "mar": 6,
+      "apr": 10,
+      "may": 14,
+      "jun": 17,
+      "jul": 20,
+      "aug": 20,
+      "sep": 16,
+      "oct": 12,
+      "nov": 7,
+      "dec": 4
+    }
+  },
+  {
+    "country": "North Macedonia",
+    "code": "MK",
+    "avgTemps": {
+      "jan": 1,
+      "feb": 3,
+      "mar": 7,
+      "apr": 12,
+      "may": 17,
+      "jun": 22,
+      "jul": 25,
+      "aug": 25,
+      "sep": 21,
+      "oct": 14,
+      "nov": 8,
+      "dec": 2
+    }
+  },
+  {
+    "country": "Norway",
+    "code": "NO",
+    "avgTemps": {
+      "jan": -4,
+      "feb": -3,
+      "mar": 0,
+      "apr": 5,
+      "may": 11,
+      "jun": 15,
+      "jul": 17,
+      "aug": 16,
+      "sep": 11,
+      "oct": 6,
+      "nov": 1,
+      "dec": -3
+    }
+  },
+  {
+    "country": "Poland",
+    "code": "PL",
+    "avgTemps": {
+      "jan": -2,
+      "feb": -1,
+      "mar": 3,
+      "apr": 8,
+      "may": 14,
+      "jun": 17,
+      "jul": 19,
+      "aug": 19,
+      "sep": 14,
+      "oct": 9,
+      "nov": 4,
+      "dec": -1
+    }
+  },
+  {
+    "country": "Portugal",
+    "code": "PT",
+    "avgTemps": {
+      "jan": 11,
+      "feb": 12,
+      "mar": 14,
+      "apr": 15,
+      "may": 18,
+      "jun": 21,
+      "jul": 23,
+      "aug": 24,
+      "sep": 21,
+      "oct": 17,
+      "nov": 13,
+      "dec": 11
+    }
+  },
+  {
+    "country": "Romania",
+    "code": "RO",
+    "avgTemps": {
+      "jan": -3,
+      "feb": -1,
+      "mar": 5,
+      "apr": 11,
+      "may": 16,
+      "jun": 20,
+      "jul": 22,
+      "aug": 22,
+      "sep": 17,
+      "oct": 11,
+      "nov": 5,
+      "dec": -1
+    }
+  },
+  {
+    "country": "Russia",
+    "code": "RU",
+    "avgTemps": {
+      "jan": -10,
+      "feb": -8,
+      "mar": -2,
+      "apr": 7,
+      "may": 14,
+      "jun": 18,
+      "jul": 21,
+      "aug": 20,
+      "sep": 14,
+      "oct": 7,
+      "nov": 0,
+      "dec": -7
+    }
+  },
+  {
+    "country": "Serbia",
+    "code": "RS",
+    "avgTemps": {
+      "jan": 1,
+      "feb": 3,
+      "mar": 8,
+      "apr": 13,
+      "may": 18,
+      "jun": 22,
+      "jul": 24,
+      "aug": 24,
+      "sep": 20,
+      "oct": 14,
+      "nov": 8,
+      "dec": 2
+    }
+  },
+  {
+    "country": "Slovakia",
+    "code": "SK",
+    "avgTemps": {
+      "jan": -2,
+      "feb": 0,
+      "mar": 4,
+      "apr": 10,
+      "may": 15,
+      "jun": 18,
+      "jul": 20,
+      "aug": 20,
+      "sep": 15,
+      "oct": 10,
+      "nov": 5,
+      "dec": 0
+    }
+  },
+  {
+    "country": "Slovenia",
+    "code": "SI",
+    "avgTemps": {
+      "jan": 0,
+      "feb": 2,
+      "mar": 6,
+      "apr": 10,
+      "may": 15,
+      "jun": 18,
+      "jul": 21,
+      "aug": 21,
+      "sep": 16,
+      "oct": 11,
+      "nov": 6,
+      "dec": 1
+    }
+  },
+  {
+    "country": "Spain",
+    "code": "ES",
+    "avgTemps": {
+      "jan": 9,
+      "feb": 10,
+      "mar": 13,
+      "apr": 15,
+      "may": 19,
+      "jun": 23,
+      "jul": 26,
+      "aug": 27,
+      "sep": 23,
+      "oct": 18,
+      "nov": 13,
+      "dec": 10
+    }
+  },
+  {
+    "country": "Sweden",
+    "code": "SE",
+    "avgTemps": {
+      "jan": -3,
+      "feb": -3,
+      "mar": 0,
+      "apr": 5,
+      "may": 11,
+      "jun": 16,
+      "jul": 18,
+      "aug": 17,
+      "sep": 12,
+      "oct": 7,
+      "nov": 3,
+      "dec": -1
+    }
+  },
+  {
+    "country": "Switzerland",
+    "code": "CH",
+    "avgTemps": {
+      "jan": 0,
+      "feb": 1,
+      "mar": 5,
+      "apr": 9,
+      "may": 13,
+      "jun": 17,
+      "jul": 19,
+      "aug": 19,
+      "sep": 15,
+      "oct": 10,
+      "nov": 5,
+      "dec": 1
+    }
+  },
+  {
+    "country": "Ukraine",
+    "code": "UA",
+    "avgTemps": {
+      "jan": -4,
+      "feb": -4,
+      "mar": 1,
+      "apr": 9,
+      "may": 16,
+      "jun": 20,
+      "jul": 22,
+      "aug": 21,
+      "sep": 16,
+      "oct": 10,
+      "nov": 4,
+      "dec": -2
+    }
+  },
+  {
+    "country": "United Kingdom",
+    "code": "GB",
+    "avgTemps": {
+      "jan": 5,
+      "feb": 5,
+      "mar": 7,
+      "apr": 9,
+      "may": 13,
+      "jun": 16,
+      "jul": 18,
+      "aug": 18,
+      "sep": 15,
+      "oct": 11,
+      "nov": 8,
+      "dec": 5
+    }
+  },
+  {
+    "country": "Afghanistan",
+    "code": "AF",
+    "avgTemps": {
+      "jan": 2,
+      "feb": 4,
+      "mar": 10,
+      "apr": 16,
+      "may": 21,
+      "jun": 26,
+      "jul": 29,
+      "aug": 28,
+      "sep": 24,
+      "oct": 17,
+      "nov": 9,
+      "dec": 3
+    }
+  },
+  {
+    "country": "Armenia",
+    "code": "AM",
+    "avgTemps": {
+      "jan": -2,
+      "feb": 0,
+      "mar": 5,
+      "apr": 11,
+      "may": 17,
+      "jun": 22,
+      "jul": 25,
+      "aug": 25,
+      "sep": 20,
+      "oct": 14,
+      "nov": 7,
+      "dec": 1
+    }
+  },
+  {
+    "country": "Azerbaijan",
+    "code": "AZ",
+    "avgTemps": {
+      "jan": 3,
+      "feb": 4,
+      "mar": 8,
+      "apr": 14,
+      "may": 19,
+      "jun": 24,
+      "jul": 28,
+      "aug": 28,
+      "sep": 23,
+      "oct": 17,
+      "nov": 11,
+      "dec": 5
+    }
+  },
+  {
+    "country": "Bahrain",
+    "code": "BH",
+    "avgTemps": {
+      "jan": 17,
+      "feb": 18,
+      "mar": 21,
+      "apr": 26,
+      "may": 31,
+      "jun": 33,
+      "jul": 35,
+      "aug": 35,
+      "sep": 33,
+      "oct": 29,
+      "nov": 23,
+      "dec": 19
+    }
+  },
+  {
+    "country": "Bangladesh",
+    "code": "BD",
+    "avgTemps": {
+      "jan": 17,
+      "feb": 20,
+      "mar": 25,
+      "apr": 28,
+      "may": 29,
+      "jun": 30,
+      "jul": 30,
+      "aug": 30,
+      "sep": 29,
+      "oct": 27,
+      "nov": 23,
+      "dec": 19
+    }
+  },
+  {
+    "country": "Bhutan",
+    "code": "BT",
+    "avgTemps": {
+      "jan": 5,
+      "feb": 7,
+      "mar": 10,
+      "apr": 14,
+      "may": 17,
+      "jun": 19,
+      "jul": 20,
+      "aug": 20,
+      "sep": 18,
+      "oct": 14,
+      "nov": 10,
+      "dec": 6
+    }
+  },
+  {
+    "country": "Cambodia",
+    "code": "KH",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 28,
+      "mar": 30,
+      "apr": 31,
+      "may": 30,
+      "jun": 29,
+      "jul": 28,
+      "aug": 28,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 25
+    }
+  },
+  {
+    "country": "China",
+    "code": "CN",
+    "avgTemps": {
+      "jan": 4,
+      "feb": 6,
+      "mar": 11,
+      "apr": 17,
+      "may": 21,
+      "jun": 25,
+      "jul": 27,
+      "aug": 27,
+      "sep": 22,
+      "oct": 16,
+      "nov": 10,
+      "dec": 5
+    }
+  },
+  {
+    "country": "Georgia",
+    "code": "GE",
+    "avgTemps": {
+      "jan": 4,
+      "feb": 5,
+      "mar": 9,
+      "apr": 14,
+      "may": 19,
+      "jun": 23,
+      "jul": 26,
+      "aug": 26,
+      "sep": 22,
+      "oct": 16,
+      "nov": 11,
+      "dec": 6
+    }
+  },
+  {
+    "country": "India",
+    "code": "IN",
+    "avgTemps": {
+      "jan": 19,
+      "feb": 20,
+      "mar": 24,
+      "apr": 27,
+      "may": 30,
+      "jun": 29,
+      "jul": 28,
+      "aug": 27,
+      "sep": 27,
+      "oct": 26,
+      "nov": 22,
+      "dec": 19
+    }
+  },
+  {
+    "country": "Indonesia",
+    "code": "ID",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 27,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Iran",
+    "code": "IR",
+    "avgTemps": {
+      "jan": 7,
+      "feb": 9,
+      "mar": 14,
+      "apr": 19,
+      "may": 24,
+      "jun": 29,
+      "jul": 31,
+      "aug": 31,
+      "sep": 27,
+      "oct": 21,
+      "nov": 14,
+      "dec": 8
+    }
+  },
+  {
+    "country": "Iraq",
+    "code": "IQ",
+    "avgTemps": {
+      "jan": 9,
+      "feb": 11,
+      "mar": 16,
+      "apr": 22,
+      "may": 27,
+      "jun": 32,
+      "jul": 35,
+      "aug": 34,
+      "sep": 30,
+      "oct": 24,
+      "nov": 16,
+      "dec": 10
+    }
+  },
+  {
+    "country": "Israel",
+    "code": "IL",
+    "avgTemps": {
+      "jan": 10,
+      "feb": 11,
+      "mar": 14,
+      "apr": 19,
+      "may": 23,
+      "jun": 27,
+      "jul": 29,
+      "aug": 29,
+      "sep": 27,
+      "oct": 23,
+      "nov": 17,
+      "dec": 11
+    }
+  },
+  {
+    "country": "Japan",
+    "code": "JP",
+    "avgTemps": {
+      "jan": 5,
+      "feb": 6,
+      "mar": 9,
+      "apr": 14,
+      "may": 19,
+      "jun": 23,
+      "jul": 27,
+      "aug": 28,
+      "sep": 24,
+      "oct": 18,
+      "nov": 13,
+      "dec": 7
+    }
+  },
+  {
+    "country": "Jordan",
+    "code": "JO",
+    "avgTemps": {
+      "jan": 9,
+      "feb": 10,
+      "mar": 14,
+      "apr": 18,
+      "may": 23,
+      "jun": 27,
+      "jul": 29,
+      "aug": 29,
+      "sep": 27,
+      "oct": 22,
+      "nov": 16,
+      "dec": 11
+    }
+  },
+  {
+    "country": "Kazakhstan",
+    "code": "KZ",
+    "avgTemps": {
+      "jan": -10,
+      "feb": -9,
+      "mar": -3,
+      "apr": 8,
+      "may": 15,
+      "jun": 20,
+      "jul": 23,
+      "aug": 22,
+      "sep": 15,
+      "oct": 7,
+      "nov": -1,
+      "dec": -7
+    }
+  },
+  {
+    "country": "Kuwait",
+    "code": "KW",
+    "avgTemps": {
+      "jan": 13,
+      "feb": 16,
+      "mar": 20,
+      "apr": 26,
+      "may": 32,
+      "jun": 36,
+      "jul": 38,
+      "aug": 38,
+      "sep": 34,
+      "oct": 28,
+      "nov": 21,
+      "dec": 14
+    }
+  },
+  {
+    "country": "Kyrgyzstan",
+    "code": "KG",
+    "avgTemps": {
+      "jan": -8,
+      "feb": -6,
+      "mar": 0,
+      "apr": 8,
+      "may": 14,
+      "jun": 19,
+      "jul": 22,
+      "aug": 21,
+      "sep": 15,
+      "oct": 8,
+      "nov": 1,
+      "dec": -5
+    }
+  },
+  {
+    "country": "Laos",
+    "code": "LA",
+    "avgTemps": {
+      "jan": 20,
+      "feb": 23,
+      "mar": 27,
+      "apr": 30,
+      "may": 29,
+      "jun": 28,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 26,
+      "nov": 23,
+      "dec": 20
+    }
+  },
+  {
+    "country": "Lebanon",
+    "code": "LB",
+    "avgTemps": {
+      "jan": 10,
+      "feb": 11,
+      "mar": 13,
+      "apr": 17,
+      "may": 22,
+      "jun": 26,
+      "jul": 29,
+      "aug": 29,
+      "sep": 27,
+      "oct": 22,
+      "nov": 17,
+      "dec": 12
+    }
+  },
+  {
+    "country": "Malaysia",
+    "code": "MY",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 28,
+      "nov": 28,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Maldives",
+    "code": "MV",
+    "avgTemps": {
+      "jan": 29,
+      "feb": 29,
+      "mar": 30,
+      "apr": 30,
+      "may": 30,
+      "jun": 29,
+      "jul": 29,
+      "aug": 29,
+      "sep": 29,
+      "oct": 29,
+      "nov": 29,
+      "dec": 29
+    }
+  },
+  {
+    "country": "Mongolia",
+    "code": "MN",
+    "avgTemps": {
+      "jan": -20,
+      "feb": -16,
+      "mar": -6,
+      "apr": 5,
+      "may": 13,
+      "jun": 18,
+      "jul": 21,
+      "aug": 20,
+      "sep": 12,
+      "oct": 2,
+      "nov": -9,
+      "dec": -17
+    }
+  },
+  {
+    "country": "Myanmar",
+    "code": "MM",
+    "avgTemps": {
+      "jan": 23,
+      "feb": 25,
+      "mar": 28,
+      "apr": 30,
+      "may": 29,
+      "jun": 28,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 27,
+      "nov": 26,
+      "dec": 23
+    }
+  },
+  {
+    "country": "Nepal",
+    "code": "NP",
+    "avgTemps": {
+      "jan": 10,
+      "feb": 12,
+      "mar": 16,
+      "apr": 20,
+      "may": 23,
+      "jun": 24,
+      "jul": 24,
+      "aug": 24,
+      "sep": 23,
+      "oct": 20,
+      "nov": 15,
+      "dec": 11
+    }
+  },
+  {
+    "country": "North Korea",
+    "code": "KP",
+    "avgTemps": {
+      "jan": -8,
+      "feb": -5,
+      "mar": 2,
+      "apr": 10,
+      "may": 16,
+      "jun": 21,
+      "jul": 25,
+      "aug": 26,
+      "sep": 20,
+      "oct": 13,
+      "nov": 4,
+      "dec": -5
+    }
+  },
+  {
+    "country": "Oman",
+    "code": "OM",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 23,
+      "mar": 26,
+      "apr": 30,
+      "may": 34,
+      "jun": 37,
+      "jul": 38,
+      "aug": 37,
+      "sep": 35,
+      "oct": 31,
+      "nov": 27,
+      "dec": 23
+    }
+  },
+  {
+    "country": "Pakistan",
+    "code": "PK",
+    "avgTemps": {
+      "jan": 13,
+      "feb": 15,
+      "mar": 20,
+      "apr": 26,
+      "may": 30,
+      "jun": 34,
+      "jul": 35,
+      "aug": 34,
+      "sep": 31,
+      "oct": 26,
+      "nov": 20,
+      "dec": 14
+    }
+  },
+  {
+    "country": "Philippines",
+    "code": "PH",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 27,
+      "mar": 28,
+      "apr": 29,
+      "may": 29,
+      "jun": 29,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 28,
+      "nov": 27,
+      "dec": 26
+    }
+  },
+  {
+    "country": "Qatar",
+    "code": "QA",
+    "avgTemps": {
+      "jan": 17,
+      "feb": 18,
+      "mar": 22,
+      "apr": 27,
+      "may": 32,
+      "jun": 36,
+      "jul": 38,
+      "aug": 38,
+      "sep": 35,
+      "oct": 30,
+      "nov": 24,
+      "dec": 19
+    }
+  },
+  {
+    "country": "Saudi Arabia",
+    "code": "SA",
+    "avgTemps": {
+      "jan": 14,
+      "feb": 17,
+      "mar": 22,
+      "apr": 27,
+      "may": 32,
+      "jun": 36,
+      "jul": 37,
+      "aug": 37,
+      "sep": 34,
+      "oct": 29,
+      "nov": 22,
+      "dec": 16
+    }
+  },
+  {
+    "country": "Singapore",
+    "code": "SG",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 28,
+      "may": 28,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "South Korea",
+    "code": "KR",
+    "avgTemps": {
+      "jan": -3,
+      "feb": 0,
+      "mar": 5,
+      "apr": 12,
+      "may": 17,
+      "jun": 21,
+      "jul": 25,
+      "aug": 26,
+      "sep": 21,
+      "oct": 15,
+      "nov": 7,
+      "dec": 0
+    }
+  },
+  {
+    "country": "Sri Lanka",
+    "code": "LK",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 29,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 28,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Syria",
+    "code": "SY",
+    "avgTemps": {
+      "jan": 9,
+      "feb": 11,
+      "mar": 14,
+      "apr": 18,
+      "may": 23,
+      "jun": 28,
+      "jul": 31,
+      "aug": 31,
+      "sep": 27,
+      "oct": 21,
+      "nov": 15,
+      "dec": 10
+    }
+  },
+  {
+    "country": "Taiwan",
+    "code": "TW",
+    "avgTemps": {
+      "jan": 16,
+      "feb": 16,
+      "mar": 18,
+      "apr": 22,
+      "may": 25,
+      "jun": 28,
+      "jul": 29,
+      "aug": 29,
+      "sep": 28,
+      "oct": 25,
+      "nov": 22,
+      "dec": 18
+    }
+  },
+  {
+    "country": "Tajikistan",
+    "code": "TJ",
+    "avgTemps": {
+      "jan": -4,
+      "feb": -1,
+      "mar": 5,
+      "apr": 13,
+      "may": 19,
+      "jun": 24,
+      "jul": 27,
+      "aug": 26,
+      "sep": 20,
+      "oct": 13,
+      "nov": 5,
+      "dec": -2
+    }
+  },
+  {
+    "country": "Thailand",
+    "code": "TH",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 28,
+      "mar": 30,
+      "apr": 31,
+      "may": 30,
+      "jun": 29,
+      "jul": 29,
+      "aug": 29,
+      "sep": 28,
+      "oct": 27,
+      "nov": 26,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Timor-Leste",
+    "code": "TL",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 26,
+      "jul": 25,
+      "aug": 26,
+      "sep": 27,
+      "oct": 28,
+      "nov": 28,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Turkmenistan",
+    "code": "TM",
+    "avgTemps": {
+      "jan": -2,
+      "feb": 0,
+      "mar": 7,
+      "apr": 16,
+      "may": 22,
+      "jun": 27,
+      "jul": 30,
+      "aug": 29,
+      "sep": 22,
+      "oct": 14,
+      "nov": 5,
+      "dec": 0
+    }
+  },
+  {
+    "country": "United Arab Emirates",
+    "code": "AE",
+    "avgTemps": {
+      "jan": 18,
+      "feb": 20,
+      "mar": 22,
+      "apr": 27,
+      "may": 32,
+      "jun": 35,
+      "jul": 37,
+      "aug": 37,
+      "sep": 35,
+      "oct": 30,
+      "nov": 25,
+      "dec": 20
+    }
+  },
+  {
+    "country": "Uzbekistan",
+    "code": "UZ",
+    "avgTemps": {
+      "jan": -1,
+      "feb": 2,
+      "mar": 8,
+      "apr": 16,
+      "may": 22,
+      "jun": 27,
+      "jul": 30,
+      "aug": 28,
+      "sep": 22,
+      "oct": 14,
+      "nov": 6,
+      "dec": 0
+    }
+  },
+  {
+    "country": "Vietnam",
+    "code": "VN",
+    "avgTemps": {
+      "jan": 20,
+      "feb": 21,
+      "mar": 24,
+      "apr": 27,
+      "may": 29,
+      "jun": 30,
+      "jul": 30,
+      "aug": 30,
+      "sep": 29,
+      "oct": 27,
+      "nov": 24,
+      "dec": 21
+    }
+  },
+  {
+    "country": "Yemen",
+    "code": "YE",
+    "avgTemps": {
+      "jan": 25,
+      "feb": 26,
+      "mar": 27,
+      "apr": 29,
+      "may": 31,
+      "jun": 33,
+      "jul": 33,
+      "aug": 33,
+      "sep": 31,
+      "oct": 29,
+      "nov": 27,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Australia",
+    "code": "AU",
+    "avgTemps": {
+      "jan": 22,
+      "feb": 22,
+      "mar": 20,
+      "apr": 17,
+      "may": 13,
+      "jun": 10,
+      "jul": 9,
+      "aug": 11,
+      "sep": 13,
+      "oct": 16,
+      "nov": 19,
+      "dec": 21
+    }
+  },
+  {
+    "country": "Fiji",
+    "code": "FJ",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 26,
+      "may": 25,
+      "jun": 23,
+      "jul": 23,
+      "aug": 23,
+      "sep": 24,
+      "oct": 25,
+      "nov": 26,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Kiribati",
+    "code": "KI",
+    "avgTemps": {
+      "jan": 29,
+      "feb": 29,
+      "mar": 29,
+      "apr": 29,
+      "may": 29,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 28,
+      "nov": 28,
+      "dec": 29
+    }
+  },
+  {
+    "country": "Marshall Islands",
+    "code": "MH",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 28,
+      "nov": 28,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Micronesia",
+    "code": "FM",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 28,
+      "jul": 28,
+      "aug": 28,
+      "sep": 28,
+      "oct": 28,
+      "nov": 28,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Nauru",
+    "code": "NR",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 27,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 28,
+      "nov": 28,
+      "dec": 28
+    }
+  },
+  {
+    "country": "New Zealand",
+    "code": "NZ",
+    "avgTemps": {
+      "jan": 17,
+      "feb": 17,
+      "mar": 15,
+      "apr": 12,
+      "may": 9,
+      "jun": 7,
+      "jul": 6,
+      "aug": 7,
+      "sep": 9,
+      "oct": 12,
+      "nov": 14,
+      "dec": 16
+    }
+  },
+  {
+    "country": "Palau",
+    "code": "PW",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 28,
+      "jul": 27,
+      "aug": 27,
+      "sep": 28,
+      "oct": 28,
+      "nov": 28,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Papua New Guinea",
+    "code": "PG",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 27,
+      "may": 27,
+      "jun": 26,
+      "jul": 26,
+      "aug": 26,
+      "sep": 26,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Samoa",
+    "code": "WS",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 27,
+      "may": 27,
+      "jun": 26,
+      "jul": 26,
+      "aug": 26,
+      "sep": 26,
+      "oct": 27,
+      "nov": 27,
+      "dec": 27
+    }
+  },
+  {
+    "country": "Solomon Islands",
+    "code": "SB",
+    "avgTemps": {
+      "jan": 28,
+      "feb": 28,
+      "mar": 28,
+      "apr": 28,
+      "may": 28,
+      "jun": 27,
+      "jul": 27,
+      "aug": 27,
+      "sep": 27,
+      "oct": 27,
+      "nov": 27,
+      "dec": 28
+    }
+  },
+  {
+    "country": "Tonga",
+    "code": "TO",
+    "avgTemps": {
+      "jan": 26,
+      "feb": 26,
+      "mar": 25,
+      "apr": 24,
+      "may": 22,
+      "jun": 20,
+      "jul": 20,
+      "aug": 20,
+      "sep": 21,
+      "oct": 22,
+      "nov": 23,
+      "dec": 25
+    }
+  },
+  {
+    "country": "Tuvalu",
+    "code": "TV",
+    "avgTemps": {
+      "jan": 29,
+      "feb": 29,
+      "mar": 29,
+      "apr": 29,
+      "may": 29,
+      "jun": 29,
+      "jul": 29,
+      "aug": 29,
+      "sep": 29,
+      "oct": 29,
+      "nov": 29,
+      "dec": 29
+    }
+  },
+  {
+    "country": "Vanuatu",
+    "code": "VU",
+    "avgTemps": {
+      "jan": 27,
+      "feb": 27,
+      "mar": 27,
+      "apr": 26,
+      "may": 25,
+      "jun": 24,
+      "jul": 23,
+      "aug": 23,
+      "sep": 24,
+      "oct": 25,
+      "nov": 26,
+      "dec": 27
+    }
+  }
+]
