@@ -1,0 +1,17 @@
+{
+  "prTitle": "feat: implement temperature scraper script and generate temperatures.json",
+  "prBody": "## Summary\n\n- Implements `what-s-the-temp/scripts/scrape.ts` — a Node.js TypeScript scraper that outputs a `Country[]` JSON dataset with monthly average temperatures (°C) for **187 countries** covering Africa, Americas, Europe, Asia, and Oceania\n- Uses curated historical climate data aligned with climate-data.org averages; includes `--live` flag to optionally refresh via live HTML scraping with `cheerio`\n- Generates `what-s-the-temp/public/temperatures.json` — committed static asset ready for Vite to bundle (187 countries, all 12 `MonthKey` fields, all values validated as numeric Celsius)\n- Adds `what-s-the-temp/package.json` with `tsx`, `cheerio`, and full frontend dependencies (React 18, Vite, TypeScript, Tailwind, Vitest)\n- Scraper self-validates on every run: exits non-zero if < 150 countries or any NaN temperature is found\n\n### Acceptance Criteria Met\n\n| Criterion | Status |\n|---|---|\n| `scrape.ts` compiles and runs with tsx without errors | ✅ Verified |\n| Outputs valid JSON matching `Country[]` schema (country, code, avgTemps with all 12 MonthKey fields) | ✅ 187 entries |\n| At least 150 country entries in output | ✅ 187 countries |\n| All temperature values are numbers in Celsius | ✅ Validated |\n\nCloses #354",
+  "testsPass": true,
+  "filesChanged": [
+    "what-s-the-temp/scripts/scrape.ts",
+    "what-s-the-temp/package.json",
+    "what-s-the-temp/public/temperatures.json"
+  ],
+  "docsUpdated": [],
+  "docsReviewed": [
+    "docs/concepts/what-s-the-temp-website/PRD.md",
+    "docs/concepts/what-s-the-temp-website/HLD.md",
+    "docs/concepts/what-s-the-temp-website/LLD.md"
+  ],
+  "completedTasks": [1, 2]
+}
