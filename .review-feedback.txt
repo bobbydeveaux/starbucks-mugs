@@ -1,6 +1,41 @@
 ## Code Review - Changes Requested
 
-The review is complete. This PR is flagged as blocking because it contains **no implementation whatsoever** — just an empty branch initialization commit. The entire task (TypeScript + Vite build pipeline configuration) remains unimplemented.
+## ❌ BLOCKING ISSUES FOUND
+
+### Summary
+
+This PR is essentially empty. The title claims to implement the `FilterControls` component with unit conversion (issue #360), but **no implementation was committed**. The only file change is deletion of `.claude-output.json` from the prior sprint.
+
+---
+
+### BLOCKING: Implementation Not Delivered
+
+**The two required files do not exist in the repository:**
+
+- `what-s-the-temp/src/components/FilterControls.tsx` — **missing**
+- `what-s-the-temp/src/components/FilterControls.test.tsx` — **missing**
+
+**All acceptance criteria are unmet:**
+
+| Criterion | Status |
+|---|---|
+| Component renders month selector with all 12 MonthKey options, targetTemp input, tolerance input, and unit toggle button | ❌ Not implemented |
+| Toggling unit from C to F (or F to C) converts the targetTemp value and calls `onChange` with updated `FilterState` | ❌ Not implemented |
+| All inputs are controlled and invoke `onChange` with correct `FilterState` shape | ❌ Not implemented |
+| Tests cover initial render, each input change, and unit toggle conversion logic | ❌ Not implemented |
+
+---
+
+### What Needs to Be Done
+
+Per the LLD (`docs/concepts/what-s-the-temp-website/LLD.md`), the `FilterControls` component should:
+
+- Accept props `filter: FilterState` and `onChange: (f: FilterState) => void`
+- Render a `<select>` with all 12 month options
+- Render `<input type="number">` for `targetTemp` and `tolerance`
+- Render C/F toggle buttons; on switch, convert `targetTemp` using `toFahrenheit`/`toCelsius` from `src/utils/temperature.ts` before calling `onChange`
+
+The PR should not be merged until the component and its tests are committed.
 
 **Action Required**: Please address the blocking issues above before merging.
 
