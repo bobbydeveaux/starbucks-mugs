@@ -1,6 +1,54 @@
 ## Code Review - Changes Requested
 
+## ❌ BLOCKING ISSUES FOUND
+
+### PR #384 - Implement temperature conversion utilities with tests
+
+**Summary:** This PR only deletes a metadata file (`.claude-output.json`) and contains **no actual implementation**. The core deliverables required by issue #357 are entirely missing.
+
+---
+
+### BLOCKING: Core Implementation Not Delivered
+
+The PR is titled "Implement temperature conversion utilities with tests" and references issue #357, which requires:
+
+**Files to create (per issue spec):**
+- `what-s-the-temp/src/utils/temperature.ts` — **MISSING**
+- `what-s-the-temp/src/utils/temperature.test.ts` — **MISSING**
+
+**Acceptance criteria (all unmet):**
+- ❌ `toFahrenheit` and `toCelsius` are inverse operations with < 0.01 floating point error
+- ❌ `formatTemp` returns correctly rounded string with unit symbol
+- ❌ All `temperature.test.ts` tests pass
+
+**What the PR actually changes:**
+- Deletes `.claude-output.json` (a metadata artifact from a previous task/PR)
+
+The `what-s-the-temp/src/utils/` directory exists but is empty. No utility functions have been implemented and no tests have been written.
+
+---
+
+### BLOCKING: filterCountries Implementation Also Missing
+
 The PR has **blocking issues** — it's a WIP with zero implementation. The entire `filterCountries` function and its tests need to be written before this can merge.
+
+---
+
+### What Needs to Be Done
+
+1. Implement `what-s-the-temp/src/utils/temperature.ts` with:
+   - `toFahrenheit(celsius: number): number`
+   - `toCelsius(fahrenheit: number): number`
+   - `formatTemp(temp: number, unit: 'C' | 'F'): string`
+
+2. Implement `what-s-the-temp/src/utils/temperature.test.ts` with:
+   - Roundtrip conversion accuracy tests (< 0.01 error)
+   - Edge cases: negative temps, 0°C/32°F boundary
+   - `formatTemp` output format and rounding tests
+
+3. Implement `what-s-the-temp/src/utils/filterCountries.ts` and its tests.
+
+4. Ensure all tests pass before re-submitting.
 
 **Action Required**: Please address the blocking issues above before merging.
 
