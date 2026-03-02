@@ -1,0 +1,37 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: what-s-the-temp-website-feat-project-setup
+        name: Project Setup
+        type: enabler
+        files: [what-s-the-temp/index.html what-s-the-temp/package.json what-s-the-temp/tsconfig.json what-s-the-temp/tsconfig.node.json what-s-the-temp/vite.config.ts what-s-the-temp/tailwind.config.ts what-s-the-temp/package-lock.json what-s-the-temp/.gitignore what-s-the-temp/README.md what-s-the-temp/Dockerfile what-s-the-temp/docker-compose.yml]
+      - id: what-s-the-temp-website-feat-temperature-scraper
+        name: Temperature Data Scraper
+        type: feature
+        files: [what-s-the-temp/scripts/scrape.ts what-s-the-temp/public/temperatures.json what-s-the-temp/package.json what-s-the-temp/package-lock.json what-s-the-temp/tsconfig.json what-s-the-temp/.gitignore what-s-the-temp/README.md what-s-the-temp/Dockerfile what-s-the-temp/docker-compose.yml]
+  - number: 2
+    features:
+      - id: what-s-the-temp-website-feat-core-types-utils
+        name: Core Types and Filtering Logic
+        type: enabler
+        files: [what-s-the-temp/src/types.ts what-s-the-temp/src/utils/temperature.ts what-s-the-temp/src/utils/temperature.test.ts what-s-the-temp/src/utils/filterCountries.ts what-s-the-temp/src/utils/filterCountries.test.ts what-s-the-temp/package.json what-s-the-temp/package-lock.json what-s-the-temp/tsconfig.json what-s-the-temp/.gitignore what-s-the-temp/README.md what-s-the-temp/Dockerfile what-s-the-temp/docker-compose.yml]
+      - id: what-s-the-temp-website-feat-data-hook
+        name: Temperature Data Hook
+        type: feature
+        files: [what-s-the-temp/src/hooks/useTemperatures.ts what-s-the-temp/src/hooks/useTemperatures.test.ts what-s-the-temp/package.json what-s-the-temp/package-lock.json what-s-the-temp/tsconfig.json what-s-the-temp/.gitignore what-s-the-temp/README.md what-s-the-temp/Dockerfile what-s-the-temp/docker-compose.yml]
+      - id: what-s-the-temp-website-feat-filter-controls
+        name: Filter Controls UI
+        type: feature
+        files: [what-s-the-temp/src/components/FilterControls.tsx what-s-the-temp/src/components/FilterControls.test.tsx what-s-the-temp/package.json what-s-the-temp/package-lock.json what-s-the-temp/tsconfig.json what-s-the-temp/.gitignore what-s-the-temp/README.md what-s-the-temp/Dockerfile what-s-the-temp/docker-compose.yml]
+  - number: 3
+    features:
+      - id: what-s-the-temp-website-feat-country-results
+        name: Country Results Display
+        type: feature
+        files: [what-s-the-temp/src/components/CountryList.tsx what-s-the-temp/src/components/CountryList.test.tsx what-s-the-temp/src/components/CountryCard.tsx what-s-the-temp/src/components/CountryCard.test.tsx what-s-the-temp/package.json what-s-the-temp/package-lock.json what-s-the-temp/tsconfig.json what-s-the-temp/.gitignore what-s-the-temp/README.md what-s-the-temp/Dockerfile what-s-the-temp/docker-compose.yml]
+      - id: what-s-the-temp-website-feat-app-integration
+        name: App Integration
+        type: feature
+        files: [what-s-the-temp/src/main.tsx what-s-the-temp/src/App.tsx what-s-the-temp/src/App.test.tsx what-s-the-temp/package.json what-s-the-temp/package-lock.json what-s-the-temp/tsconfig.json what-s-the-temp/.gitignore what-s-the-temp/README.md what-s-the-temp/Dockerfile what-s-the-temp/docker-compose.yml]

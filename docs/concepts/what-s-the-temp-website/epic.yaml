@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Scaffold Vite + React 18 + TypeScript + Tailwind CSS project with
       all config files needed for build and deployment
     estimatedComplexity: low
@@ -15,7 +16,8 @@ Epics:
     name: Project Setup
     project: what-s-the-temp
     type: enabler
-  - dependencies:
+  - Sprint: 1
+    dependencies:
     - what-s-the-temp-website-feat-project-setup
     description: Node.js scraper that fetches monthly average temperatures for 150+
       countries from climate-data.org and outputs public/temperatures.json as a static
@@ -28,10 +30,11 @@ Epics:
     name: Temperature Data Scraper
     project: what-s-the-temp
     type: feature
-  id: what-s-the-temp-website-epic-data-pipeline
-  name: Data Pipeline
-- features:
-  - dependencies:
+  ID: what-s-the-temp-website-epic-data-pipeline
+  Name: Data Pipeline
+- Features:
+  - Sprint: 2
+    dependencies:
     - what-s-the-temp-website-feat-project-setup
     description: Define TypeScript types (Country, MonthKey, FilterState, Unit) and
       implement pure utility functions for temperature conversion and country filtering
@@ -46,7 +49,8 @@ Epics:
     name: Core Types and Filtering Logic
     project: what-s-the-temp
     type: enabler
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - what-s-the-temp-website-feat-core-types-utils
     - what-s-the-temp-website-feat-temperature-scraper
     description: useTemperatures hook that fetches and parses temperatures.json once
@@ -59,7 +63,8 @@ Epics:
     name: Temperature Data Hook
     project: what-s-the-temp
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - what-s-the-temp-website-feat-core-types-utils
     description: Controlled FilterControls component with month selector, target temperature
       input, tolerance input, and C/F unit toggle that converts targetTemp on unit
@@ -72,7 +77,8 @@ Epics:
     name: Filter Controls UI
     project: what-s-the-temp
     type: feature
-  - dependencies:
+  - Sprint: 3
+    dependencies:
     - what-s-the-temp-website-feat-core-types-utils
     description: CountryList and CountryCard components that render filtered countries
       sorted A-Z with flag emoji, country name, and formatted temperature; shows empty
@@ -87,7 +93,8 @@ Epics:
     name: Country Results Display
     project: what-s-the-temp
     type: feature
-  - dependencies:
+  - Sprint: 3
+    dependencies:
     - what-s-the-temp-website-feat-data-hook
     - what-s-the-temp-website-feat-filter-controls
     - what-s-the-temp-website-feat-country-results
@@ -102,6 +109,6 @@ Epics:
     name: App Integration
     project: what-s-the-temp
     type: feature
-  id: what-s-the-temp-website-epic-react-app
-  name: React Application
+  ID: what-s-the-temp-website-epic-react-app
+  Name: React Application
 Version: v1alpha1
