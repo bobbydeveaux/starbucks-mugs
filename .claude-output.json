@@ -12,6 +12,7 @@
   "docsReviewed": [
     "docs/components.md",
     "docs/testing.md",
+    "docs/concepts/what-s-the-temp-website/PRD.md",
     "docs/concepts/what-s-the-temp-website/LLD.md",
     "docs/concepts/what-s-the-temp-website/HLD.md",
     "docs/concepts/what-s-the-temp-website/tasks.yaml"

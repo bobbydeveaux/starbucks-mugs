@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in src/utils/imageUrl.ts and src/utils/imageUrl.test.ts. The HEAD branch had a robust URL-generation implementation (special-char removal, step-by-step normalization) with comprehensive fixture-based tests. origin/main introduced brand-prefix stripping (e.g. 'Ferrari 488' → '488') and brand.toLowerCase() in URLs, with simpler tests. Both sets of functionality were preserved in the merge.",
-  "strategyUsed": "preserved both changes: kept HEAD's robust special-character removal and comprehensive test suite; added origin/main's brand-prefix stripping logic and brand.toLowerCase() URL normalization; added origin/main's brand-prefix test cases as a new describe block. All 76 imageUrl tests pass."
+  "filesResolved": 5,
+  "summary": "Resolved conflicts across 5 files: .claude-output.json (manual merge preserving HEAD's PR title/body for issue #355 and completedTasks [1,2,3,4] while merging docsReviewed from both branches), package.json (manual merge keeping HEAD's version 0.1.0 + origin/main's lint script, cheerio, eslint packages, and newer dependency versions), scrape.ts (used origin/main's curated dataset approach with 187 countries and --live flag), temperatures.json (used origin/main's comprehensive 187-country dataset), package-lock.json (used origin/main's version including cheerio lock entries).",
+  "strategyUsed": "Manual merge for .claude-output.json and package.json to preserve both branches' contributions; used origin/main for scrape.ts, temperatures.json, and package-lock.json as they represent a more comprehensive and complete dataset (187 countries vs 167, curated approach with validation, and matching lock file including cheerio dependency)"
 }
