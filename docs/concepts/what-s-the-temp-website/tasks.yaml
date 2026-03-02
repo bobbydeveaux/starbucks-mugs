@@ -1,0 +1,208 @@
+GeneratedAt: "2026-03-02T15:38:34Z"
+Plan: what-s-the-temp-website-plan
+Sprints:
+- Features:
+  - FeatureID: what-s-the-temp-website-feat-project-setup
+    FeatureTitle: Project Setup
+    Tasks:
+    - AcceptanceCriteria:
+      - package.json defines all required dependencies and devDependencies including
+        react 18, vite, typescript, tailwindcss, and vitest
+      - index.html references the Vite entry point and renders the React root mount
+        point
+      - npm install completes without errors
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create the root package.json with all required dependencies (React
+        18, Vite, TypeScript, Tailwind, Vitest) and the index.html entry point. This
+        establishes the dependency graph and HTML shell for the SPA.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/package.json
+      - what-s-the-temp/index.html
+      ID: task-what-s-the-temp-website-feat-project-setup-1
+      Title: Initialize Vite + React 18 project structure
+    - AcceptanceCriteria:
+      - tsconfig.json enables strict mode and targets ES2020 with JSX set to react-jsx
+      - tsconfig.node.json covers the Vite config file for Node tooling
+      - vite.config.ts registers the React plugin and configures vitest with jsdom
+        environment
+      - npx vite build exits 0 from the project root
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-what-s-the-temp-website-feat-project-setup-1
+      Description: Set up tsconfig.json and tsconfig.node.json with strict TypeScript
+        settings suitable for a React SPA. Configure vite.config.ts with the React
+        plugin and Vitest test runner settings.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/tsconfig.json
+      - what-s-the-temp/tsconfig.node.json
+      - what-s-the-temp/vite.config.ts
+      ID: task-what-s-the-temp-website-feat-project-setup-2
+      Title: Configure TypeScript and Vite build pipeline
+    - AcceptanceCriteria:
+      - tailwind.config.ts specifies content glob covering src/**/*.{ts,tsx}
+      - A Tailwind utility class applied in a component is present in the production
+        CSS bundle
+      - vite build produces no Tailwind-related warnings
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-what-s-the-temp-website-feat-project-setup-2
+      Description: Set up tailwind.config.ts with content paths covering all src files
+        to enable purging. Ensure Tailwind is imported in the global CSS entry so
+        utility classes are available throughout the app.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/tailwind.config.ts
+      ID: task-what-s-the-temp-website-feat-project-setup-3
+      Title: Configure Tailwind CSS
+  - FeatureID: what-s-the-temp-website-feat-temperature-scraper
+    FeatureTitle: Temperature Data Scraper
+    Tasks:
+    - AcceptanceCriteria:
+      - scrape.ts compiles and runs with ts-node or tsx without errors
+      - Script outputs valid JSON matching the Country[] schema with all 12 MonthKey
+        fields per entry
+      - At least 150 country entries are present in the output
+      - All temperature values are numbers in Celsius
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Write what-s-the-temp/scripts/scrape.ts as a Node.js script using
+        fetch or a lightweight HTTP client to scrape monthly average temperature data
+        for 150+ countries from climate-data.org. Parse HTML responses to extract
+        the 12 monthly Celsius averages per country, map each country to its ISO code,
+        and write the structured array to public/temperatures.json matching the Country
+        interface (country, code, avgTemps keyed jan–dec).
+      EstimatedEffort: L
+      Files:
+      - what-s-the-temp/scripts/scrape.ts
+      ID: task-what-s-the-temp-website-feat-temperature-scraper-1
+      Title: Implement temperature scraper script
+    - AcceptanceCriteria:
+      - package.json includes a 'scrape' script that runs scrape.ts
+      - public/temperatures.json exists, is valid JSON, and contains 150+ country
+        entries
+      - File is committed to the repo so Vite includes it in the public/ bundle
+      AgentType: backend-engineer
+      Dependencies:
+      - task-what-s-the-temp-website-feat-temperature-scraper-1
+      Description: Run the scraper to produce the static data asset and commit it
+        to the repository so it is available as a build-time public file. Add a package.json
+        script (e.g. 'scrape') that invokes the scraper, and verify the resulting
+        temperatures.json is well-formed and complete.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/public/temperatures.json
+      - what-s-the-temp/package.json
+      ID: task-what-s-the-temp-website-feat-temperature-scraper-2
+      Title: Generate and commit temperatures.json
+  Sprint: 1
+- Features:
+  - FeatureID: what-s-the-temp-website-feat-core-types-utils
+    FeatureTitle: Core Types and Filtering Logic
+    Tasks:
+    - AcceptanceCriteria:
+      - MonthKey union type covers all 12 months as lowercase 3-letter strings
+      - Country interface has country, code, and avgTemps (Record<MonthKey, number>)
+        fields
+      - FilterState interface captures month, targetTemp, tolerance, and unit fields
+      - All types are exported and importable without TypeScript errors
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create the shared type definitions used across the entire application.
+        Define MonthKey, Unit, Country, and FilterState interfaces in types.ts. These
+        types are foundational and must be established before any other implementation
+        work.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/src/types.ts
+      ID: task-what-s-the-temp-website-feat-core-types-utils-1
+      Title: Define core TypeScript types
+    - AcceptanceCriteria:
+      - toFahrenheit and toCelsius are inverse operations with < 0.01 floating point
+        error
+      - formatTemp returns correctly rounded string with unit symbol
+      - All temperature.test.ts tests pass
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-what-s-the-temp-website-feat-core-types-utils-1
+      Description: Implement pure utility functions toFahrenheit, toCelsius, and formatTemp
+        in temperature.ts. Write comprehensive unit tests covering conversion accuracy,
+        edge cases (negative temps, 0°C/32°F boundary), and formatting output.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/src/utils/temperature.ts
+      - what-s-the-temp/src/utils/temperature.test.ts
+      ID: task-what-s-the-temp-website-feat-core-types-utils-2
+      Title: Implement temperature conversion utilities with tests
+    - AcceptanceCriteria:
+      - filterCountries returns only countries whose avgTemp for the selected month
+        is within tolerance of targetTemp
+      - Results are sorted ascending by absolute temperature difference from targetTemp
+      - Unit conversion is applied correctly when unit is 'F'
+      - All filterCountries.test.ts tests pass including edge cases (empty input,
+        zero tolerance, all countries match)
+      AgentType: frontend-engineer
+      Dependencies:
+      - task-what-s-the-temp-website-feat-core-types-utils-1
+      - task-what-s-the-temp-website-feat-core-types-utils-2
+      Description: Implement the filterCountries pure function that takes a Country
+        array and FilterState and returns matching countries sorted by closeness to
+        targetTemp. The function must handle unit conversion when FilterState.unit
+        is Fahrenheit by leveraging the temperature utilities. Write tests covering
+        exact matches, tolerance boundaries, empty results, and unit conversion scenarios.
+      EstimatedEffort: M
+      Files:
+      - what-s-the-temp/src/utils/filterCountries.ts
+      - what-s-the-temp/src/utils/filterCountries.test.ts
+      ID: task-what-s-the-temp-website-feat-core-types-utils-3
+      Title: Implement country filtering logic with tests
+  - FeatureID: what-s-the-temp-website-feat-data-hook
+    FeatureTitle: Temperature Data Hook
+    Tasks:
+    - AcceptanceCriteria:
+      - Hook returns loading=true initially then loading=false after fetch resolves
+      - Hook returns parsed Country[] array on successful fetch of valid JSON
+      - Hook returns non-null error string when fetch fails or JSON is malformed
+      - Fetch is called exactly once on mount and not on re-renders
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create the useTemperatures hook that fetches /temperatures.json
+        once on mount using useEffect and useState. Expose { countries, loading, error
+        } where countries is typed as Country[] from types.ts, loading is a boolean,
+        and error is string|null. Write tests covering the loading state, successful
+        parse, and fetch error scenarios using mocked fetch.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/src/hooks/useTemperatures.ts
+      - what-s-the-temp/src/hooks/useTemperatures.test.ts
+      ID: task-what-s-the-temp-website-feat-data-hook-1
+      Title: Implement useTemperatures hook with tests
+  - FeatureID: what-s-the-temp-website-feat-filter-controls
+    FeatureTitle: Filter Controls UI
+    Tasks:
+    - AcceptanceCriteria:
+      - Component renders month selector with all 12 MonthKey options, targetTemp
+        input, tolerance input, and unit toggle button
+      - Toggling unit from C to F (or F to C) converts the targetTemp value and calls
+        onChange with the updated FilterState
+      - All inputs are controlled and invoke the onChange callback with correct FilterState
+        shape on change
+      - Tests cover initial render, each input change, and unit toggle conversion
+        logic
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Build the controlled FilterControls component with a month selector,
+        targetTemp numeric input, tolerance numeric input, and a C/F toggle button.
+        When the unit toggles, convert the current targetTemp value between Celsius
+        and Fahrenheit using the utility functions from the core-types-utils feature.
+        Write tests covering rendering, user interactions, and the unit conversion
+        behavior on toggle.
+      EstimatedEffort: S
+      Files:
+      - what-s-the-temp/src/components/FilterControls.tsx
+      - what-s-the-temp/src/components/FilterControls.test.tsx
+      ID: task-what-s-the-temp-website-feat-filter-controls-1
+      Title: Implement FilterControls component with unit conversion
+  Sprint: 2

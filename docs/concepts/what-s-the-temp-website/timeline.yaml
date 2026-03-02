@@ -1,0 +1,50 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-03-02T15:36:40Z
+  totalSprints: 3
+  totalDuration: 23 days
+
+sprints:
+  - number: 1
+    startDate: 2026-03-02
+    endDate: 2026-03-09
+    duration: 7 days
+    features:
+      - id: what-s-the-temp-website-feat-project-setup
+        name: Project Setup
+        type: enabler
+      - id: what-s-the-temp-website-feat-temperature-scraper
+        name: Temperature Data Scraper
+        type: feature
+  - number: 2
+    startDate: 2026-03-10
+    endDate: 2026-03-17
+    duration: 7 days
+    features:
+      - id: what-s-the-temp-website-feat-core-types-utils
+        name: Core Types and Filtering Logic
+        type: enabler
+      - id: what-s-the-temp-website-feat-data-hook
+        name: Temperature Data Hook
+        type: feature
+      - id: what-s-the-temp-website-feat-filter-controls
+        name: Filter Controls UI
+        type: feature
+  - number: 3
+    startDate: 2026-03-18
+    endDate: 2026-03-25
+    duration: 7 days
+    features:
+      - id: what-s-the-temp-website-feat-country-results
+        name: Country Results Display
+        type: feature
+      - id: what-s-the-temp-website-feat-app-integration
+        name: App Integration
+        type: feature
+
+criticalPath:
+  - what-s-the-temp-website-feat-project-setup
+  - what-s-the-temp-website-feat-core-types-utils
+  - what-s-the-temp-website-feat-data-hook
+  - what-s-the-temp-website-feat-app-integration
