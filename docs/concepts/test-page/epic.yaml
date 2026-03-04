@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Add a TestPage React component at /test that fetches /healthz on
       mount and displays pass/fail status, and wire up the route in App.tsx
     estimatedComplexity: low
@@ -11,6 +12,6 @@ Epics:
     name: Test Page Component and Route
     project: frontend
     type: feature
-  id: test-page-epic-main
-  name: Test Page
+  ID: test-page-epic-main
+  Name: Test Page
 Version: v1alpha1
