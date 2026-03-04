@@ -1,0 +1,25 @@
+GeneratedAt: "2026-03-04T22:59:47Z"
+Plan: test-page-plan
+Sprints:
+- Features:
+  - FeatureID: test-page-feat-main
+    FeatureTitle: Test Page Component and Route
+    Tasks:
+    - AcceptanceCriteria:
+      - TestPage renders a loading state on mount, then updates to 'pass' on 2xx response
+        or 'fail' on error/non-2xx from /healthz
+      - Navigating to /test in the app renders the TestPage component
+      - 'Component exports a default function TestPage(): JSX.Element with useState<''loading''|''pass''|''fail''>(''loading'')'
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create src/pages/TestPage.tsx with a React component that fetches
+        /healthz on mount using useState and useEffect, displaying 'loading', 'pass',
+        or 'fail' status based on the response. Add the /test route to src/App.tsx
+        pointing to this new component.
+      EstimatedEffort: S
+      Files:
+      - src/pages/TestPage.tsx
+      - src/App.tsx
+      ID: task-test-page-feat-main-1
+      Title: Implement TestPage component and wire route
+  Sprint: 1
