@@ -1,0 +1,9 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: test-page-feat-main
+        name: Test Page Component and Route
+        type: feature
+        files: [src/pages/TestPage.tsx src/App.tsx src/package.json src/package-lock.json src/tsconfig.json src/.gitignore src/README.md src/Dockerfile src/docker-compose.yml]
