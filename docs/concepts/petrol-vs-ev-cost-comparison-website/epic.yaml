@@ -1,6 +1,7 @@
 Epics:
-- features:
-  - dependencies: []
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: Create PostgreSQL migrations for the vehicles and pricing_defaults
       tables, including indexes on make/model/year/fuel_type. Continues the existing
       db/migrations/ sequence at 005/006.
@@ -12,7 +13,8 @@ Epics:
     name: Database Schema & Migrations
     project: backend
     type: enabler
-  - dependencies:
+  - Sprint: 4
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-db-schema
     description: One-time seed script that imports ≥200 popular UK petrol, diesel,
       EV, hybrid, and PHEV vehicles (make, model, year, variant, MPG/efficiency, battery,
@@ -25,10 +27,11 @@ Epics:
     name: Vehicle Seed Data
     project: backend
     type: enabler
-  id: petrol-vs-ev-cost-comparison-website-epic-data-foundation
-  name: Data Foundation
-- features:
-  - dependencies:
+  ID: petrol-vs-ev-cost-comparison-website-epic-data-foundation
+  Name: Data Foundation
+- Features:
+  - Sprint: 2
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-db-schema
     description: 'Serverless GET /api/vehicles endpoint supporting make, model, year,
       fuel_type, and freetext (q) query params. Returns paginated vehicle records
@@ -41,7 +44,8 @@ Epics:
     name: Vehicle Search API
     project: backend
     type: feature
-  - dependencies:
+  - Sprint: 2
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-db-schema
     description: 'Serverless GET /api/pricing returning the current default pricing
       row (petrol_ppl, diesel_ppl, electricity tariffs, public charging tiers) with
@@ -55,10 +59,11 @@ Epics:
     name: Pricing API & Admin Endpoint
     project: backend
     type: feature
-  id: petrol-vs-ev-cost-comparison-website-epic-backend-api
-  name: Backend API
-- features:
-  - dependencies: []
+  ID: petrol-vs-ev-cost-comparison-website-epic-backend-api
+  Name: Backend API
+- Features:
+  - Sprint: 1
+    dependencies: null
     description: 'Pure TypeScript module implementing all calculation logic: cost-per-mile
       for ICE ((price_ppl × 4.546) / MPG) and EV (price_ppkwh / efficiency_mpkwh),
       annual cost, CO2 comparison (WLTP for ICE; grid avg 233g/kWh × kWh/mile for
@@ -72,10 +77,11 @@ Epics:
     name: Client-Side Cost Engine Module
     project: frontend
     type: enabler
-  id: petrol-vs-ev-cost-comparison-website-epic-cost-engine
-  name: Cost Calculation Engine
-- features:
-  - dependencies:
+  ID: petrol-vs-ev-cost-comparison-website-epic-cost-engine
+  Name: Cost Calculation Engine
+- Features:
+  - Sprint: 3
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-vehicle-api
     - petrol-vs-ev-cost-comparison-website-feat-cost-engine
     description: Search interface for selecting a petrol/diesel vehicle and an EV
@@ -89,7 +95,8 @@ Epics:
     name: Vehicle Search UI
     project: frontend
     type: feature
-  - dependencies:
+  - Sprint: 3
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-vehicle-search
     - petrol-vs-ev-cost-comparison-website-feat-cost-engine
     description: Extends the existing ComparisonPanel component via props to display
@@ -103,7 +110,8 @@ Epics:
     name: Side-by-Side Comparison Panel
     project: frontend
     type: feature
-  - dependencies:
+  - Sprint: 4
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-pricing-api
     - petrol-vs-ev-cost-comparison-website-feat-comparison-panel
     description: Editable panel showing default UK fuel/electricity prices fetched
@@ -117,7 +125,8 @@ Epics:
     name: Pricing & Tariff Override Panel
     project: frontend
     type: feature
-  - dependencies:
+  - Sprint: 5
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-comparison-panel
     - petrol-vs-ev-cost-comparison-website-feat-cost-engine
     description: Recharts-based chart components showing cumulative cost difference
@@ -132,7 +141,8 @@ Epics:
     name: Breakeven & Cost-Over-Time Charts
     project: frontend
     type: feature
-  - dependencies:
+  - Sprint: 5
+    dependencies:
     - petrol-vs-ev-cost-comparison-website-feat-pricing-panel
     - petrol-vs-ev-cost-comparison-website-feat-breakeven-chart
     description: Module that serialises the full comparison state (vehicle IDs, annual
@@ -146,6 +156,6 @@ Epics:
     name: Shareable URL State Manager
     project: frontend
     type: feature
-  id: petrol-vs-ev-cost-comparison-website-epic-frontend
-  name: Frontend Application
+  ID: petrol-vs-ev-cost-comparison-website-epic-frontend
+  Name: Frontend Application
 Version: v1alpha1

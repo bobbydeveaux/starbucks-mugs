@@ -1,0 +1,53 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: petrol-vs-ev-cost-comparison-website-feat-db-schema
+        name: Database Schema & Migrations
+        type: enabler
+        files: [db/migrations/005_create_vehicles.sql db/migrations/006_create_pricing_defaults.sql]
+      - id: petrol-vs-ev-cost-comparison-website-feat-cost-engine
+        name: Client-Side Cost Engine Module
+        type: enabler
+        files: [src/petrol-vs-ev/costEngine.ts src/petrol-vs-ev/costEngine.test.ts]
+  - number: 2
+    features:
+      - id: petrol-vs-ev-cost-comparison-website-feat-vehicle-api
+        name: Vehicle Search API
+        type: feature
+        files: [api/vehicles.ts]
+      - id: petrol-vs-ev-cost-comparison-website-feat-pricing-api
+        name: Pricing API & Admin Endpoint
+        type: feature
+        files: [api/pricing.ts api/admin/pricing.ts]
+  - number: 3
+    features:
+      - id: petrol-vs-ev-cost-comparison-website-feat-vehicle-search
+        name: Vehicle Search UI
+        type: feature
+        files: [src/petrol-vs-ev/VehicleSelector.tsx]
+      - id: petrol-vs-ev-cost-comparison-website-feat-comparison-panel
+        name: Side-by-Side Comparison Panel
+        type: feature
+        files: [src/petrol-vs-ev/ComparisonView.tsx]
+  - number: 4
+    features:
+      - id: petrol-vs-ev-cost-comparison-website-feat-vehicle-seed
+        name: Vehicle Seed Data
+        type: enabler
+        files: [scripts/seed-vehicles.ts scripts/data/uk-vehicles.csv]
+      - id: petrol-vs-ev-cost-comparison-website-feat-pricing-panel
+        name: Pricing & Tariff Override Panel
+        type: feature
+        files: [src/petrol-vs-ev/PricingPanel.tsx]
+  - number: 5
+    features:
+      - id: petrol-vs-ev-cost-comparison-website-feat-breakeven-chart
+        name: Breakeven & Cost-Over-Time Charts
+        type: feature
+        files: [src/petrol-vs-ev/BreakevenChart.tsx src/petrol-vs-ev/CostOverTimeChart.tsx]
+      - id: petrol-vs-ev-cost-comparison-website-feat-url-state
+        name: Shareable URL State Manager
+        type: feature
+        files: [src/petrol-vs-ev/urlStateManager.ts]
