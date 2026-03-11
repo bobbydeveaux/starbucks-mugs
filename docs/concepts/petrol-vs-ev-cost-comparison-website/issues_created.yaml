@@ -1,0 +1,24 @@
+GeneratedAt: "2026-03-11T20:48:33Z"
+Issues:
+- IssueNumber: 391
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/391
+  TaskID: task-petrol-vs-ev-cost-comparison-website-feat-db-schema-1
+- IssueNumber: 392
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/392
+  TaskID: task-petrol-vs-ev-cost-comparison-website-feat-cost-engine-1
+- IssueNumber: 393
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/393
+  TaskID: task-petrol-vs-ev-cost-comparison-website-feat-cost-engine-2
+- IssueNumber: 394
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/394
+  TaskID: task-petrol-vs-ev-cost-comparison-website-feat-vehicle-api-1
+- IssueNumber: 395
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/395
+  TaskID: task-petrol-vs-ev-cost-comparison-website-feat-vehicle-api-2
+- IssueNumber: 396
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/396
+  TaskID: task-petrol-vs-ev-cost-comparison-website-feat-pricing-api-1
+- IssueNumber: 397
+  IssueURL: https://github.com/bobbydeveaux/starbucks-mugs/issues/397
+  TaskID: task-petrol-vs-ev-cost-comparison-website-feat-pricing-api-2
+Plan: petrol-vs-ev-cost-comparison-website-plan
