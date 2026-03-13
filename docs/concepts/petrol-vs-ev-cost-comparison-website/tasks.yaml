@@ -1,0 +1,142 @@
+GeneratedAt: "2026-03-11T20:48:07Z"
+Plan: petrol-vs-ev-cost-comparison-website-plan
+Sprints:
+- Features:
+  - FeatureID: petrol-vs-ev-cost-comparison-website-feat-db-schema
+    FeatureTitle: Database Schema & Migrations
+    Tasks:
+    - AcceptanceCriteria:
+      - 005_create_vehicles.sql creates the vehicles table with columns for make,
+        model, year, fuel_type, and relevant specs, with indexes on make/model/year/fuel_type
+      - 006_create_pricing_defaults.sql creates the pricing_defaults table with appropriate
+        columns for default cost values
+      - Both migration files include a rollback (DOWN) section that cleanly drops
+        the created objects
+      - Migrations apply in sequence without errors on a fresh PostgreSQL database
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Write PostgreSQL migration files 005 and 006 to create the vehicles
+        and pricing_defaults tables respectively. Each migration must include a down
+        script for clean rollback. Add indexes on make, model, year, and fuel_type
+        columns on the vehicles table.
+      EstimatedEffort: S
+      Files:
+      - db/migrations/005_create_vehicles.sql
+      - db/migrations/006_create_pricing_defaults.sql
+      ID: task-petrol-vs-ev-cost-comparison-website-feat-db-schema-1
+      Title: Create vehicles and pricing_defaults migration files
+  - FeatureID: petrol-vs-ev-cost-comparison-website-feat-cost-engine
+    FeatureTitle: Client-Side Cost Engine Module
+    Tasks:
+    - AcceptanceCriteria:
+      - All five calculation functions exported with explicit TypeScript signatures
+      - ICE formula correctly converts pence-per-litre to pence-per-mile using 4.546
+        litres/gallon
+      - EV CO2 uses 233g/kWh grid average constant
+      - Breakeven returns Infinity when annual savings ≤ 0
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: 'Create costEngine.ts with all calculation functions: cost-per-mile
+        for ICE ((price_ppl × 4.546) / MPG) and EV (price_ppkwh / efficiency_mpkwh),
+        annual cost, CO2 comparison (WLTP for ICE; 233g/kWh × kWh/mile for EV), and
+        breakeven (price delta ÷ annual savings). All functions must be pure, typed,
+        and exported.'
+      EstimatedEffort: S
+      Files:
+      - src/petrol-vs-ev/costEngine.ts
+      ID: task-petrol-vs-ev-cost-comparison-website-feat-cost-engine-1
+      Title: Implement CostEngine pure TypeScript module
+    - AcceptanceCriteria:
+      - Vitest reports ≥90% line and branch coverage for costEngine.ts
+      - 'Edge cases covered: zero/negative savings returns Infinity for breakeven,
+        zero efficiency values handled'
+      - All five functions have at least two test cases each (happy path + edge case)
+      AgentType: backend-engineer
+      Dependencies:
+      - task-petrol-vs-ev-cost-comparison-website-feat-cost-engine-1
+      Description: Create costEngine.test.ts covering all exported functions with
+        representative inputs, edge cases (zero MPG, zero savings for breakeven),
+        and boundary values. Configure Vitest coverage thresholds to enforce the ≥90%
+        requirement.
+      EstimatedEffort: S
+      Files:
+      - src/petrol-vs-ev/costEngine.test.ts
+      ID: task-petrol-vs-ev-cost-comparison-website-feat-cost-engine-2
+      Title: Write Vitest unit tests for CostEngine with ≥90% coverage
+  Sprint: 1
+- Features:
+  - FeatureID: petrol-vs-ev-cost-comparison-website-feat-vehicle-api
+    FeatureTitle: Vehicle Search API
+    Tasks:
+    - AcceptanceCriteria:
+      - GET /api/vehicles returns 200 with paginated vehicle records for valid query
+        params
+      - Invalid or missing params return 400 with zod validation error details
+      - SQL uses parameterised queries with no string interpolation of user input
+      - 'Response includes Cache-Control: max-age=86400 header'
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: 'Create the serverless GET /api/vehicles handler in api/vehicles.ts.
+        Implement zod schema validation for make, model, year, fuel_type, and q query
+        params, build parameterised SQL queries against the vehicles table, return
+        paginated results with all MPG/efficiency fields, and set Cache-Control: max-age=86400
+        response header.'
+      EstimatedEffort: M
+      Files:
+      - api/vehicles.ts
+      ID: task-petrol-vs-ev-cost-comparison-website-feat-vehicle-api-1
+      Title: Implement Vehicle Search API endpoint
+    - AcceptanceCriteria:
+      - Tests cover make/model/year/fuel_type filters individually and in combination
+      - Pagination returns correct page sizes and total counts
+      - p95 latency ≤500ms measured against the local DB with representative row count
+      - SQL injection attempts via q param are safely rejected
+      AgentType: qa-engineer
+      Dependencies:
+      - task-petrol-vs-ev-cost-comparison-website-feat-vehicle-api-1
+      Description: Write integration tests covering filter combinations, pagination
+        edge cases, and freetext search. Validate p95 response time is ≤500ms under
+        representative load using a test dataset seeded from the migration fixtures.
+      EstimatedEffort: S
+      Files:
+      - api/vehicles.test.ts
+      ID: task-petrol-vs-ev-cost-comparison-website-feat-vehicle-api-2
+      Title: Test Vehicle Search API performance and correctness
+  - FeatureID: petrol-vs-ev-cost-comparison-website-feat-pricing-api
+    FeatureTitle: Pricing API & Admin Endpoint
+    Tasks:
+    - AcceptanceCriteria:
+      - GET /api/pricing returns 200 with correct pricing fields from DB
+      - 'Response includes Cache-Control: max-age=3600 header'
+      - Returns 404 with descriptive message when no pricing row exists
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: 'Create a serverless handler that queries the default pricing row
+        from the database and returns petrol_ppl, diesel_ppl, electricity tariffs,
+        and public charging tiers as JSON. Set Cache-Control: max-age=3600 on the
+        response. Handle 404 gracefully if no pricing row exists.'
+      EstimatedEffort: S
+      Files:
+      - api/pricing.ts
+      ID: task-petrol-vs-ev-cost-comparison-website-feat-pricing-api-1
+      Title: Implement GET /api/pricing endpoint
+    - AcceptanceCriteria:
+      - PUT /api/admin/pricing rejects requests with missing or invalid x-api-key
+        with 401
+      - Rate limiting returns 429 after threshold is exceeded
+      - Zod validation rejects malformed bodies with 400 and field-level error details
+      - Valid authenticated requests update the pricing row and return the updated
+        data
+      AgentType: backend-engineer
+      Dependencies: []
+      Description: Create a serverless handler that accepts pricing updates via PUT,
+        validates the x-api-key header against an env secret, applies rate limiting
+        per IP, and validates the request body using Zod schemas before writing to
+        the database. Return 401 for missing/invalid key, 429 for rate limit exceeded,
+        400 for invalid body, and 200 with updated row on success.
+      EstimatedEffort: M
+      Files:
+      - api/admin/pricing.ts
+      ID: task-petrol-vs-ev-cost-comparison-website-feat-pricing-api-2
+      Title: Implement auth-gated PUT /api/admin/pricing endpoint
+  Sprint: 2

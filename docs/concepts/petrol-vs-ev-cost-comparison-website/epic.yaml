@@ -1,0 +1,161 @@
+Epics:
+- Features:
+  - Sprint: 1
+    dependencies: null
+    description: Create PostgreSQL migrations for the vehicles and pricing_defaults
+      tables, including indexes on make/model/year/fuel_type. Continues the existing
+      db/migrations/ sequence at 005/006.
+    estimatedComplexity: low
+    files:
+    - db/migrations/005_create_vehicles.sql
+    - db/migrations/006_create_pricing_defaults.sql
+    id: petrol-vs-ev-cost-comparison-website-feat-db-schema
+    name: Database Schema & Migrations
+    project: backend
+    type: enabler
+  - Sprint: 4
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-db-schema
+    description: One-time seed script that imports ≥200 popular UK petrol, diesel,
+      EV, hybrid, and PHEV vehicles (make, model, year, variant, MPG/efficiency, battery,
+      WLTP range, CO2 g/km) from DVLA/manufacturer CSV exports into the vehicles table.
+    estimatedComplexity: medium
+    files:
+    - scripts/seed-vehicles.ts
+    - scripts/data/uk-vehicles.csv
+    id: petrol-vs-ev-cost-comparison-website-feat-vehicle-seed
+    name: Vehicle Seed Data
+    project: backend
+    type: enabler
+  ID: petrol-vs-ev-cost-comparison-website-epic-data-foundation
+  Name: Data Foundation
+- Features:
+  - Sprint: 2
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-db-schema
+    description: 'Serverless GET /api/vehicles endpoint supporting make, model, year,
+      fuel_type, and freetext (q) query params. Returns paginated vehicle records
+      with all MPG/efficiency fields. Uses parameterised SQL, zod validation, and
+      responds in p95 ≤500ms with Cache-Control: max-age=86400.'
+    estimatedComplexity: medium
+    files:
+    - api/vehicles.ts
+    id: petrol-vs-ev-cost-comparison-website-feat-vehicle-api
+    name: Vehicle Search API
+    project: backend
+    type: feature
+  - Sprint: 2
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-db-schema
+    description: 'Serverless GET /api/pricing returning the current default pricing
+      row (petrol_ppl, diesel_ppl, electricity tariffs, public charging tiers) with
+      Cache-Control: max-age=3600. Includes auth-gated PUT /api/admin/pricing protected
+      by x-api-key header with rate limiting and zod input validation.'
+    estimatedComplexity: medium
+    files:
+    - api/pricing.ts
+    - api/admin/pricing.ts
+    id: petrol-vs-ev-cost-comparison-website-feat-pricing-api
+    name: Pricing API & Admin Endpoint
+    project: backend
+    type: feature
+  ID: petrol-vs-ev-cost-comparison-website-epic-backend-api
+  Name: Backend API
+- Features:
+  - Sprint: 1
+    dependencies: null
+    description: 'Pure TypeScript module implementing all calculation logic: cost-per-mile
+      for ICE ((price_ppl × 4.546) / MPG) and EV (price_ppkwh / efficiency_mpkwh),
+      annual cost, CO2 comparison (WLTP for ICE; grid avg 233g/kWh × kWh/mile for
+      EV), and breakeven (price delta ÷ annual savings). Fully unit-tested with ≥90%
+      coverage via Vitest.'
+    estimatedComplexity: medium
+    files:
+    - src/petrol-vs-ev/costEngine.ts
+    - src/petrol-vs-ev/costEngine.test.ts
+    id: petrol-vs-ev-cost-comparison-website-feat-cost-engine
+    name: Client-Side Cost Engine Module
+    project: frontend
+    type: enabler
+  ID: petrol-vs-ev-cost-comparison-website-epic-cost-engine
+  Name: Cost Calculation Engine
+- Features:
+  - Sprint: 3
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-vehicle-api
+    - petrol-vs-ev-cost-comparison-website-feat-cost-engine
+    description: Search interface for selecting a petrol/diesel vehicle and an EV
+      equivalent. Reuses existing useCarCatalog hook and SearchBar/SearchBox components
+      without forking. Debounces API calls at 300ms and supports make/model/year/fuel_type
+      filters.
+    estimatedComplexity: low
+    files:
+    - src/petrol-vs-ev/VehicleSelector.tsx
+    id: petrol-vs-ev-cost-comparison-website-feat-vehicle-search
+    name: Vehicle Search UI
+    project: frontend
+    type: feature
+  - Sprint: 3
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-vehicle-search
+    - petrol-vs-ev-cost-comparison-website-feat-cost-engine
+    description: Extends the existing ComparisonPanel component via props to display
+      cost-per-mile, annual cost (at user-entered mileage, defaulting to 10,000 mi/yr),
+      and CO2 g/km side-by-side for the two selected vehicles. Updates in real time
+      (≤100ms) on mileage input change. Mobile-responsive across 320px–2560px.
+    estimatedComplexity: medium
+    files:
+    - src/petrol-vs-ev/ComparisonView.tsx
+    id: petrol-vs-ev-cost-comparison-website-feat-comparison-panel
+    name: Side-by-Side Comparison Panel
+    project: frontend
+    type: feature
+  - Sprint: 4
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-pricing-api
+    - petrol-vs-ev-cost-comparison-website-feat-comparison-panel
+    description: Editable panel showing default UK fuel/electricity prices fetched
+      from /api/pricing. Users can override petrol p/litre, electricity p/kWh, select
+      from EV tariff presets (Economy 7, Octopus Go, OVO Drive), or enter public charging
+      rates. All overrides immediately recalculate comparison figures.
+    estimatedComplexity: medium
+    files:
+    - src/petrol-vs-ev/PricingPanel.tsx
+    id: petrol-vs-ev-cost-comparison-website-feat-pricing-panel
+    name: Pricing & Tariff Override Panel
+    project: frontend
+    type: feature
+  - Sprint: 5
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-comparison-panel
+    - petrol-vs-ev-cost-comparison-website-feat-cost-engine
+    description: Recharts-based chart components showing cumulative cost difference
+      over 1–15 years and the breakeven point given a user-entered purchase price
+      delta. Includes PNG export via html2canvas. Triggered when user provides purchase
+      price difference; ≥60% breakeven engagement is a key success metric.
+    estimatedComplexity: medium
+    files:
+    - src/petrol-vs-ev/BreakevenChart.tsx
+    - src/petrol-vs-ev/CostOverTimeChart.tsx
+    id: petrol-vs-ev-cost-comparison-website-feat-breakeven-chart
+    name: Breakeven & Cost-Over-Time Charts
+    project: frontend
+    type: feature
+  - Sprint: 5
+    dependencies:
+    - petrol-vs-ev-cost-comparison-website-feat-pricing-panel
+    - petrol-vs-ev-cost-comparison-website-feat-breakeven-chart
+    description: Module that serialises the full comparison state (vehicle IDs, annual
+      mileage, price overrides) into compact URL query params and deserialises on
+      page load to restore identical state. Enables shareable comparison URLs with
+      no backend session. Uses short param keys to keep URLs compact.
+    estimatedComplexity: low
+    files:
+    - src/petrol-vs-ev/urlStateManager.ts
+    id: petrol-vs-ev-cost-comparison-website-feat-url-state
+    name: Shareable URL State Manager
+    project: frontend
+    type: feature
+  ID: petrol-vs-ev-cost-comparison-website-epic-frontend
+  Name: Frontend Application
+Version: v1alpha1
