@@ -18,5 +18,15 @@ export default defineConfig({
     // Only pick up TypeScript tests from src/; exclude the legacy vanilla-JS
     // app.test.js at the project root which uses its own custom test runner.
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/petrol-vs-ev/costEngine.ts'],
+      thresholds: {
+        lines: 90,
+        branches: 90,
+        functions: 90,
+        statements: 90,
+      },
+    },
   },
 });
