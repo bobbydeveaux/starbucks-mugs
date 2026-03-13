@@ -1,18 +1,22 @@
 {
-  "prTitle": "test: add CostEngine module and Vitest unit tests with ≥90% coverage",
-  "prBody": "## Summary\n\n- Creates `src/petrol-vs-ev/costEngine.ts` — six pure TypeScript functions: `iceCostPerMile`, `evCostPerMile`, `annualCost`, `iceCo2PerMile`, `evCo2PerMile`, and `breakevenYears`, all with explicit TypeScript type signatures\n- Creates `src/petrol-vs-ev/costEngine.test.ts` — 42 Vitest unit tests covering every function with happy-path inputs, edge cases (zero/negative MPG, efficiency, savings), and boundary values\n- Enforces ≥90% coverage threshold in `vite.config.ts` via `coverage.thresholds`; actual coverage is **100%** across lines, branches, functions, and statements\n\n## Formula details\n- **ICE cost per mile**: `(fuelPricePpl × 4.546) / mpg` — uses exact litres-per-gallon constant\n- **EV cost per mile**: `electricityPricePpkwh / efficiencyMilesPerKwh`\n- **Annual cost**: `costPerMilePence × annualMiles`\n- **ICE CO2 per mile**: `wltpCo2GPerKm × 1.60934` (g/km → g/mile)\n- **EV CO2 per mile**: `233 / efficiencyMilesPerKwh` (UK grid average 233 g/kWh)\n- **Breakeven years**: `priceDeltaPence / annualSavingsPence`, returns `Infinity` when savings ≤ 0\n\nCloses #393",
+  "prTitle": "feat: implement GET /api/pricing serverless endpoint",
+  "prBody": "## Summary\n\n- Implements `GET /api/pricing` as a Vercel serverless function (`api/pricing.ts`) that reads the most recent row from `pricing_defaults` and returns fuel/electricity pricing in the JSON shape specified in HLD.md\n- 9 Vitest unit tests with `pg` fully mocked cover: 200 happy path with correct shape + `Cache-Control` header, null tariff coercion, 404 when table is empty, 405 for non-GET methods, 500 on query failure, 500 on pool connect failure, SQL `ORDER BY id DESC LIMIT 1` guard, and pool singleton behaviour\n- Updated `vite.config.ts` to include `api/**/*.test.ts` alongside `src/**` tests\n- Fixed `vercel.json` catch-all rewrite to exclude `/api/` so Vercel routes serverless function calls correctly instead of serving `index.html`\n- Added `pg` to runtime dependencies; `@types/node` and `@types/pg` to devDependencies\n- New `docs/concepts/petrol-vs-ev-cost-comparison-website/api.md` with endpoint reference, caching strategy, error table, and environment variable documentation\n\nCloses #396",
   "testsPass": true,
   "filesChanged": [
-    "src/petrol-vs-ev/costEngine.ts",
-    "src/petrol-vs-ev/costEngine.test.ts",
+    "api/pricing.ts",
+    "api/pricing.test.ts",
     "vite.config.ts",
+    "vercel.json",
     "package.json",
     "package-lock.json"
   ],
-  "docsUpdated": [],
-  "docsReviewed": [
-    "docs/concepts/petrol-vs-ev-cost-comparison-website/LLD.md",
-    "docs/concepts/petrol-vs-ev-cost-comparison-website/tasks.yaml"
+  "docsUpdated": [
+    "docs/concepts/petrol-vs-ev-cost-comparison-website/api.md"
   ],
-  "completedTasks": [1, 2]
+  "docsReviewed": [
+    "docs/concepts/petrol-vs-ev-cost-comparison-website/HLD.md",
+    "docs/concepts/petrol-vs-ev-cost-comparison-website/LLD.md",
+    "docs/concepts/petrol-vs-ev-cost-comparison-website/reviews/sprint_1_review.md",
+    "docs/testing.md"
+  ]
 }
