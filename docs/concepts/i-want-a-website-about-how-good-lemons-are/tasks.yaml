@@ -1,0 +1,24 @@
+GeneratedAt: "2026-03-13T12:16:04Z"
+Plan: i-want-a-website-about-how-good-lemons-are-plan
+Sprints:
+- Features:
+  - FeatureID: i-want-a-website-about-how-good-lemons-are-feat-main
+    FeatureTitle: Static Lemon Page
+    Tasks:
+    - AcceptanceCriteria:
+      - lemons/index.html exists with a hero section and at least 3 lemon facts
+      - lemons/style.css exists with yellow/green themed styles applied to the page
+      - Page renders correctly when opened directly in a browser without a server
+      - HTML links to the CSS file and displays readable, styled content
+      AgentType: frontend-engineer
+      Dependencies: []
+      Description: Create lemons/index.html with a hero section and lemon facts content,
+        and lemons/style.css with a yellow/green theme. The page should be fully self-contained
+        with no external dependencies or build tooling.
+      EstimatedEffort: S
+      Files:
+      - lemons/index.html
+      - lemons/style.css
+      ID: task-i-want-a-website-about-how-good-lemons-are-feat-main-1
+      Title: Create lemon website HTML and CSS
+  Sprint: 1
