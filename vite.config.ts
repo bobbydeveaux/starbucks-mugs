@@ -15,9 +15,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
     css: false,
-    // Only pick up TypeScript tests from src/; exclude the legacy vanilla-JS
-    // app.test.js at the project root which uses its own custom test runner.
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Pick up TypeScript tests from src/ and api/.
+    // Excludes the legacy vanilla-JS app.test.js which uses its own test runner.
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'api/**/*.{test,spec}.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/petrol-vs-ev/costEngine.ts'],
