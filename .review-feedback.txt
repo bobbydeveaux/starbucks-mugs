@@ -1,6 +1,45 @@
 ## Code Review - Changes Requested
 
-The review is complete. PR #400 is a DRAFT with no code changes — the `src/petrol-vs-ev/costEngine.test.ts` file is missing, the `src/petrol-vs-ev/` directory doesn't exist, and the dependency (`costEngine.ts`) also hasn't been committed. All three acceptance criteria are unmet. The PR should not be merged until the implementation is delivered.
+## ❌ BLOCKING ISSUES FOUND
+
+**PR:** WIP: [task-petrol-vs-ev-cost-comparison-website-feat-vehicle-api-2] Test Vehicle Search API performance and correctness
+**Branch:** `feature/395-petrol-vs-ev-cost-comparison-website-sprint-2-issue-395`
+
+---
+
+### Summary
+
+This PR contains **no meaningful implementation**. The only change is the deletion of `.claude-output.json` — a leftover metadata file from a previous sprint task (the CostEngine implementation). The actual deliverable required by this task is entirely absent.
+
+---
+
+### Blocking Issue: Task Not Implemented
+
+**Task goal:** Create `api/vehicles.test.ts` with integration tests covering:
+- Filter combinations (make/model/year/fuel_type)
+- Pagination edge cases and correct page sizes/total counts
+- p95 latency ≤ 500ms under representative load
+- SQL injection prevention via the `q` param
+
+**What was delivered:**
+- Deletion of `.claude-output.json` (18 lines removed, no functional code)
+
+**What is missing:**
+- `api/vehicles.test.ts` — does not exist anywhere in the repository
+- `api/vehicles.ts` — the dependency for this task (`task-petrol-vs-ev-cost-comparison-website-feat-vehicle-api-1`) also does not exist; there is no `api/` directory at all
+
+The PR title itself acknowledges this with the `WIP:` prefix and the PR body still shows all implementation checklist items unchecked.
+
+---
+
+### Required Before Merge
+
+1. `api/vehicles.ts` must be implemented first (dependency task `feat-vehicle-api-1`)
+2. `api/vehicles.test.ts` must be written covering all acceptance criteria:
+   - Individual and combined filter tests (make, model, year, fuel_type)
+   - Pagination correctness (page sizes, total counts)
+   - p95 latency ≤ 500ms with a seeded test dataset
+   - SQL injection attempts via `q` param are safely rejected (parameterised queries verified)
 
 **Action Required**: Please address the blocking issues above before merging.
 
