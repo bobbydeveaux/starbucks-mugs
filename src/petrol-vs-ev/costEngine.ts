@@ -1,87 +1,138 @@
 /**
- * CostEngine — pure TypeScript module for petrol vs EV cost comparison.
+ * CostEngine — pure TypeScript calculation functions for petrol vs EV cost comparison.
  *
- * All functions are stateless and side-effect free. UK conventions are used:
- *   - Fuel prices in pence per litre (ppl) or pence per kWh (ppkwh)
- *   - Consumption in MPG (miles per imperial gallon) or miles per kWh
- *   - 1 imperial gallon = 4.546 litres
- *   - UK grid carbon intensity constant: 233 g CO₂/kWh
+ * All functions are stateless and have no side-effects, making them easy to test
+ * and reuse across both client-side rendering and server-side logic.
+ *
+ * Unit conventions:
+ *  - fuel prices: pence per litre (petrol/diesel) or pence per kWh (electricity)
+ *  - distances: miles
+ *  - efficiency: MPG (miles per gallon) for ICE, miles per kWh for EV
+ *  - costs returned: pence (unless noted)
+ *  - CO2 returned: grams per mile
  */
 
-/** Litres in one UK imperial gallon. */
+/** Litres in one imperial gallon (exact). */
 const LITRES_PER_GALLON = 4.546;
 
-/** UK average grid carbon intensity in grams of CO₂ per kWh (National Grid ESO). */
-export const GRID_CO2_G_PER_KWH = 233;
+/** UK grid average CO2 intensity used for EV tailpipe-equivalent calculation (g/kWh). */
+const GRID_CO2_G_PER_KWH = 233;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface IceCostPerMileParams {
+  /** Petrol or diesel price in pence per litre. */
+  fuelPricePpl: number;
+  /** Vehicle fuel efficiency in miles per gallon (WLTP or real-world). */
+  mpg: number;
+}
+
+export interface EvCostPerMileParams {
+  /** Electricity price in pence per kWh. */
+  electricityPricePpkwh: number;
+  /** Vehicle efficiency in miles per kWh. */
+  efficiencyMilesPerKwh: number;
+}
+
+export interface AnnualCostParams {
+  /** Cost per mile in pence. */
+  costPerMilePence: number;
+  /** Expected annual mileage. */
+  annualMiles: number;
+}
+
+export interface IceCo2PerMileParams {
+  /** WLTP CO2 figure in g/km as published by the manufacturer. */
+  wltpCo2GPerKm: number;
+}
+
+export interface EvCo2PerMileParams {
+  /** Vehicle efficiency in miles per kWh. */
+  efficiencyMilesPerKwh: number;
+}
+
+export interface BreakevenParams {
+  /** Upfront price premium of the EV over the ICE vehicle in pence (may be negative). */
+  priceDeltaPence: number;
+  /** Annual fuel/energy cost saving of the EV over the ICE vehicle in pence. */
+  annualSavingsPence: number;
+}
+
+// ---------------------------------------------------------------------------
+// Calculation functions
+// ---------------------------------------------------------------------------
 
 /**
- * Calculates the fuel cost per mile for an ICE (petrol or diesel) vehicle.
+ * Calculate the running cost per mile for an ICE (petrol or diesel) vehicle.
  *
- * Formula: (pricePpl × LITRES_PER_GALLON) / mpg
+ * Formula: (fuelPricePpl × LITRES_PER_GALLON) / mpg
  *
- * @param pricePpl - Petrol/diesel price in pence per litre.
- * @param mpg - Vehicle fuel economy in miles per imperial gallon (WLTP combined).
- * @returns Cost per mile in pence.
+ * @returns Cost in pence per mile.
  */
-export function iceCostPerMile(pricePpl: number, mpg: number): number {
-  return (pricePpl * LITRES_PER_GALLON) / mpg;
+export function iceCostPerMile({ fuelPricePpl, mpg }: IceCostPerMileParams): number {
+  if (mpg <= 0) return Infinity;
+  return (fuelPricePpl * LITRES_PER_GALLON) / mpg;
 }
 
 /**
- * Calculates the electricity cost per mile for an EV.
+ * Calculate the running cost per mile for an EV.
  *
- * Formula: pricePpkwh / efficiencyMpkwh
+ * Formula: electricityPricePpkwh / efficiencyMilesPerKwh
  *
- * @param pricePpkwh - Electricity tariff in pence per kWh.
- * @param efficiencyMpkwh - Vehicle efficiency in miles per kWh (WLTP).
- * @returns Cost per mile in pence.
+ * @returns Cost in pence per mile.
  */
-export function evCostPerMile(pricePpkwh: number, efficiencyMpkwh: number): number {
-  return pricePpkwh / efficiencyMpkwh;
+export function evCostPerMile({ electricityPricePpkwh, efficiencyMilesPerKwh }: EvCostPerMileParams): number {
+  if (efficiencyMilesPerKwh <= 0) return Infinity;
+  return electricityPricePpkwh / efficiencyMilesPerKwh;
 }
 
 /**
- * Calculates the annual running cost for a vehicle.
+ * Calculate the annual running cost for a vehicle given a cost-per-mile and mileage.
  *
- * Formula: costPerMile × annualMiles
+ * Formula: costPerMilePence × annualMiles
  *
- * @param costPerMile - Running cost per mile in pence.
- * @param annualMiles - Estimated annual mileage.
  * @returns Annual cost in pence.
  */
-export function annualCost(costPerMile: number, annualMiles: number): number {
-  return costPerMile * annualMiles;
+export function annualCost({ costPerMilePence, annualMiles }: AnnualCostParams): number {
+  return costPerMilePence * annualMiles;
 }
 
 /**
- * Calculates the CO₂ emissions per mile for an EV using the UK grid average.
+ * Calculate the CO2 emissions per mile for an ICE vehicle using its WLTP figure.
  *
- * Formula: GRID_CO2_G_PER_KWH / efficiencyMpkwh
- *   where GRID_CO2_G_PER_KWH = 233 g/kWh
+ * Converts the manufacturer's g/km figure to g/mile (1 mile ≈ 1.60934 km).
  *
- * ICE vehicles use their WLTP co2_gkm figure directly from the vehicle record;
- * EV emissions must be derived from grid intensity × energy consumed per mile.
- *
- * @param efficiencyMpkwh - Vehicle efficiency in miles per kWh (WLTP).
- * @returns CO₂ in grams per mile.
+ * @returns CO2 in grams per mile.
  */
-export function evCo2PerMile(efficiencyMpkwh: number): number {
-  return GRID_CO2_G_PER_KWH / efficiencyMpkwh;
+export function iceCo2PerMile({ wltpCo2GPerKm }: IceCo2PerMileParams): number {
+  return wltpCo2GPerKm * 1.60934;
 }
 
 /**
- * Calculates the breakeven point (in years) for switching from ICE to EV.
+ * Calculate the equivalent CO2 emissions per mile for an EV using the UK grid average.
  *
- * Formula: priceDelta / annualSavings
+ * Formula: GRID_CO2_G_PER_KWH / efficiencyMilesPerKwh
  *
- * Returns `Infinity` when annual savings ≤ 0, meaning the EV never recovers
- * its purchase premium at current running costs.
- *
- * @param priceDelta - Upfront price difference in £ (EV purchase price − ICE purchase price).
- * @param annualSavings - Annual running-cost saving in £ (ICE annual cost − EV annual cost).
- * @returns Breakeven point in years, or `Infinity` if annual savings ≤ 0.
+ * @returns CO2 in grams per mile.
  */
-export function breakevenYears(priceDelta: number, annualSavings: number): number {
-  if (annualSavings <= 0) return Infinity;
-  return priceDelta / annualSavings;
+export function evCo2PerMile({ efficiencyMilesPerKwh }: EvCo2PerMileParams): number {
+  if (efficiencyMilesPerKwh <= 0) return Infinity;
+  return GRID_CO2_G_PER_KWH / efficiencyMilesPerKwh;
+}
+
+/**
+ * Calculate the breakeven point (in years) at which an EV recoups its price premium
+ * through lower running costs.
+ *
+ * Returns `Infinity` when annualSavingsPence ≤ 0 (the EV never pays back).
+ *
+ * Formula: priceDeltaPence / annualSavingsPence
+ *
+ * @returns Years to breakeven, or Infinity if savings are zero or negative.
+ */
+export function breakevenYears({ priceDeltaPence, annualSavingsPence }: BreakevenParams): number {
+  if (annualSavingsPence <= 0) return Infinity;
+  return priceDeltaPence / annualSavingsPence;
 }

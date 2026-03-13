@@ -1,6 +1,6 @@
 ## Code Review - Changes Requested
 
-The review is complete. The PR is in draft state with no implementation committed — same pattern as previously seen in this repository. The `.claude-review.json` has been written with `changes_requested` and `hasBlockingIssues: true`.
+The review is complete. PR #400 is a DRAFT with no code changes — the `src/petrol-vs-ev/costEngine.test.ts` file is missing, the `src/petrol-vs-ev/` directory doesn't exist, and the dependency (`costEngine.ts`) also hasn't been committed. All three acceptance criteria are unmet. The PR should not be merged until the implementation is delivered.
 
 **Action Required**: Please address the blocking issues above before merging.
 
