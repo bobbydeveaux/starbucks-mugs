@@ -1,0 +1,9 @@
+# Sprint Slices (Horizontal Decomposition)
+
+sprints:
+  - number: 1
+    features:
+      - id: i-want-a-website-about-how-good-lemons-are-feat-main
+        name: Static Lemon Page
+        type: feature
+        files: [lemons/index.html lemons/style.css lemons/README.md lemons/.gitignore lemons/Dockerfile lemons/docker-compose.yml]
