@@ -1,0 +1,19 @@
+# Project Timeline
+
+metadata:
+  generated: 2026-03-13T12:15:41Z
+  totalSprints: 1
+  totalDuration: 7 days
+
+sprints:
+  - number: 1
+    startDate: 2026-03-13
+    endDate: 2026-03-20
+    duration: 7 days
+    features:
+      - id: i-want-a-website-about-how-good-lemons-are-feat-main
+        name: Static Lemon Page
+        type: feature
+
+criticalPath:
+  - i-want-a-website-about-how-good-lemons-are-feat-main
