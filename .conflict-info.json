@@ -1,10 +1,11 @@
 {
-  "prNumber": 383,
+  "prNumber": 399,
   "baseBranch": "main",
-  "headBranch": "feature/360-what-s-the-temp-website-sprint-2-issue-360",
+  "headBranch": "feature/392-petrol-vs-ev-cost-comparison-website-sprint-1-issue-392",
   "conflictedFiles": [
     ".review-feedback.txt",
-    "what-s-the-temp/src/utils/temperature.ts"
+    "src/petrol-vs-ev/costEngine.test.ts",
+    "src/petrol-vs-ev/costEngine.ts"
   ],
-  "conflictCount": 2
+  "conflictCount": 3
 }

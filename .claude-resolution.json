@@ -1,6 +1,6 @@
 {
   "method": "ai-assisted",
-  "filesResolved": 2,
-  "summary": "Resolved conflicts in .review-feedback.txt and temperature.ts. Combined both review feedback sections to preserve all review context. Used the improved temperature.ts from origin/main (type-only import, JSDoc comments, cleaner formatTemp implementation).",
-  "strategyUsed": "preserved both changes: combined both review feedback documents into one cohesive file; chose origin/main version of temperature.ts for better TypeScript practices (import type) and cleaner formatTemp using template literal with unit variable"
+  "filesResolved": 3,
+  "summary": "Resolved conflicts in .review-feedback.txt, costEngine.ts, and costEngine.test.ts by choosing the origin/main version for all three files, as it represented a more complete and better-designed implementation.",
+  "strategyUsed": "Chose origin/main for all three conflicted files: (1) .review-feedback.txt — origin/main was more specific and accurate about PR #400; (2) costEngine.ts — origin/main added TypeScript interfaces for all function params, input validation (zero/negative guards), and the missing iceCo2PerMile function; (3) costEngine.test.ts — updated tests to match the origin/main API (object params) and added iceCo2PerMile test coverage. All costEngine tests pass after resolution."
 }
