@@ -1,0 +1,16 @@
+Epics:
+- features:
+  - dependencies: []
+    description: Create a single-page static website with a hero section and lemon
+      facts using HTML and CSS
+    estimatedComplexity: low
+    files:
+    - lemons/index.html
+    - lemons/style.css
+    id: i-want-a-website-about-how-good-lemons-are-feat-main
+    name: Static Lemon Page
+    project: website
+    type: feature
+  id: i-want-a-website-about-how-good-lemons-are-epic-main
+  name: Lemon Website
+Version: v1alpha1
